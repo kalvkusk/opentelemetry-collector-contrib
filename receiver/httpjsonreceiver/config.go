@@ -4,22 +4,27 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"time"
 
 	"go.opentelemetry.io/collector/config/confighttp"
-	"go.opentelemetry.io/collector/config/configopaque"
-	"go.opentelemetry.io/collector/receiver/scraperhelper"
 )
 
-// Config represents the receiver config settings within the collector's config.yaml
+// Config represents the receiver config
 type Config struct {
-	scraperhelper.ScraperControllerSettings `mapstructure:",squash"`
-	confighttp.HTTPClientSettings           `mapstructure:",squash"`
+	// Collection interval
+	CollectionInterval time.Duration `mapstructure:"collection_interval"`
+
+	// Initial delay before starting collection
+	InitialDelay time.Duration `mapstructure:"initial_delay"`
+
+	// HTTP client settings
+	confighttp.HTTPClientSettings `mapstructure:",squash"`
 
 	// Endpoints to scrape
 	Endpoints []EndpointConfig `mapstructure:"endpoints"`
 
-	// Default metric configurations
-	DefaultMetrics []MetricConfig `mapstructure:"default_metrics,omitempty"`
+	// Resource attributes to add to all metrics
+	ResourceAttributes map[string]string `mapstructure:"resource_attributes"`
 }
 
 // EndpointConfig defines configuration for a single endpoint
@@ -31,7 +36,7 @@ type EndpointConfig struct {
 	Method string `mapstructure:"method"`
 
 	// Additional headers
-	Headers map[string]configopaque.String `mapstructure:"headers"`
+	Headers map[string]string `mapstructure:"headers"`
 
 	// Request body for POST requests
 	Body string `mapstructure:"body,omitempty"`
@@ -42,8 +47,8 @@ type EndpointConfig struct {
 	// Metrics to extract from this endpoint
 	Metrics []MetricConfig `mapstructure:"metrics"`
 
-	// Per-endpoint HTTP client settings
-	HTTPClientSettings confighttp.HTTPClientSettings `mapstructure:",squash"`
+	// Per-endpoint timeout
+	Timeout time.Duration `mapstructure:"timeout,omitempty"`
 }
 
 // MetricConfig defines how to extract and configure a metric
@@ -76,6 +81,10 @@ func (cfg *Config) Validate() error {
 		return errors.New("at least one endpoint must be specified")
 	}
 
+	if cfg.CollectionInterval <= 0 {
+		cfg.CollectionInterval = 60 * time.Second
+	}
+
 	for i, endpoint := range cfg.Endpoints {
 		if err := cfg.validateEndpoint(i, &endpoint); err != nil {
 			return err
@@ -98,7 +107,7 @@ func (cfg *Config) validateEndpoint(index int, endpoint *EndpointConfig) error {
 		endpoint.Method = "GET"
 	}
 
-	if len(endpoint.Metrics) == 0 && len(cfg.DefaultMetrics) == 0 {
+	if len(endpoint.Metrics) == 0 {
 		return fmt.Errorf("endpoints[%d]: no metrics configured", index)
 	}
 

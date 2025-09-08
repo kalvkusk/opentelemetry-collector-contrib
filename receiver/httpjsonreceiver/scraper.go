@@ -10,56 +10,60 @@ import (
 	"time"
 
 	"github.com/tidwall/gjson"
-	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/httpjsonreceiver/internal/metadata"
 )
 
-type httpJSONScraper struct {
-	cfg      *Config
-	settings receiver.CreateSettings
-	logger   *zap.Logger
-	mb       *metadata.MetricsBuilder
-	client   *http.Client
+// Scraper handles the HTTP requests and JSON parsing
+type Scraper struct {
+	cfg    *Config
+	client *http.Client
+	logger *zap.Logger
 }
 
-func newScraper(cfg *Config, settings receiver.CreateSettings) *httpJSONScraper {
-	return &httpJSONScraper{
-		cfg:      cfg,
-		settings: settings,
-		logger:   settings.Logger,
-		mb:       metadata.NewMetricsBuilder(cfg.MetricsBuilderConfig, settings),
+// NewScraper creates a new scraper
+func NewScraper(cfg *Config, client *http.Client, logger *zap.Logger) *Scraper {
+	return &Scraper{
+		cfg:    cfg,
+		client: client,
+		logger: logger,
 	}
 }
 
-func (h *httpJSONScraper) start(ctx context.Context, host component.Host) error {
-	httpClient, err := h.cfg.HTTPClientSettings.ToClient(host, h.settings.TelemetrySettings)
-	if err != nil {
-		return fmt.Errorf("failed to create HTTP client: %w", err)
+// Scrape collects metrics from all configured endpoints
+func (s *Scraper) Scrape(ctx context.Context) (pmetric.Metrics, error) {
+	metrics := pmetric.NewMetrics()
+	rm := metrics.ResourceMetrics().AppendEmpty()
+
+	// Set resource attributes
+	resource := rm.Resource()
+	resource.Attributes().PutStr("receiver", "httpjson")
+
+	// Add configured resource attributes
+	for key, value := range s.cfg.ResourceAttributes {
+		resource.Attributes().PutStr(key, value)
 	}
-	h.client = httpClient
-	return nil
-}
 
-func (h *httpJSONScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
-	h.logger.Debug("Starting HTTP JSON scrape")
+	sm := rm.ScopeMetrics().AppendEmpty()
+	sm.Scope().SetName("github.com/kalvkusk/opentelemetry-collector-contrib/receiver/httpjsonreceiver")
+	sm.Scope().SetVersion("1.0.0")
 
-	for _, endpoint := range h.cfg.Endpoints {
-		if err := h.scrapeEndpoint(ctx, endpoint); err != nil {
-			h.logger.Error("Failed to scrape endpoint",
+	// Scrape each endpoint
+	for _, endpoint := range s.cfg.Endpoints {
+		if err := s.scrapeEndpoint(ctx, endpoint, sm); err != nil {
+			s.logger.Error("Failed to scrape endpoint",
 				zap.String("url", endpoint.URL),
 				zap.Error(err))
 			// Continue with other endpoints
 		}
 	}
 
-	return h.mb.Emit(), nil
+	return metrics, nil
 }
 
-func (h *httpJSONScraper) scrapeEndpoint(ctx context.Context, endpoint EndpointConfig) error {
+// scrapeEndpoint scrapes a single endpoint
+func (s *Scraper) scrapeEndpoint(ctx context.Context, endpoint EndpointConfig, sm pmetric.ScopeMetrics) error {
 	start := time.Now()
 
 	// Create HTTP request
@@ -70,36 +74,40 @@ func (h *httpJSONScraper) scrapeEndpoint(ctx context.Context, endpoint EndpointC
 
 	// Add headers
 	for key, value := range endpoint.Headers {
-		req.Header.Set(key, string(value))
+		req.Header.Set(key, value)
 	}
 
 	// Add request body for POST
-	if endpoint.Body != "" && endpoint.Method == "POST" {
+	if endpoint.Body != "" && (endpoint.Method == "POST" || endpoint.Method == "PUT") {
 		req.Body = io.NopCloser(strings.NewReader(endpoint.Body))
 		if req.Header.Get("Content-Type") == "" {
 			req.Header.Set("Content-Type", "application/json")
 		}
 	}
 
+	// Apply per-endpoint timeout
+	if endpoint.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, endpoint.Timeout)
+		defer cancel()
+		req = req.WithContext(ctx)
+	}
+
 	// Make request
-	resp, err := h.client.Do(req)
+	resp, err := s.client.Do(req)
 	if err != nil {
-		h.mb.RecordHttpjsonScrapeErrorsDataPoint(time.Now(), 1, endpoint.URL)
 		return fmt.Errorf("HTTP request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Record request duration
+	// Log request duration
 	duration := time.Since(start)
-	h.mb.RecordHttpjsonRequestDurationDataPoint(
-		time.Now(),
-		float64(duration.Milliseconds()),
-		endpoint.URL,
-		endpoint.Method,
-	)
+	s.logger.Debug("HTTP request completed",
+		zap.String("url", endpoint.URL),
+		zap.Int("status", resp.StatusCode),
+		zap.Duration("duration", duration))
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		h.mb.RecordHttpjsonScrapeErrorsDataPoint(time.Now(), 1, endpoint.URL)
 		return fmt.Errorf("HTTP request failed with status %d", resp.StatusCode)
 	}
 
@@ -110,30 +118,21 @@ func (h *httpJSONScraper) scrapeEndpoint(ctx context.Context, endpoint EndpointC
 	}
 
 	// Parse JSON and extract metrics
-	if err := h.parseAndEmitMetrics(body, endpoint); err != nil {
-		h.mb.RecordHttpjsonScrapeErrorsDataPoint(time.Now(), 1, endpoint.URL)
-		return err
-	}
-
-	return nil
+	return s.parseAndEmitMetrics(body, endpoint, sm)
 }
 
-func (h *httpJSONScraper) parseAndEmitMetrics(jsonData []byte, endpoint EndpointConfig) error {
+// parseAndEmitMetrics parses JSON and emits metrics
+func (s *Scraper) parseAndEmitMetrics(jsonData []byte, endpoint EndpointConfig, sm pmetric.ScopeMetrics) error {
 	if !gjson.ValidBytes(jsonData) {
 		return fmt.Errorf("invalid JSON response")
 	}
 
-	// Use endpoint metrics or default metrics
-	metrics := endpoint.Metrics
-	if len(metrics) == 0 {
-		metrics = h.cfg.DefaultMetrics
-	}
-
-	for _, metricCfg := range metrics {
-		if err := h.extractAndEmitMetric(jsonData, metricCfg, endpoint); err != nil {
-			h.logger.Warn("Failed to extract metric",
+	for _, metricCfg := range endpoint.Metrics {
+		if err := s.extractAndEmitMetric(jsonData, metricCfg, endpoint, sm); err != nil {
+			s.logger.Warn("Failed to extract metric",
 				zap.String("metric", metricCfg.Name),
 				zap.String("path", metricCfg.JSONPath),
+				zap.String("url", endpoint.URL),
 				zap.Error(err))
 			// Continue with other metrics
 		}
@@ -142,7 +141,8 @@ func (h *httpJSONScraper) parseAndEmitMetrics(jsonData []byte, endpoint Endpoint
 	return nil
 }
 
-func (h *httpJSONScraper) extractAndEmitMetric(jsonData []byte, metricCfg MetricConfig, endpoint EndpointConfig) error {
+// extractAndEmitMetric extracts a single metric from JSON
+func (s *Scraper) extractAndEmitMetric(jsonData []byte, metricCfg MetricConfig, endpoint EndpointConfig, sm pmetric.ScopeMetrics) error {
 	// Extract value using JSONPath
 	result := gjson.GetBytes(jsonData, metricCfg.JSONPath)
 	if !result.Exists() {
@@ -150,99 +150,106 @@ func (h *httpJSONScraper) extractAndEmitMetric(jsonData []byte, metricCfg Metric
 	}
 
 	// Convert based on value type
-	var value interface{}
+	var intValue int64
+	var floatValue float64
 	var err error
 
-	switch metricCfg.ValueType {
-	case "int":
-		switch result.Type {
-		case gjson.Number:
-			value = result.Int()
-		case gjson.String:
-			value, err = strconv.ParseInt(result.String(), 10, 64)
-		case gjson.True:
-			value = int64(1)
-		case gjson.False:
-			value = int64(0)
-		default:
-			return fmt.Errorf("cannot convert %s to int", result.Type)
+	switch result.Type {
+	case gjson.Number:
+		floatValue = result.Float()
+		intValue = result.Int()
+	case gjson.String:
+		if metricCfg.ValueType == "int" {
+			intValue, err = strconv.ParseInt(result.String(), 10, 64)
+			floatValue = float64(intValue)
+		} else {
+			floatValue, err = strconv.ParseFloat(result.String(), 64)
+			intValue = int64(floatValue)
 		}
-	default: // double
-		switch result.Type {
-		case gjson.Number:
-			value = result.Float()
-		case gjson.String:
-			value, err = strconv.ParseFloat(result.String(), 64)
-		case gjson.True:
-			value = 1.0
-		case gjson.False:
-			value = 0.0
-		default:
-			return fmt.Errorf("cannot convert %s to float", result.Type)
-		}
+	case gjson.True:
+		intValue = 1
+		floatValue = 1.0
+	case gjson.False:
+		intValue = 0
+		floatValue = 0.0
+	default:
+		return fmt.Errorf("cannot convert %s to numeric value", result.Type)
 	}
 
 	if err != nil {
 		return fmt.Errorf("failed to parse value: %w", err)
 	}
 
+	// Create metric
+	metric := sm.Metrics().AppendEmpty()
+	metric.SetName(metricCfg.Name)
+	if metricCfg.Description != "" {
+		metric.SetDescription(metricCfg.Description)
+	}
+	if metricCfg.Unit != "" {
+		metric.SetUnit(metricCfg.Unit)
+	}
+
 	// Create attributes
-	attributes := make(map[string]string)
+	attrs := pcommon.NewMap()
 
 	// Add endpoint attributes
-	attributes["http.url"] = endpoint.URL
-	attributes["http.method"] = endpoint.Method
+	attrs.PutStr("http.url", endpoint.URL)
+	attrs.PutStr("http.method", endpoint.Method)
 	if endpoint.Name != "" {
-		attributes["endpoint.name"] = endpoint.Name
+		attrs.PutStr("endpoint.name", endpoint.Name)
 	}
-	attributes["json.path"] = metricCfg.JSONPath
+	attrs.PutStr("json.path", metricCfg.JSONPath)
 
 	// Add configured attributes
 	for k, v := range metricCfg.Attributes {
-		attributes[k] = v
+		attrs.PutStr(k, v)
 	}
 
 	// Emit metric based on type
-	now := time.Now()
+	now := pcommon.NewTimestampFromTime(time.Now())
 
 	switch metricCfg.Type {
 	case "gauge":
+		gauge := metric.SetEmptyGauge()
+		dp := gauge.DataPoints().AppendEmpty()
+		dp.SetTimestamp(now)
 		if metricCfg.ValueType == "int" {
-			h.emitIntGauge(metricCfg.Name, value.(int64), attributes, now)
+			dp.SetIntValue(intValue)
 		} else {
-			h.emitDoubleGauge(metricCfg.Name, value.(float64), attributes, now)
+			dp.SetDoubleValue(floatValue)
 		}
+		attrs.CopyTo(dp.Attributes())
+
 	case "counter":
+		sum := metric.SetEmptySum()
+		sum.SetIsMonotonic(true)
+		sum.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+		dp := sum.DataPoints().AppendEmpty()
+		dp.SetTimestamp(now)
 		if metricCfg.ValueType == "int" {
-			h.emitIntSum(metricCfg.Name, value.(int64), attributes, now)
+			dp.SetIntValue(intValue)
 		} else {
-			h.emitDoubleSum(metricCfg.Name, value.(float64), attributes, now)
+			dp.SetDoubleValue(floatValue)
 		}
+		attrs.CopyTo(dp.Attributes())
+
 	case "histogram":
-		h.emitHistogram(metricCfg.Name, value.(float64), attributes, now)
+		histogram := metric.SetEmptyHistogram()
+		histogram.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
+		dp := histogram.DataPoints().AppendEmpty()
+		dp.SetTimestamp(now)
+		dp.SetCount(1)
+		dp.SetSum(floatValue)
+		dp.BucketCounts().Append(1)
+		dp.ExplicitBounds().Append(floatValue)
+		attrs.CopyTo(dp.Attributes())
 	}
 
+	s.logger.Debug("Extracted metric",
+		zap.String("name", metricCfg.Name),
+		zap.Float64("value", floatValue),
+		zap.String("type", metricCfg.Type))
+
 	return nil
-}
-
-// Helper methods to emit different metric types
-func (h *httpJSONScraper) emitDoubleGauge(name string, value float64, attributes map[string]string, ts time.Time) {
-	// Implementation depends on your metrics builder
-	// This is a simplified example
-}
-
-func (h *httpJSONScraper) emitIntGauge(name string, value int64, attributes map[string]string, ts time.Time) {
-	// Implementation depends on your metrics builder
-}
-
-func (h *httpJSONScraper) emitDoubleSum(name string, value float64, attributes map[string]string, ts time.Time) {
-	// Implementation depends on your metrics builder
-}
-
-func (h *httpJSONScraper) emitIntSum(name string, value int64, attributes map[string]string, ts time.Time) {
-	// Implementation depends on your metrics builder
-}
-
-func (h *httpJSONScraper) emitHistogram(name string, value float64, attributes map[string]string, ts time.Time) {
-	// Implementation depends on your metrics builder
 }
