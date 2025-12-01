@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"math"
 	"sort"
 	"strconv"
@@ -274,7 +273,7 @@ func zipkinKindToSpanKind(kind zipkinmodel.Kind, tags map[string]string) ptrace.
 }
 
 func zTagsToSpanLinks(tags map[string]string, dest ptrace.SpanLinkSlice) error {
-	for i := range 128 {
+	for i := 0; i < 128; i++ {
 		key := fmt.Sprintf("otlp.link.%d", i)
 		val, ok := tags[key]
 		if !ok {
@@ -489,7 +488,9 @@ func populateILFromZipkinSpan(tags map[string]string, instrLibName string, libra
 
 func copySpanTags(tags map[string]string) map[string]string {
 	dest := make(map[string]string, len(tags))
-	maps.Copy(dest, tags)
+	for key, val := range tags {
+		dest[key] = val
+	}
 	return dest
 }
 

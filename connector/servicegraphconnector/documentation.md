@@ -8,24 +8,24 @@ The following telemetry is emitted by this component.
 
 ### otelcol_connector_servicegraph_dropped_spans
 
-Number of spans dropped when trying to add edges [Development]
+Number of spans dropped when trying to add edges
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 ### otelcol_connector_servicegraph_expired_edges
 
-Number of edges that expired before finding its matching span [Development]
+Number of edges that expired before finding its matching span
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 ### otelcol_connector_servicegraph_total_edges
 
-Total number of unique edges [Development]
+Total number of unique edges
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |

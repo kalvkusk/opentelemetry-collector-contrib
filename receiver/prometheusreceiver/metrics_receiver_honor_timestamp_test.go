@@ -226,7 +226,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts2))),
 						compareTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts2))),
 						compareDoubleValue(100),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -234,7 +234,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts3))),
 						compareTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts3))),
 						compareDoubleValue(5),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -250,7 +250,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts4))),
 						compareHistogramTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts4))),
 						compareHistogram(2500, 5000, []float64{0.05, 0.5, 1}, []uint64{1000, 500, 500, 500}),
 					},
@@ -265,7 +265,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts5))),
 						compareSummaryTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts5))),
 						compareSummary(1000, 5000, [][]float64{{0.01, 1}, {0.9, 5}, {0.99, 8}}),
 					},
@@ -302,7 +302,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts7))),
 						compareTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts7))),
 						compareDoubleValue(99),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -310,7 +310,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts8))),
 						compareTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts8))),
 						compareDoubleValue(3),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -326,7 +326,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts9))),
 						compareHistogramTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts9))),
 						compareHistogram(2400, 4950, []float64{0.05, 0.5, 1}, []uint64{900, 500, 500, 500}),
 					},
@@ -341,7 +341,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts10))),
 						compareSummaryTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts10))),
 						compareSummary(900, 4980, [][]float64{{0.01, 1}, {0.9, 6}, {0.99, 8}}),
 					},
@@ -378,7 +378,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts7))),
 						compareTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts12))),
 						compareDoubleValue(100),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -386,7 +386,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts8))),
 						compareTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts13))),
 						compareDoubleValue(5),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -402,7 +402,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts9))),
 						compareHistogramTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts14))),
 						compareHistogram(2500, 5000, []float64{0.05, 0.5, 1}, []uint64{1000, 500, 500, 500}),
 					},
@@ -417,7 +417,7 @@ func verifyHonorTimeStampsTrue(t *testing.T, td *testData, resourceMetrics []pme
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts10))),
 						compareSummaryTimestamp(pcommon.NewTimestampFromTime(time.UnixMilli(ts15))),
 						compareSummary(1000, 5000, [][]float64{{0.01, 1}, {0.9, 5}, {0.99, 8}}),
 					},
@@ -462,7 +462,7 @@ func verifyHonorTimeStampsFalse(t *testing.T, td *testData, resourceMetrics []pm
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts1),
 						compareDoubleValue(100),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -470,7 +470,7 @@ func verifyHonorTimeStampsFalse(t *testing.T, td *testData, resourceMetrics []pm
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts1),
 						compareDoubleValue(5),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -486,7 +486,7 @@ func verifyHonorTimeStampsFalse(t *testing.T, td *testData, resourceMetrics []pm
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts1),
 						compareHistogram(2500, 5000, []float64{0.05, 0.5, 1}, []uint64{1000, 500, 500, 500}),
 					},
@@ -501,7 +501,7 @@ func verifyHonorTimeStampsFalse(t *testing.T, td *testData, resourceMetrics []pm
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts1),
 						compareSummary(1000, 5000, [][]float64{{0.01, 1}, {0.9, 5}, {0.99, 8}}),
 					},
@@ -540,7 +540,7 @@ func verifyHonorTimeStampsFalse(t *testing.T, td *testData, resourceMetrics []pm
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts2),
 						compareTimestamp(ts2),
 						compareDoubleValue(99),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -548,7 +548,7 @@ func verifyHonorTimeStampsFalse(t *testing.T, td *testData, resourceMetrics []pm
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts2),
 						compareTimestamp(ts2),
 						compareDoubleValue(3),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -564,7 +564,7 @@ func verifyHonorTimeStampsFalse(t *testing.T, td *testData, resourceMetrics []pm
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts2),
 						compareHistogramTimestamp(ts2),
 						compareHistogram(2400, 4950, []float64{0.05, 0.5, 1}, []uint64{900, 500, 500, 500}),
 					},
@@ -579,7 +579,7 @@ func verifyHonorTimeStampsFalse(t *testing.T, td *testData, resourceMetrics []pm
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts2),
 						compareSummaryTimestamp(ts2),
 						compareSummary(900, 4980, [][]float64{{0.01, 1}, {0.9, 6}, {0.99, 8}}),
 					},

@@ -49,7 +49,7 @@ func newApacheScraper(
 }
 
 func (r *apacheScraper) start(ctx context.Context, host component.Host) error {
-	httpClient, err := r.cfg.ToClient(ctx, host.GetExtensions(), r.settings)
+	httpClient, err := r.cfg.ToClient(ctx, host, r.settings)
 	if err != nil {
 		return err
 	}
@@ -165,12 +165,13 @@ func (r *apacheScraper) GetStats() (string, error) {
 func parseStats(resp string) map[string]string {
 	metrics := make(map[string]string)
 
-	for field := range strings.SplitSeq(resp, "\n") {
-		key, value, found := strings.Cut(field, ": ")
-		if !found {
+	fields := strings.Split(resp, "\n")
+	for _, field := range fields {
+		index := strings.Index(field, ": ")
+		if index == -1 {
 			continue
 		}
-		metrics[key] = value
+		metrics[field[:index]] = field[index+2:]
 	}
 	return metrics
 }

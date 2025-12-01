@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 	pb "google.golang.org/protobuf/proto"
 
-	cls "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/tencentcloudlogserviceexporter/internal/proto"
+	cls "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/tencentcloudlogserviceexporter/proto"
 )
 
 // logServiceClient log Service's client wrapper

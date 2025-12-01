@@ -458,7 +458,7 @@ func BenchmarkAttributes_FilterLogsByName(b *testing.B) {
 		td := generateLogData(tt.name, tt.inputAttributes)
 
 		b.Run(tt.name, func(b *testing.B) {
-			for b.Loop() {
+			for i := 0; i < b.N; i++ {
 				assert.NoError(b, tp.ConsumeLogs(b.Context(), td))
 			}
 		})

@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"maps"
 	"strings"
 	"sync"
 	"testing"
@@ -823,7 +822,7 @@ func TestReceiverEOF(t *testing.T) {
 	ctc.start(ctc.newRealConsumer, defaultBQ())
 
 	go func() {
-		for range times {
+		for i := 0; i < times; i++ {
 			td := testdata.GenerateTraces(2)
 			expectData = append(expectData, td)
 
@@ -845,7 +844,7 @@ func TestReceiverEOF(t *testing.T) {
 		wg.Done()
 	}()
 
-	for range times {
+	for i := 0; i < times; i++ {
 		actualData = append(actualData, (<-ctc.consume).Data.(ptrace.Traces))
 	}
 
@@ -970,7 +969,7 @@ func TestHeaderReceiverStreamContextOnly(t *testing.T) {
 
 	h := newHeaderReceiver(ctx, nil, true)
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		cc, _, err := h.combineHeaders(ctx, nil)
 
 		require.NoError(t, err)
@@ -988,7 +987,7 @@ func TestHeaderReceiverNoIncludeMetadata(t *testing.T) {
 
 	h := newHeaderReceiver(ctx, nil, false)
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		cc, _, err := h.combineHeaders(ctx, nil)
 
 		require.NoError(t, err)
@@ -1012,7 +1011,7 @@ func TestHeaderReceiverAuthServerNoIncludeMetadata(t *testing.T) {
 
 	h := newHeaderReceiver(ctx, as, false)
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		cc, hdrs, err := h.combineHeaders(ctx, nil)
 
 		// The incoming metadata keys are not in the context.
@@ -1042,7 +1041,7 @@ func TestHeaderReceiverRequestNoStreamMetadata(t *testing.T) {
 
 	h := newHeaderReceiver(ctx, nil, true)
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		hpb.Reset()
 
 		for key, vals := range expect {
@@ -1082,7 +1081,7 @@ func TestHeaderReceiverAuthServerIsSetNoIncludeMetadata(t *testing.T) {
 
 	h := newHeaderReceiver(ctx, as, true)
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		hpb.Reset()
 
 		for key, vals := range expect {
@@ -1141,7 +1140,7 @@ func TestHeaderReceiverBothMetadata(t *testing.T) {
 
 	h := newHeaderReceiver(ctx, nil, true)
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		hpb.Reset()
 
 		for key, vals := range expectL {
@@ -1187,7 +1186,7 @@ func TestHeaderReceiverDuplicateMetadata(t *testing.T) {
 
 	h := newHeaderReceiver(ctx, nil, true)
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		hpb.Reset()
 
 		for key, vals := range expectRequest {
@@ -1257,7 +1256,9 @@ func testReceiverAuthHeaders(t *testing.T, includeMeta, dataAuth bool) {
 
 		if ok {
 			newmd := map[string][]string{}
-			maps.Copy(newmd, hdrs)
+			for k, v := range hdrs {
+				newmd[k] = v
+			}
 			newmd["has_auth"] = []string{":+1:", ":100:"}
 			return client.NewContext(ctx, client.Info{
 				Metadata: client.NewMetadata(newmd),
@@ -1305,7 +1306,9 @@ func testReceiverAuthHeaders(t *testing.T, includeMeta, dataAuth bool) {
 		cpy := map[string][]string{}
 		cpy["stream_ctx"] = []string{"per-request"}
 
-		maps.Copy(cpy, testInput)
+		for k, v := range testInput {
+			cpy[k] = v
+		}
 
 		expectCode := arrowpb.StatusCode_OK
 		if dataAuth {
@@ -1371,7 +1374,7 @@ func TestHeaderReceiverIsTraced(t *testing.T) {
 
 	h := newHeaderReceiver(ctx, nil, true)
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		hpb.Reset()
 
 		for key, vals := range requestHeaders {

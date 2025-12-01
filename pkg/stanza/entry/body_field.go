@@ -6,14 +6,11 @@ package entry // import "github.com/open-telemetry/opentelemetry-collector-contr
 import (
 	"encoding/json"
 	"fmt"
-	"maps"
 )
 
 // BodyField is a field found on an entry body.
 type BodyField struct {
 	Keys []string
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // NewBodyField creates a new field from an ordered array of keys.
@@ -21,7 +18,7 @@ func NewBodyField(keys ...string) Field {
 	if keys == nil {
 		keys = []string{}
 	}
-	return Field{FieldInterface: BodyField{
+	return Field{BodyField{
 		Keys: keys,
 	}}
 }
@@ -34,7 +31,7 @@ func (f BodyField) Parent() BodyField {
 	}
 
 	keys := f.Keys[:len(f.Keys)-1]
-	return BodyField{Keys: keys}
+	return BodyField{keys}
 }
 
 // Child returns a child of the current field using the given key.
@@ -42,7 +39,7 @@ func (f BodyField) Child(key string) BodyField {
 	child := make([]string, len(f.Keys), len(f.Keys)+1)
 	copy(child, f.Keys)
 	child = append(child, key)
-	return BodyField{Keys: child}
+	return BodyField{child}
 }
 
 // IsRoot returns a boolean indicating if this is a root level field.
@@ -118,7 +115,9 @@ func (f BodyField) Merge(entry *Entry, mapValues map[string]any) {
 		currentMap = getNestedMap(currentMap, key)
 	}
 
-	maps.Copy(currentMap, mapValues)
+	for key, value := range mapValues {
+		currentMap[key] = value
+	}
 }
 
 // Delete removes a value from an entry's body using the field.
@@ -171,7 +170,7 @@ func (f *BodyField) UnmarshalJSON(raw []byte) error {
 		return fmt.Errorf("must start with 'body': %s", value)
 	}
 
-	*f = BodyField{Keys: keys[1:]}
+	*f = BodyField{keys[1:]}
 	return nil
 }
 
@@ -191,7 +190,7 @@ func (f *BodyField) UnmarshalYAML(unmarshal func(any) error) error {
 		return fmt.Errorf("must start with 'body': %s", value)
 	}
 
-	*f = BodyField{Keys: keys[1:]}
+	*f = BodyField{keys[1:]}
 	return nil
 }
 
@@ -206,6 +205,6 @@ func (f *BodyField) UnmarshalText(text []byte) error {
 		return fmt.Errorf("must start with 'body': %s", text)
 	}
 
-	*f = BodyField{Keys: keys[1:]}
+	*f = BodyField{keys[1:]}
 	return nil
 }

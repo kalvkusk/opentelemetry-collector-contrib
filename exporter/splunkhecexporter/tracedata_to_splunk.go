@@ -41,17 +41,17 @@ type hecSpan struct {
 	Attributes map[string]any    `json:"attributes,omitempty"`
 	EndTime    pcommon.Timestamp `json:"end_time"`
 	Kind       string            `json:"kind"`
-	Status     hecSpanStatus     `json:"status"`
+	Status     hecSpanStatus     `json:"status,omitempty"`
 	StartTime  pcommon.Timestamp `json:"start_time"`
 	Events     []hecEvent        `json:"events,omitempty"`
 	Links      []hecLink         `json:"links,omitempty"`
 }
 
 func mapSpanToSplunkEvent(resource pcommon.Resource, span ptrace.Span, config *Config) *splunk.Event {
-	sourceKey := config.OtelAttrsToHec.Source
-	sourceTypeKey := config.OtelAttrsToHec.SourceType
-	indexKey := config.OtelAttrsToHec.Index
-	hostKey := config.OtelAttrsToHec.Host
+	sourceKey := config.HecToOtelAttrs.Source
+	sourceTypeKey := config.HecToOtelAttrs.SourceType
+	indexKey := config.HecToOtelAttrs.Index
+	hostKey := config.HecToOtelAttrs.Host
 
 	host := unknownHostName
 	source := config.Source

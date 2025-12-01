@@ -16,8 +16,7 @@ import (
 )
 
 func TestDropEvaluatorNotSampled(t *testing.T) {
-	n1, err := NewStringAttributeFilter(componenttest.NewNopTelemetrySettings(), "name", []string{"value"}, false, 0, false)
-	require.NoError(t, err)
+	n1 := NewStringAttributeFilter(componenttest.NewNopTelemetrySettings(), "name", []string{"value"}, false, 0, false)
 	n2, err := NewStatusCodeFilter(componenttest.NewNopTelemetrySettings(), []string{"ERROR"})
 	require.NoError(t, err)
 
@@ -41,8 +40,7 @@ func TestDropEvaluatorNotSampled(t *testing.T) {
 }
 
 func TestDropEvaluatorSampled(t *testing.T) {
-	n1, err := NewStringAttributeFilter(componenttest.NewNopTelemetrySettings(), "attribute_name", []string{"attribute_value"}, false, 0, false)
-	require.NoError(t, err)
+	n1 := NewStringAttributeFilter(componenttest.NewNopTelemetrySettings(), "attribute_name", []string{"attribute_value"}, false, 0, false)
 	n2, err := NewStatusCodeFilter(componenttest.NewNopTelemetrySettings(), []string{"ERROR"})
 	require.NoError(t, err)
 
@@ -67,8 +65,7 @@ func TestDropEvaluatorSampled(t *testing.T) {
 }
 
 func TestDropEvaluatorStringInvertMatch(t *testing.T) {
-	n1, err := NewStringAttributeFilter(componenttest.NewNopTelemetrySettings(), "attribute_name", []string{"no_match"}, false, 0, true)
-	require.NoError(t, err)
+	n1 := NewStringAttributeFilter(componenttest.NewNopTelemetrySettings(), "attribute_name", []string{"no_match"}, false, 0, true)
 	n2, err := NewStatusCodeFilter(componenttest.NewNopTelemetrySettings(), []string{"ERROR"})
 	require.NoError(t, err)
 
@@ -93,8 +90,7 @@ func TestDropEvaluatorStringInvertMatch(t *testing.T) {
 }
 
 func TestDropEvaluatorStringInvertNotMatch(t *testing.T) {
-	n1, err := NewStringAttributeFilter(componenttest.NewNopTelemetrySettings(), "attribute_name", []string{"attribute_value"}, false, 0, true)
-	require.NoError(t, err)
+	n1 := NewStringAttributeFilter(componenttest.NewNopTelemetrySettings(), "attribute_name", []string{"attribute_value"}, false, 0, true)
 	n2, err := NewStatusCodeFilter(componenttest.NewNopTelemetrySettings(), []string{"ERROR"})
 	require.NoError(t, err)
 

@@ -37,6 +37,8 @@ func addCPUUtilizationMetrics(
 	r resources,
 	nodeCPULimit float64,
 ) {
+	cpuMetrics.Utilization(mb, currentTime, usageCores)
+
 	if nodeCPULimit > 0 {
 		cpuMetrics.NodeUtilization(mb, currentTime, usageCores/nodeCPULimit)
 	}

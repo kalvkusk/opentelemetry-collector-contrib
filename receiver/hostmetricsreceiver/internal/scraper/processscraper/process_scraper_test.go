@@ -772,6 +772,14 @@ func TestScrapeMetrics_ProcessErrors(t *testing.T) {
 			}(),
 		},
 		{
+			name:        "Cgroup Error",
+			osFilter:    []string{"darwin", "windows"},
+			cgroupError: errors.New("err1"),
+			expectedError: func() string {
+				return `error reading process cgroup for pid 1: err1`
+			}(),
+		},
+		{
 			name:          "Cmdline Error",
 			osFilter:      []string{"darwin"},
 			cmdlineError:  errors.New("err2"),
@@ -865,11 +873,9 @@ func TestScrapeMetrics_ProcessErrors(t *testing.T) {
 			numThreadsError:     errors.New("err8"),
 			numCtxSwitchesError: errors.New("err9"),
 			numFDsError:         errors.New("err10"),
-			cgroupError:         errors.New("err11"),
 			handleCountError:    handleCountErrorIfSupportedOnPlatform(),
 			rlimitError:         errors.New("err-rlimit"),
-			expectedError: handleCGroupErrorMessageIfSupportedOnPlatform() +
-				`error reading command for process "test" (pid 1): err2; ` +
+			expectedError: `error reading command for process "test" (pid 1): err2; ` +
 				`error reading username for process "test" (pid 1): err3; ` +
 				`error reading create time for process "test" (pid 1): err4; ` +
 				`error reading cpu times for process "test" (pid 1): err5; ` +
@@ -959,7 +965,7 @@ func TestScrapeMetrics_ProcessErrors(t *testing.T) {
 				executableError = test.cmdlineError
 			}
 
-			expectedResourceMetricsLen, expectedMetricsLen := getExpectedLengthOfReturnedMetrics(test.nameError, executableError, test.timesError, test.memoryInfoError, test.memoryPercentError, test.ioCountersError, test.pageFaultsError, test.numThreadsError, test.numCtxSwitchesError, test.numFDsError, test.handleCountError, test.rlimitError, test.createTimeError)
+			expectedResourceMetricsLen, expectedMetricsLen := getExpectedLengthOfReturnedMetrics(test.nameError, executableError, test.timesError, test.memoryInfoError, test.memoryPercentError, test.ioCountersError, test.pageFaultsError, test.numThreadsError, test.numCtxSwitchesError, test.numFDsError, test.handleCountError, test.rlimitError, test.cgroupError, test.createTimeError)
 			assert.Equal(t, expectedResourceMetricsLen, md.ResourceMetrics().Len())
 			assert.Equal(t, expectedMetricsLen, md.MetricCount())
 
@@ -967,7 +973,7 @@ func TestScrapeMetrics_ProcessErrors(t *testing.T) {
 			isPartial := scrapererror.IsPartialScrapeError(err)
 			assert.True(t, isPartial)
 			if isPartial {
-				expectedFailures := getExpectedScrapeFailures(test.nameError, executableError, test.timesError, test.memoryInfoError, test.memoryPercentError, test.ioCountersError, test.pageFaultsError, test.numThreadsError, test.numCtxSwitchesError, test.numFDsError, test.handleCountError, test.rlimitError, test.createTimeError)
+				expectedFailures := getExpectedScrapeFailures(test.nameError, executableError, test.timesError, test.memoryInfoError, test.memoryPercentError, test.ioCountersError, test.pageFaultsError, test.numThreadsError, test.numCtxSwitchesError, test.numFDsError, test.handleCountError, test.rlimitError, test.cgroupError, test.createTimeError)
 				var scraperErr scrapererror.PartialScrapeError
 				require.ErrorAs(t, err, &scraperErr)
 				assert.Equal(t, expectedFailures, scraperErr.Failed)
@@ -976,8 +982,11 @@ func TestScrapeMetrics_ProcessErrors(t *testing.T) {
 	}
 }
 
-func getExpectedLengthOfReturnedMetrics(nameError, exeError, timeError, memError, memPercentError, diskError, pageFaultsError, threadError, contextSwitchError, fileDescriptorError, handleCountError, rlimitError, uptimeError error) (int, int) {
+func getExpectedLengthOfReturnedMetrics(nameError, exeError, timeError, memError, memPercentError, diskError, pageFaultsError, threadError, contextSwitchError, fileDescriptorError, handleCountError, rlimitError, cgroupError, uptimeError error) (int, int) {
 	if runtime.GOOS == "windows" && exeError != nil {
+		return 0, 0
+	}
+	if runtime.GOOS == "linux" && cgroupError != nil {
 		return 0, 0
 	}
 
@@ -998,7 +1007,6 @@ func getExpectedLengthOfReturnedMetrics(nameError, exeError, timeError, memError
 	if diskError == nil && runtime.GOOS != "darwin" {
 		expectedLen += diskMetricsLen
 	}
-
 	if pageFaultsError == nil && runtime.GOOS != "darwin" {
 		expectedLen += pagingMetricsLen
 	}
@@ -1027,15 +1035,18 @@ func getExpectedLengthOfReturnedMetrics(nameError, exeError, timeError, memError
 	return 1, expectedLen
 }
 
-func getExpectedScrapeFailures(nameError, exeError, timeError, memError, memPercentError, diskError, pageFaultsError, threadError, contextSwitchError, fileDescriptorError, handleCountError, rlimitError, uptimeError error) int {
+func getExpectedScrapeFailures(nameError, exeError, timeError, memError, memPercentError, diskError, pageFaultsError, threadError, contextSwitchError, fileDescriptorError, handleCountError, rlimitError, cgroupError, uptimeError error) int {
 	if runtime.GOOS == "windows" && exeError != nil {
 		return 2
+	}
+	if runtime.GOOS == "linux" && cgroupError != nil {
+		return 1
 	}
 
 	if nameError != nil || exeError != nil {
 		return 1
 	}
-	_, expectedMetricsLen := getExpectedLengthOfReturnedMetrics(nameError, exeError, timeError, memError, memPercentError, diskError, pageFaultsError, threadError, contextSwitchError, fileDescriptorError, handleCountError, rlimitError, uptimeError)
+	_, expectedMetricsLen := getExpectedLengthOfReturnedMetrics(nameError, exeError, timeError, memError, memPercentError, diskError, pageFaultsError, threadError, contextSwitchError, fileDescriptorError, handleCountError, rlimitError, cgroupError, uptimeError)
 
 	// excluding unsupported metrics from darwin 'metricsLen'
 	if runtime.GOOS == "darwin" {
@@ -1372,16 +1383,10 @@ func handleCountErrorIfSupportedOnPlatform() error {
 	return nil
 }
 
-func handleCGroupErrorMessageIfSupportedOnPlatform() string {
-	if runtime.GOOS == "linux" {
-		return `error reading process cgroup for pid 1: err11; `
-	}
-	return ``
-}
-
 func handleCountErrorMessageIfSupportedOnPlatform() string {
 	if handleCountErr := handleCountErrorIfSupportedOnPlatform(); handleCountErr != nil {
 		return fmt.Errorf("error reading handle count for process \"test\" (pid 1): %w; ", handleCountErr).Error()
 	}
+
 	return ""
 }

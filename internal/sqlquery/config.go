@@ -103,8 +103,7 @@ func (q Query) Validate() error {
 			errs = append(errs, err)
 		}
 	}
-	for i := range q.Metrics {
-		metric := &q.Metrics[i]
+	for _, metric := range q.Metrics {
 		if err := metric.Validate(); err != nil {
 			errs = append(errs, err)
 		}

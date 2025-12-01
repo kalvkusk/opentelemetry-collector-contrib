@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 )
@@ -174,10 +173,10 @@ func Test_toKeyValueString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exprFunc, err := toKeyValueString[any](tt.target, tt.delimiter, tt.pairDelimiter, ottl.NewTestingOptional[bool](true))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			result, err := exprFunc(t.Context(), nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			actual, ok := result.(string)
 			assert.True(t, ok)
@@ -215,7 +214,7 @@ func Test_toKeyValueString_bad_target(t *testing.T) {
 	delimiter := ottl.NewTestingOptional[string]("=")
 	pairDelimiter := ottl.NewTestingOptional[string]("!")
 	exprFunc, err := toKeyValueString[any](target, delimiter, pairDelimiter, ottl.NewTestingOptional[bool](false))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = exprFunc(t.Context(), nil)
 	assert.Error(t, err)
 }
@@ -229,7 +228,7 @@ func Test_toKeyValueString_empty_target(t *testing.T) {
 	delimiter := ottl.NewTestingOptional[string]("=")
 	pairDelimiter := ottl.NewTestingOptional[string]("!")
 	exprFunc, err := toKeyValueString[any](target, delimiter, pairDelimiter, ottl.NewTestingOptional[bool](false))
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = exprFunc(t.Context(), nil)
 	assert.Error(t, err)
 }

@@ -1,1 +1,0 @@
-Note: testdata from https://github.com/google/pprof/tree/main/profile/testdata

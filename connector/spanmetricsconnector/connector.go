@@ -6,7 +6,6 @@ package spanmetricsconnector // import "github.com/open-telemetry/opentelemetry-
 import (
 	"bytes"
 	"context"
-	"slices"
 	"sync"
 	"time"
 
@@ -33,8 +32,6 @@ const (
 	spanNameKey                    = "span.name"                          // OpenTelemetry non-standard constant.
 	spanKindKey                    = "span.kind"                          // OpenTelemetry non-standard constant.
 	statusCodeKey                  = "status.code"                        // OpenTelemetry non-standard constant.
-	collectorInstanceKey           = "collector.instance.id"              // OpenTelemetry non-standard constant.
-	otelStatusCodeKey              = "otel.status_code"                   // OpenTelemetry non-standard constant.
 	instrumentationScopeNameKey    = "span.instrumentation.scope.name"    // OpenTelemetry non-standard constant.
 	instrumentationScopeVersionKey = "span.instrumentation.scope.version" // OpenTelemetry non-standard constant.
 	metricKeySeparator             = string(byte(0))
@@ -45,7 +42,7 @@ const (
 	metricNameCalls    = "calls"
 	metricNameEvents   = "events"
 
-	defaultUnit = metrics.Seconds
+	defaultUnit = metrics.Milliseconds
 
 	// https://github.com/open-telemetry/opentelemetry-go/blob/3ae002c3caf3e44387f0554dfcbbde2c5aab7909/sdk/metric/internal/aggregate/limit.go#L11C36-L11C50
 	overflowKey = "otel.metric.overflow"
@@ -89,7 +86,6 @@ type connectorImp struct {
 
 	// Tracks the last TimestampUnixNano for delta metrics so that they represent an uninterrupted series. Unused for cumulative span metrics.
 	lastDeltaTimestamps *simplelru.LRU[metrics.Key, pcommon.Timestamp]
-	instanceID          string
 }
 
 type resourceMetrics struct {
@@ -116,7 +112,7 @@ func newDimensions(cfgDims []Dimension) []utilattri.Dimension {
 	return dims
 }
 
-func newConnector(logger *zap.Logger, config component.Config, clock clockwork.Clock, instanceID string) (*connectorImp, error) {
+func newConnector(logger *zap.Logger, config component.Config, clock clockwork.Clock) (*connectorImp, error) {
 	logger.Info("Building spanmetrics connector")
 	cfg := config.(*Config)
 	if cfg.DimensionsCacheSize != 0 {
@@ -159,7 +155,6 @@ func newConnector(logger *zap.Logger, config component.Config, clock clockwork.C
 		callsDimensions:              newDimensions(cfg.CallsDimensions),
 		durationDimensions:           newDimensions(cfg.Histogram.Dimensions),
 		events:                       cfg.Events,
-		instanceID:                   instanceID,
 	}, nil
 }
 
@@ -280,9 +275,7 @@ func (p *connectorImp) buildMetrics() pmetric.Metrics {
 
 	p.resourceMetrics.ForEach(func(_ resourceKey, rawMetrics *resourceMetrics) {
 		rm := m.ResourceMetrics().AppendEmpty()
-		if !excludeResourceMetrics.IsEnabled() || p.config.AddResourceAttributes {
-			rawMetrics.attributes.CopyTo(rm.Resource().Attributes())
-		}
+		rawMetrics.attributes.CopyTo(rm.Resource().Attributes())
 
 		sm := rm.ScopeMetrics().AppendEmpty()
 		sm.Scope().SetName("spanmetricsconnector")
@@ -518,6 +511,16 @@ func (p *connectorImp) getOrCreateResourceMetrics(attr pcommon.Map) *resourceMet
 	return v
 }
 
+// contains checks if string slice contains a string value
+func contains(elements []string, value string) bool {
+	for _, element := range elements {
+		if value == element {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *connectorImp) buildAttributes(
 	serviceName string,
 	span ptrace.Span,
@@ -526,36 +529,21 @@ func (p *connectorImp) buildAttributes(
 	instrumentationScope pcommon.InstrumentationScope,
 ) pcommon.Map {
 	attr := pcommon.NewMap()
-	attr.EnsureCapacity(5 + len(dimensions))
-	if !slices.Contains(p.config.ExcludeDimensions, serviceNameKey) {
+	attr.EnsureCapacity(4 + len(dimensions))
+	if !contains(p.config.ExcludeDimensions, serviceNameKey) {
 		attr.PutStr(serviceNameKey, serviceName)
 	}
-	if !slices.Contains(p.config.ExcludeDimensions, spanNameKey) {
+	if !contains(p.config.ExcludeDimensions, spanNameKey) {
 		attr.PutStr(spanNameKey, span.Name())
 	}
-	if !slices.Contains(p.config.ExcludeDimensions, spanKindKey) {
+	if !contains(p.config.ExcludeDimensions, spanKindKey) {
 		attr.PutStr(spanKindKey, traceutil.SpanKindStr(span.Kind()))
 	}
-	if useOtelStatusCodeAttribute.IsEnabled() {
-		if !slices.Contains(p.config.ExcludeDimensions, otelStatusCodeKey) {
-			if span.Status().Code() == ptrace.StatusCodeError {
-				attr.PutStr(otelStatusCodeKey, "ERROR")
-			} else if span.Status().Code() == ptrace.StatusCodeOk {
-				attr.PutStr(otelStatusCodeKey, "OK")
-			}
-		}
-	} else {
-		if !slices.Contains(p.config.ExcludeDimensions, statusCodeKey) {
-			attr.PutStr(statusCodeKey, traceutil.StatusCodeStr(span.Status().Code()))
-		}
-	}
-	if includeCollectorInstanceID.IsEnabled() {
-		if !slices.Contains(p.config.ExcludeDimensions, collectorInstanceKey) {
-			attr.PutStr(collectorInstanceKey, p.instanceID)
-		}
+	if !contains(p.config.ExcludeDimensions, statusCodeKey) {
+		attr.PutStr(statusCodeKey, traceutil.StatusCodeStr(span.Status().Code()))
 	}
 
-	if slices.Contains(p.config.IncludeInstrumentationScope, instrumentationScope.Name()) && instrumentationScope.Name() != "" {
+	if contains(p.config.IncludeInstrumentationScope, instrumentationScope.Name()) && instrumentationScope.Name() != "" {
 		attr.PutStr(instrumentationScopeNameKey, instrumentationScope.Name())
 		if instrumentationScope.Version() != "" {
 			attr.PutStr(instrumentationScopeVersionKey, instrumentationScope.Version())
@@ -590,23 +578,17 @@ func concatDimensionValue(dest *bytes.Buffer, value string, prefixSep bool) {
 func (p *connectorImp) buildKey(serviceName string, span ptrace.Span, optionalDims []utilattri.Dimension, resourceOrEventAttrs pcommon.Map) metrics.Key {
 	p.keyBuf.Reset()
 
-	if !slices.Contains(p.config.ExcludeDimensions, serviceNameKey) {
+	if !contains(p.config.ExcludeDimensions, serviceNameKey) {
 		concatDimensionValue(p.keyBuf, serviceName, false)
 	}
-	if !slices.Contains(p.config.ExcludeDimensions, spanNameKey) {
+	if !contains(p.config.ExcludeDimensions, spanNameKey) {
 		concatDimensionValue(p.keyBuf, span.Name(), true)
 	}
-	if !slices.Contains(p.config.ExcludeDimensions, spanKindKey) {
+	if !contains(p.config.ExcludeDimensions, spanKindKey) {
 		concatDimensionValue(p.keyBuf, traceutil.SpanKindStr(span.Kind()), true)
 	}
-	if useOtelStatusCodeAttribute.IsEnabled() {
-		if !slices.Contains(p.config.ExcludeDimensions, otelStatusCodeKey) {
-			concatDimensionValue(p.keyBuf, traceutil.StatusCodeStr(span.Status().Code()), true)
-		}
-	} else {
-		if !slices.Contains(p.config.ExcludeDimensions, statusCodeKey) {
-			concatDimensionValue(p.keyBuf, traceutil.StatusCodeStr(span.Status().Code()), true)
-		}
+	if !contains(p.config.ExcludeDimensions, statusCodeKey) {
+		concatDimensionValue(p.keyBuf, traceutil.StatusCodeStr(span.Status().Code()), true)
 	}
 
 	for _, d := range optionalDims {

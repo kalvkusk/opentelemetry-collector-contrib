@@ -58,7 +58,7 @@ func (f *metricsRouter) consumeByHealthyPipeline(ctx context.Context, md pmetric
 // sampleRetryConsumers iterates through all unhealthy consumers to re-establish a healthy connection
 func (f *metricsRouter) sampleRetryConsumers(ctx context.Context, md pmetric.Metrics) bool {
 	stableIndex := f.pS.CurrentPipeline()
-	for i := range stableIndex {
+	for i := 0; i < stableIndex; i++ {
 		consumer := f.getConsumerAtIndex(i)
 		err := consumer.ConsumeMetrics(ctx, md)
 		if err == nil {

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 )
@@ -62,7 +61,7 @@ func Test_Format(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			exprFunc := format(tt.formatString, tt.formatArgs)
 			result, err := exprFunc(nil, nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

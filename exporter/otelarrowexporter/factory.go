@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/config/configcompression"
 	"go.opentelemetry.io/collector/config/configgrpc"
+	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/config/configretry"
 	"go.opentelemetry.io/collector/consumer"
@@ -63,6 +64,7 @@ func createDefaultConfig() component.Config {
 		RetryConfig:     configretry.NewDefaultBackOffConfig(),
 		QueueSettings:   queueCfg,
 		ClientConfig: configgrpc.ClientConfig{
+			Headers: map[string]configopaque.String{},
 			// Default to zstd compression
 			Compression: configcompression.TypeZstd,
 			// We almost read 0 bytes, so no need to tune ReadBufferSize.
@@ -86,13 +88,13 @@ func createDefaultConfig() component.Config {
 	}
 }
 
-func helperOptions(e exp) []exporterhelper.Option {
+func helperOptions(e exp, qbs exporterhelper.QueueBatchSettings) []exporterhelper.Option {
 	cfg := e.getConfig().(*Config)
 	return []exporterhelper.Option{
 		exporterhelper.WithCapabilities(consumer.Capabilities{MutatesData: false}),
 		exporterhelper.WithTimeout(cfg.TimeoutSettings),
 		exporterhelper.WithRetry(cfg.RetryConfig),
-		exporterhelper.WithQueue(cfg.QueueSettings),
+		exporterhelper.WithQueueBatch(cfg.QueueSettings, qbs),
 		exporterhelper.WithStart(e.start),
 		exporterhelper.WithShutdown(e.shutdown),
 	}
@@ -123,7 +125,7 @@ func createTracesExporter(
 	}
 	return exporterhelper.NewTraces(ctx, e.getSettings(), e.getConfig(),
 		e.pushTraces,
-		helperOptions(e)...,
+		helperOptions(e, exporterhelper.NewTracesQueueBatchSettings())...,
 	)
 }
 
@@ -142,7 +144,7 @@ func createMetricsExporter(
 	}
 	return exporterhelper.NewMetrics(ctx, e.getSettings(), e.getConfig(),
 		e.pushMetrics,
-		helperOptions(e)...,
+		helperOptions(e, exporterhelper.NewMetricsQueueBatchSettings())...,
 	)
 }
 
@@ -161,6 +163,6 @@ func createLogsExporter(
 	}
 	return exporterhelper.NewLogs(ctx, e.getSettings(), e.getConfig(),
 		e.pushLogs,
-		helperOptions(e)...,
+		helperOptions(e, exporterhelper.NewLogsQueueBatchSettings())...,
 	)
 }

@@ -16,73 +16,73 @@ metrics:
 
 The amount of memory allocated to the node.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| By | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| By | Sum | Int | Cumulative | false |
 
 ### riak.node.operation.count
 
 The number of operations performed by the node.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {operation} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {operation} | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| request | The request operation type. | Str: ``put``, ``get`` | Recommended |
+| request | The request operation type. | Str: ``put``, ``get`` | false |
 
 ### riak.node.operation.time.mean
 
 The mean time between request and response for operations performed by the node over the last minute.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| us | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| us | Gauge | Int |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| request | The request operation type. | Str: ``put``, ``get`` | Recommended |
+| request | The request operation type. | Str: ``put``, ``get`` | false |
 
 ### riak.node.read_repair.count
 
 The number of read repairs performed by the node.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {read_repair} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {read_repair} | Sum | Int | Cumulative | true |
 
 ### riak.vnode.index.operation.count
 
 The number of index operations performed by vnodes on the node.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {operation} | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {operation} | Sum | Int | Cumulative | false |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| operation | The operation type for index operations. | Str: ``read``, ``write``, ``delete`` | Recommended |
+| operation | The operation type for index operations. | Str: ``read``, ``write``, ``delete`` | false |
 
 ### riak.vnode.operation.count
 
 The number of operations performed by vnodes on the node.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {operation} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {operation} | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| request | The request operation type. | Str: ``put``, ``get`` | Recommended |
+| request | The request operation type. | Str: ``put``, ``get`` | false |
 
 ## Resource Attributes
 

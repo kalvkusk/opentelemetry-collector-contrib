@@ -5,7 +5,6 @@ package extractors // import "github.com/open-telemetry/opentelemetry-collector-
 
 import (
 	"fmt"
-	"maps"
 	"time"
 
 	cinfo "github.com/google/cadvisor/info/v1"
@@ -68,7 +67,9 @@ func (c *CAdvisorMetric) GetMetricType() string {
 }
 
 func (c *CAdvisorMetric) AddTags(tags map[string]string) {
-	maps.Copy(c.tags, tags)
+	for k, v := range tags {
+		c.tags[k] = v
+	}
 }
 
 func (c *CAdvisorMetric) HasField(key string) bool {

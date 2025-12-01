@@ -38,8 +38,6 @@ type DataReceiver interface {
 type DataReceiverBase struct {
 	// Port on which to listen.
 	Port int
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // TODO: Move these constants.

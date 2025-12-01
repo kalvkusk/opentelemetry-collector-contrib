@@ -77,7 +77,7 @@ func prepareSenderTest(t *testing.T, compression configcompression.Type, cb []fu
 	cfg.Auth = configoptional.None[configauth.Config]()
 	httpSettings := cfg.ClientConfig
 	host := componenttest.NewNopHost()
-	client, err := httpSettings.ToClient(t.Context(), host.GetExtensions(), componenttest.NewNopTelemetrySettings())
+	client, err := httpSettings.ToClient(t.Context(), host, componenttest.NewNopTelemetrySettings())
 	require.NoError(t, err)
 	if err != nil {
 		return nil
@@ -147,7 +147,7 @@ func exampleTwoLogs() []plog.LogRecord {
 
 func exampleNLogs(n int) []plog.LogRecord {
 	buffer := make([]plog.LogRecord, n)
-	for i := range n {
+	for i := 0; i < n; i++ {
 		buffer[i] = plog.NewLogRecord()
 		buffer[i].Body().SetStr("Example log")
 	}
@@ -808,7 +808,7 @@ func TestSendLogsOTLP(t *testing.T) {
 	ls := l.ResourceLogs().AppendEmpty()
 
 	logRecords := exampleTwoLogs()
-	for i := range logRecords {
+	for i := 0; i < len(logRecords); i++ {
 		logRecords[i].MoveTo(ls.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty())
 	}
 

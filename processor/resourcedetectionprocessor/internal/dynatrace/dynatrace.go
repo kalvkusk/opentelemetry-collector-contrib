@@ -27,7 +27,7 @@ const TypeStr = "dynatrace"
 
 const dtHostMetadataProperties = "dt_host_metadata.properties"
 
-var dtHostProperties = []string{"dt.entity.host", "host.name", "dt.smartscape.host"}
+var dtHostProperties = []string{"dt.entity.host", "host.name"}
 
 type Detector struct {
 	enrichmentDirectory string

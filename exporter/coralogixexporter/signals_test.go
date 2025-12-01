@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/config/configcompression"
 	"go.opentelemetry.io/collector/config/configgrpc"
 	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/consumer/consumererror"
@@ -144,11 +143,7 @@ func TestProcessError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			exp := &signalExporter{
-				config: &Config{
-					Protocol: grpcProtocol,
-				},
-			}
+			exp := &signalExporter{}
 			err := exp.processError(tt.err)
 			if tt.expected == nil {
 				assert.NoError(t, err)
@@ -169,6 +164,9 @@ func TestSignalExporter_AuthorizationHeader(t *testing.T) {
 	cfg := &Config{
 		Domain:     "test.domain.com",
 		PrivateKey: configopaque.String(privateKey),
+		Logs: configgrpc.ClientConfig{
+			Headers: map[string]configopaque.String{},
+		},
 	}
 
 	exp, err := newSignalExporter(cfg, exportertest.NewNopSettings(exportertest.NopType), "", nil)
@@ -181,7 +179,7 @@ func TestSignalExporter_AuthorizationHeader(t *testing.T) {
 		require.NoError(t, exp.shutdown(t.Context()))
 	}()
 
-	authHeader, ok := wrapper.config.Headers.Get("Authorization")
+	authHeader, ok := wrapper.config.Headers["Authorization"]
 	require.True(t, ok, "Authorization header should be present")
 	assert.Equal(t, configopaque.String("Bearer "+privateKey), authHeader, "Authorization header should be in Bearer format")
 
@@ -198,36 +196,36 @@ func TestSignalExporter_CustomHeadersAndAuthorization(t *testing.T) {
 		{
 			name: "logs",
 			config: configgrpc.ClientConfig{
-				Headers: configopaque.MapList{
-					{Name: "Custom-Header", Value: "custom-value"},
-					{Name: "X-Test", Value: "test-value"},
+				Headers: map[string]configopaque.String{
+					"Custom-Header": "custom-value",
+					"X-Test":        "test-value",
 				},
 			},
 		},
 		{
 			name: "traces",
 			config: configgrpc.ClientConfig{
-				Headers: configopaque.MapList{
-					{Name: "Custom-Header", Value: "custom-value"},
-					{Name: "X-Test", Value: "test-value"},
+				Headers: map[string]configopaque.String{
+					"Custom-Header": "custom-value",
+					"X-Test":        "test-value",
 				},
 			},
 		},
 		{
 			name: "metrics",
 			config: configgrpc.ClientConfig{
-				Headers: configopaque.MapList{
-					{Name: "Custom-Header", Value: "custom-value"},
-					{Name: "X-Test", Value: "test-value"},
+				Headers: map[string]configopaque.String{
+					"Custom-Header": "custom-value",
+					"X-Test":        "test-value",
 				},
 			},
 		},
 		{
 			name: "profiles",
 			config: configgrpc.ClientConfig{
-				Headers: configopaque.MapList{
-					{Name: "Custom-Header", Value: "custom-value"},
-					{Name: "X-Test", Value: "test-value"},
+				Headers: map[string]configopaque.String{
+					"Custom-Header": "custom-value",
+					"X-Test":        "test-value",
 				},
 			},
 		},
@@ -243,11 +241,11 @@ func TestSignalExporter_CustomHeadersAndAuthorization(t *testing.T) {
 
 			switch tt.name {
 			case "logs":
-				cfg.Logs = TransportConfig{ClientConfig: tt.config}
+				cfg.Logs = tt.config
 			case "traces":
-				cfg.Traces = TransportConfig{ClientConfig: tt.config}
+				cfg.Traces = tt.config
 			case "metrics":
-				cfg.Metrics = TransportConfig{ClientConfig: tt.config}
+				cfg.Metrics = tt.config
 			case "profiles":
 				cfg.Profiles = tt.config
 			}
@@ -255,8 +253,7 @@ func TestSignalExporter_CustomHeadersAndAuthorization(t *testing.T) {
 			exp, err := newSignalExporter(cfg, exportertest.NewNopSettings(exportertest.NopType), "", nil)
 			require.NoError(t, err)
 
-			transportConfig := TransportConfig{ClientConfig: tt.config}
-			wrapper := &signalConfigWrapper{config: &transportConfig}
+			wrapper := &signalConfigWrapper{config: &tt.config}
 			err = exp.startSignalExporter(t.Context(), componenttest.NewNopHost(), wrapper)
 			require.NoError(t, err)
 			defer func() {
@@ -266,15 +263,15 @@ func TestSignalExporter_CustomHeadersAndAuthorization(t *testing.T) {
 			headers := wrapper.config.Headers
 			require.Len(t, headers, 3)
 
-			authHeader, ok := headers.Get("Authorization")
+			authHeader, ok := headers["Authorization"]
 			require.True(t, ok)
 			assert.Equal(t, configopaque.String("Bearer "+privateKey), authHeader)
 
-			customHeader, ok := headers.Get("Custom-Header")
+			customHeader, ok := headers["Custom-Header"]
 			require.True(t, ok)
 			assert.Equal(t, configopaque.String("custom-value"), customHeader)
 
-			testHeader, ok := headers.Get("X-Test")
+			testHeader, ok := headers["X-Test"]
 			require.True(t, ok)
 			assert.Equal(t, configopaque.String("test-value"), testHeader)
 
@@ -289,164 +286,6 @@ func TestSignalExporter_CustomHeadersAndAuthorization(t *testing.T) {
 			mdTest := exp.metadata.Get("X-Test")
 			require.Len(t, mdTest, 1)
 			assert.Equal(t, "test-value", mdTest[0])
-		})
-	}
-}
-
-func TestSignalExporter_HTTPClientWithDomainAndSignalSettings(t *testing.T) {
-	tests := []struct {
-		name           string
-		protocol       string
-		domain         string
-		domainProxy    string
-		domainTimeout  time.Duration
-		signalEndpoint string
-		signalProxy    string
-		signalTimeout  time.Duration
-		expectError    bool
-	}{
-		{
-			name:          "domain_settings_only",
-			protocol:      "http",
-			domain:        "coralogix.com",
-			domainProxy:   "http://domain-proxy:8080",
-			domainTimeout: 30 * time.Second,
-		},
-		{
-			name:          "signal_settings_override_domain",
-			protocol:      "http",
-			domain:        "coralogix.com",
-			domainProxy:   "http://domain-proxy:8080",
-			domainTimeout: 30 * time.Second,
-			signalProxy:   "http://signal-proxy:8080",
-			signalTimeout: 60 * time.Second,
-		},
-		{
-			name:           "signal_endpoint_uses_signal_settings",
-			protocol:       "http",
-			signalEndpoint: "ingress.coralogix.com:443",
-			signalProxy:    "http://signal-proxy:8080",
-			signalTimeout:  45 * time.Second,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &Config{
-				Protocol:   tt.protocol,
-				Domain:     tt.domain,
-				PrivateKey: "test-key",
-				AppName:    "test-app",
-				DomainSettings: TransportConfig{
-					ProxyURL: tt.domainProxy,
-					Timeout:  tt.domainTimeout,
-				},
-				Logs: TransportConfig{
-					ProxyURL: tt.signalProxy,
-					Timeout:  tt.signalTimeout,
-				},
-			}
-
-			if tt.signalEndpoint != "" {
-				cfg.Logs.Endpoint = tt.signalEndpoint
-			}
-
-			exp, err := newLogsExporter(cfg, exportertest.NewNopSettings(exportertest.NopType))
-			require.NoError(t, err)
-
-			ctx := t.Context()
-			host := componenttest.NewNopHost()
-
-			signalCfg := &signalConfigWrapper{config: &cfg.Logs}
-			err = exp.startSignalExporter(ctx, host, signalCfg)
-
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, exp.clientHTTP)
-				// Clean up HTTP client
-				if exp.clientHTTP != nil {
-					exp.clientHTTP.CloseIdleConnections()
-				}
-			}
-		})
-	}
-}
-
-func TestSignalExporter_GRPCClientWithDomainAndSignalSettings(t *testing.T) {
-	tests := []struct {
-		name              string
-		domain            string
-		domainCompression configcompression.Type
-		signalEndpoint    string
-		signalCompression configcompression.Type
-		signalWriteBuffer int
-		expectError       bool
-	}{
-		{
-			name:              "domain_settings_only",
-			domain:            "coralogix.com",
-			domainCompression: configcompression.TypeGzip,
-		},
-		{
-			name:              "signal_settings_override_domain",
-			domain:            "coralogix.com",
-			domainCompression: configcompression.TypeGzip,
-			signalCompression: configcompression.TypeZstd,
-			signalWriteBuffer: 1024 * 1024,
-		},
-		{
-			name:              "signal_endpoint_uses_signal_settings",
-			signalEndpoint:    "ingress.coralogix.com:443",
-			signalCompression: configcompression.TypeSnappy,
-			signalWriteBuffer: 512 * 1024,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cfg := &Config{
-				Protocol:   "grpc",
-				Domain:     tt.domain,
-				PrivateKey: "test-key",
-				AppName:    "test-app",
-				DomainSettings: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Compression: tt.domainCompression,
-					},
-				},
-				Logs: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Compression:     tt.signalCompression,
-						WriteBufferSize: tt.signalWriteBuffer,
-					},
-				},
-			}
-
-			if tt.signalEndpoint != "" {
-				cfg.Logs.Endpoint = tt.signalEndpoint
-			}
-
-			exp, err := newLogsExporter(cfg, exportertest.NewNopSettings(exportertest.NopType))
-			require.NoError(t, err)
-
-			ctx := t.Context()
-			host := componenttest.NewNopHost()
-
-			signalCfg := &signalConfigWrapper{config: &cfg.Logs}
-			err = exp.startSignalExporter(ctx, host, signalCfg)
-
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, exp.clientConn)
-				// Clean up gRPC connection
-				if exp.clientConn != nil {
-					_ = exp.clientConn.Close()
-				}
-			}
 		})
 	}
 }

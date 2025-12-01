@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"net"
 	"strconv"
 	"time"
@@ -192,9 +191,13 @@ func populateStatus(status ptrace.Status, zs *zipkinmodel.SpanModel, tags map[st
 
 func aggregateSpanTags(span ptrace.Span, zTags map[string]string) map[string]string {
 	tags := make(map[string]string)
-	maps.Copy(tags, zTags)
+	for key, val := range zTags {
+		tags[key] = val
+	}
 	spanTags := attributeMapToStringMap(span.Attributes())
-	maps.Copy(tags, spanTags)
+	for key, val := range spanTags {
+		tags[key] = val
+	}
 	return tags
 }
 

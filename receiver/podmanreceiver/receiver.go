@@ -106,8 +106,7 @@ func (r *metricsReceiver) scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 	wg := &sync.WaitGroup{}
 	wg.Add(len(containers))
-	for i := range containers {
-		c := containers[i]
+	for _, c := range containers {
 		go func(c container) {
 			defer wg.Done()
 			stats, err := r.scraper.fetchContainerStats(ctx, c)

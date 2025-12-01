@@ -402,7 +402,8 @@ func BenchmarkSpansWithAttributesOCToInternal(b *testing.B) {
 	resource := generateOCTestResource()
 	spans := []*octrace.Span{generateSpanWithAttributes(15)}
 
-	for b.Loop() {
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
 		OCToTraces(nil, resource, spans)
 	}
 }
@@ -415,7 +416,8 @@ func BenchmarkSpansWithAttributesUnmarshal(b *testing.B) {
 		b.Fail()
 	}
 
-	for b.Loop() {
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
 		unmarshalOc := &octrace.Span{}
 		if err := proto.Unmarshal(bytes, unmarshalOc); err != nil {
 			b.Fail()
@@ -440,7 +442,7 @@ func generateSpanWithAttributes(length int) *octrace.Span {
 
 	ocSpan2.Attributes.AttributeMap = make(map[string]*octrace.AttributeValue, length)
 	ocAttr := ocSpan2.Attributes.AttributeMap
-	for i := range length {
+	for i := 0; i < length; i++ {
 		ocAttr["span-link-attr_"+strconv.Itoa(i)] = &octrace.AttributeValue{
 			Value: &octrace.AttributeValue_StringValue{
 				StringValue: &octrace.TruncatableString{Value: "span-link-attr-val"},

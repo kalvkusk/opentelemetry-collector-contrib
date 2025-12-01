@@ -44,7 +44,7 @@ func BenchmarkBatchGet(b *testing.B) {
 			b.ResetTimer()
 
 			// Run Benchmark
-			for b.Loop() {
+			for i := 0; i < b.N; i++ {
 				if err := client.Batch(b.Context(), ops...); err != nil {
 					b.Fatal(err)
 				}
@@ -72,7 +72,7 @@ func BenchmarkBatchSet(b *testing.B) {
 			b.ResetTimer()
 
 			// Run Benchmark
-			for b.Loop() {
+			for i := 0; i < b.N; i++ {
 				if err := client.Batch(b.Context(), ops...); err != nil {
 					b.Fatal(err)
 				}
@@ -100,7 +100,7 @@ func BenchmarkBatchDelete(b *testing.B) {
 			b.ResetTimer()
 
 			// Run Benchmark
-			for b.Loop() {
+			for i := 0; i < b.N; i++ {
 				if err := client.Batch(b.Context(), ops...); err != nil {
 					b.Fatal(err)
 				}

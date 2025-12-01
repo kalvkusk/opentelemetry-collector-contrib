@@ -23,13 +23,11 @@ const (
 	totalResourceAttributes = 6
 )
 
-// By default k8s event has only two types of events (Normal, Warning), here are we allowing other types as well.
-// For more info: https://github.com/kubernetes/api/blob/release-1.34/events/v1/types_swagger_doc_generated.go#L42
+// Only two types of events are created as of now.
+// For more info: https://docs.openshift.com/container-platform/4.9/rest_api/metadata_apis/event-core-v1.html
 var severityMap = map[string]plog.SeverityNumber{
-	"normal":   plog.SeverityNumberInfo,
-	"warning":  plog.SeverityNumberWarn,
-	"error":    plog.SeverityNumberError,
-	"critical": plog.SeverityNumberFatal,
+	"normal":  plog.SeverityNumberInfo,
+	"warning": plog.SeverityNumberWarn,
 }
 
 // k8sEventToLogRecord converts Kubernetes event to plog.LogRecordSlice and adds the resource attributes.

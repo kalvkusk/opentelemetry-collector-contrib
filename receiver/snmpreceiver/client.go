@@ -305,7 +305,11 @@ func chunkArray(initArray []string, chunkSize int) [][]string {
 	var chunkedArrays [][]string
 
 	for i := 0; i < len(initArray); i += chunkSize {
-		end := min(i+chunkSize, len(initArray))
+		end := i + chunkSize
+
+		if end > len(initArray) {
+			end = len(initArray)
+		}
 
 		chunkedArrays = append(chunkedArrays, initArray[i:end])
 	}

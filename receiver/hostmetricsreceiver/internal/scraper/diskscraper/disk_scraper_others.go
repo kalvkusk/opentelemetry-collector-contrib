@@ -98,39 +98,34 @@ func (s *diskScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 }
 
 func (s *diskScraper) recordDiskIOMetric(now pcommon.Timestamp, ioCounters map[string]disk.IOCountersStat) {
-	for device := range ioCounters {
-		ioCounter := ioCounters[device]
+	for device, ioCounter := range ioCounters {
 		s.mb.RecordSystemDiskIoDataPoint(now, int64(ioCounter.ReadBytes), device, metadata.AttributeDirectionRead)
 		s.mb.RecordSystemDiskIoDataPoint(now, int64(ioCounter.WriteBytes), device, metadata.AttributeDirectionWrite)
 	}
 }
 
 func (s *diskScraper) recordDiskOperationsMetric(now pcommon.Timestamp, ioCounters map[string]disk.IOCountersStat) {
-	for device := range ioCounters {
-		ioCounter := ioCounters[device]
+	for device, ioCounter := range ioCounters {
 		s.mb.RecordSystemDiskOperationsDataPoint(now, int64(ioCounter.ReadCount), device, metadata.AttributeDirectionRead)
 		s.mb.RecordSystemDiskOperationsDataPoint(now, int64(ioCounter.WriteCount), device, metadata.AttributeDirectionWrite)
 	}
 }
 
 func (s *diskScraper) recordDiskIOTimeMetric(now pcommon.Timestamp, ioCounters map[string]disk.IOCountersStat) {
-	for device := range ioCounters {
-		ioCounter := ioCounters[device]
+	for device, ioCounter := range ioCounters {
 		s.mb.RecordSystemDiskIoTimeDataPoint(now, float64(ioCounter.IoTime)/1e3, device)
 	}
 }
 
 func (s *diskScraper) recordDiskOperationTimeMetric(now pcommon.Timestamp, ioCounters map[string]disk.IOCountersStat) {
-	for device := range ioCounters {
-		ioCounter := ioCounters[device]
+	for device, ioCounter := range ioCounters {
 		s.mb.RecordSystemDiskOperationTimeDataPoint(now, float64(ioCounter.ReadTime)/1e3, device, metadata.AttributeDirectionRead)
 		s.mb.RecordSystemDiskOperationTimeDataPoint(now, float64(ioCounter.WriteTime)/1e3, device, metadata.AttributeDirectionWrite)
 	}
 }
 
 func (s *diskScraper) recordDiskPendingOperationsMetric(now pcommon.Timestamp, ioCounters map[string]disk.IOCountersStat) {
-	for device := range ioCounters {
-		ioCounter := ioCounters[device]
+	for device, ioCounter := range ioCounters {
 		s.mb.RecordSystemDiskPendingOperationsDataPoint(now, int64(ioCounter.IopsInProgress), device)
 	}
 }

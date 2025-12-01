@@ -16,7 +16,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/plog"
 	conventions "go.opentelemetry.io/otel/semconv/v1.27.0"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension/internal/constants"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension/internal/metadata"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension/internal/unmarshaler"
 )
@@ -68,7 +67,7 @@ func (f *subscriptionFilterUnmarshaler) UnmarshalAWSLogs(reader io.Reader) (plog
 	}
 
 	if cwLog.MessageType == "CONTROL_MESSAGE" {
-		return plog.NewLogs(), nil
+		return plog.Logs{}, nil
 	}
 
 	if err := validateLog(cwLog); err != nil {
@@ -95,7 +94,6 @@ func (f *subscriptionFilterUnmarshaler) createLogs(
 	sl := rl.ScopeLogs().AppendEmpty()
 	sl.Scope().SetName(metadata.ScopeName)
 	sl.Scope().SetVersion(f.buildInfo.Version)
-	sl.Scope().Attributes().PutStr(constants.FormatIdentificationTag, "aws."+constants.FormatCloudWatchLogsSubscriptionFilter)
 	for _, event := range cwLog.LogEvents {
 		logRecord := sl.LogRecords().AppendEmpty()
 		// pcommon.Timestamp is a time specified as UNIX Epoch time in nanoseconds

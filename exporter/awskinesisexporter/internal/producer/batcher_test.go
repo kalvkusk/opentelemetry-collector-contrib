@@ -78,7 +78,7 @@ func TestBatchedExporter(t *testing.T) {
 	}
 
 	bt := batch.New()
-	for range 500 {
+	for i := 0; i < 500; i++ {
 		assert.NoError(t, bt.AddRecord([]byte("foobar"), "fixed-key"))
 	}
 

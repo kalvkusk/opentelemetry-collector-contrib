@@ -12,7 +12,7 @@ import (
 
 type DeleteKeyArguments[K any] struct {
 	Target ottl.PMapGetSetter[K]
-	Key    ottl.StringGetter[K]
+	Key    string
 }
 
 func NewDeleteKeyFactory[K any]() ottl.Factory[K] {
@@ -29,17 +29,13 @@ func createDeleteKeyFunction[K any](_ ottl.FunctionContext, oArgs ottl.Arguments
 	return deleteKey(args.Target, args.Key), nil
 }
 
-func deleteKey[K any](target ottl.PMapGetSetter[K], key ottl.StringGetter[K]) ottl.ExprFunc[K] {
+func deleteKey[K any](target ottl.PMapGetSetter[K], key string) ottl.ExprFunc[K] {
 	return func(ctx context.Context, tCtx K) (any, error) {
 		val, err := target.Get(ctx, tCtx)
 		if err != nil {
 			return nil, err
 		}
-		keyVal, err := key.Get(ctx, tCtx)
-		if err != nil {
-			return nil, err
-		}
-		val.Remove(keyVal)
+		val.Remove(key)
 		return nil, target.Set(ctx, tCtx, val)
 	}
 }

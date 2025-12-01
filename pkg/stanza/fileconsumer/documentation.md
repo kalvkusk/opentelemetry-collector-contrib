@@ -8,16 +8,16 @@ The following telemetry is emitted by this component.
 
 ### otelcol_fileconsumer_open_files
 
-Number of open files [Development]
+Number of open files
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | false | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | false |
 
 ### otelcol_fileconsumer_reading_files
 
-Number of open files that are being read [Development]
+Number of open files that are being read
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | false | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | false |

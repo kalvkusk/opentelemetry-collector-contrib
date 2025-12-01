@@ -10,6 +10,9 @@ receivers:
     attributes:
       type: <<your-logzio-type>>
 processors:
+  batch:
+    send_batch_size: 10000
+    timeout: 1s
   resourcedetection/system:
     detectors: [ "system" ]
     system:
@@ -22,7 +25,7 @@ service:
   pipelines:
     logs:
       receivers: [filelog]
-      processors: [ resourcedetection/system ]
+      processors: [ resourcedetection/system, batch ]
       exporters: [logzio/logs]
   telemetry:
     logs:

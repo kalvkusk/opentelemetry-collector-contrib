@@ -15,10 +15,8 @@ type DataConnector interface {
 	GetReceiverType() string
 }
 
-// DataConnectorBase implement basic functions needed by all receivers.
+// DataReceiverBase implement basic functions needed by all receivers.
 type DataConnectorBase struct {
 	// The data type of the receiver in second pipeline.
 	ReceiverDataType string
-	// prevent unkeyed literal initialization
-	_ struct{}
 }

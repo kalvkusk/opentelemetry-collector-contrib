@@ -5,6 +5,7 @@ package metrics // import "github.com/open-telemetry/opentelemetry-collector-con
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -110,13 +111,16 @@ func (e *expHistogramMetrics) insert(ctx context.Context, db driver.Conn) error 
 	return nil
 }
 
-func (e *expHistogramMetrics) Add(resAttr pcommon.Map, resURL string, scopeInstr pcommon.InstrumentationScope, scopeURL string, metrics pmetric.Metric) {
-	expHistogram := metrics.ExponentialHistogram()
+func (e *expHistogramMetrics) Add(resAttr pcommon.Map, resURL string, scopeInstr pcommon.InstrumentationScope, scopeURL string, metrics any, name, description, unit string) error {
+	expHistogram, ok := metrics.(pmetric.ExponentialHistogram)
+	if !ok {
+		return errors.New("metrics param is not type of ExponentialHistogram")
+	}
 	e.count += expHistogram.DataPoints().Len()
 	e.expHistogramModels = append(e.expHistogramModels, &expHistogramModel{
-		metricName:        metrics.Name(),
-		metricDescription: metrics.Description(),
-		metricUnit:        metrics.Unit(),
+		metricName:        name,
+		metricDescription: description,
+		metricUnit:        unit,
 		metadata: &MetricsMetaData{
 			ResAttr:    resAttr,
 			ResURL:     resURL,
@@ -125,4 +129,6 @@ func (e *expHistogramMetrics) Add(resAttr pcommon.Map, resURL string, scopeInstr
 		},
 		expHistogram: expHistogram,
 	})
+
+	return nil
 }

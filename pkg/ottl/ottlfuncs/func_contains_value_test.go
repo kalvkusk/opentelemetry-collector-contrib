@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
@@ -174,7 +173,7 @@ func Test_ContainsValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			exprFunc := containsValue(tt.target, tt.item)
 			result, err := exprFunc(nil, nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

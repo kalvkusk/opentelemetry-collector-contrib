@@ -16,6 +16,6 @@ metrics:
 
 The time the system has been running
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| s | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| s | Gauge | Double |

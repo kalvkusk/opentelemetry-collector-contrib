@@ -116,7 +116,7 @@ func testJaegerAgent(t *testing.T, agentEndpoint string, receiverConfig Protocol
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, jr.Shutdown(t.Context())) })
 
-	for range 3 {
+	for i := 0; i < 3; i++ {
 		err = jr.Start(t.Context(), componenttest.NewNopHost())
 		if err == nil {
 			break

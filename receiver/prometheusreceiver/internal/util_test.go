@@ -59,7 +59,6 @@ func TestConvToMetricType(t *testing.T) {
 	tests := []struct {
 		name          string
 		mtype         model.MetricType
-		isExponential bool
 		want          pmetric.MetricType
 		wantMonotonic bool
 	}{
@@ -85,13 +84,6 @@ func TestConvToMetricType(t *testing.T) {
 			name:          "model.histogram",
 			mtype:         model.MetricTypeHistogram,
 			want:          pmetric.MetricTypeHistogram,
-			wantMonotonic: true,
-		},
-		{
-			name:          "model.histogram",
-			mtype:         model.MetricTypeHistogram,
-			isExponential: true,
-			want:          pmetric.MetricTypeExponentialHistogram,
 			wantMonotonic: true,
 		},
 		{
@@ -122,7 +114,7 @@ func TestConvToMetricType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, monotonic := convToMetricType(tt.mtype, tt.isExponential)
+			got, monotonic := convToMetricType(tt.mtype)
 			require.Equal(t, got.String(), tt.want.String())
 			require.Equal(t, tt.wantMonotonic, monotonic)
 		})

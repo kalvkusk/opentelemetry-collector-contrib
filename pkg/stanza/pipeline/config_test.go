@@ -394,7 +394,7 @@ func TestUpdateOutputIDs(t *testing.T) {
 			}
 			require.Len(t, ops, expectedNumOps)
 
-			for i := range ops {
+			for i := 0; i < len(ops); i++ {
 				id := ops[i].ID()
 				if id == "fake" {
 					require.Nil(t, ops[i].GetOutputIDs())

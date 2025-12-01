@@ -43,6 +43,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver/internal/replicaset"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver/internal/replicationcontroller"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver/internal/statefulset"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver/internal/utils"
 )
 
 type sharedInformer interface {
@@ -205,8 +206,7 @@ func (rw *resourceWatcher) isKindSupported(gvk schema.GroupVersionKind) (bool, e
 		return false, fmt.Errorf("failed to fetch group version details: %w", err)
 	}
 
-	for i := range resources.APIResources {
-		r := &resources.APIResources[i]
+	for _, r := range resources.APIResources {
 		if r.Kind == gvk.Kind {
 			return true, nil
 		}
@@ -405,7 +405,7 @@ func (rw *resourceWatcher) setupMetadataExporters(
 ) error {
 	var out []metadataConsumer
 
-	metadataExportersSet := stringSliceToMap(metadataExportersFromConfig)
+	metadataExportersSet := utils.StringSliceToMap(metadataExportersFromConfig)
 	if err := validateMetadataExporters(metadataExportersSet, exporters); err != nil {
 		return fmt.Errorf("failed to configure metadata_exporters: %w", err)
 	}
@@ -477,13 +477,4 @@ func (rw *resourceWatcher) syncMetadataUpdate(oldMetadata, newMetadata map[exper
 			}
 		}
 	}
-}
-
-// stringSliceToMap converts a slice of strings into a map with keys from the slice
-func stringSliceToMap(strings []string) map[string]bool {
-	ret := map[string]bool{}
-	for _, s := range strings {
-		ret[s] = true
-	}
-	return ret
 }

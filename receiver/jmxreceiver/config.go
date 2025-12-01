@@ -279,7 +279,8 @@ func init() {
 
 func initAdditionalTargetSystems() {
 	if AdditionalTargetSystems != "n/a" {
-		for t := range strings.SplitSeq(AdditionalTargetSystems, ",") {
+		additionalTargets := strings.Split(AdditionalTargetSystems, ",")
+		for _, t := range additionalTargets {
 			validTargetSystems[t] = struct{}{}
 		}
 	}
@@ -339,7 +340,7 @@ func (c *Config) Validate() error {
 	}
 
 	if c.TargetSystem != "" {
-		for system := range strings.SplitSeq(c.TargetSystem, ",") {
+		for _, system := range strings.Split(c.TargetSystem, ",") {
 			if _, ok := validTargetSystems[strings.ToLower(system)]; !ok {
 				return fmt.Errorf("`target_system` list may only be a subset of %s", listKeys(validTargetSystems))
 			}

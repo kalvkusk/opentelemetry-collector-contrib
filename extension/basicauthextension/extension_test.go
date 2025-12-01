@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
-	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -220,7 +219,9 @@ type mockRoundTripper struct{}
 
 func (*mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp := &http.Response{StatusCode: http.StatusOK, Header: map[string][]string{}}
-	maps.Copy(resp.Header, req.Header)
+	for k, v := range req.Header {
+		resp.Header[k] = v
+	}
 	return resp, nil
 }
 

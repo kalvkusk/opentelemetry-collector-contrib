@@ -69,8 +69,9 @@ func benchmarkLogs(b *testing.B, batchSize int, mappingMode string) {
 	logs, _ := runnerCfg.provider.GenerateLogs()
 	logs.MarkReadOnly()
 	b.ReportAllocs()
-
-	for b.Loop() {
+	b.ResetTimer()
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
 		b.StartTimer()
 		require.NoError(b, exporter.ConsumeLogs(ctx, logs))
 		b.StopTimer()
@@ -98,8 +99,9 @@ func benchmarkMetrics(b *testing.B, batchSize int, mappingMode string) {
 	metrics, _ := runnerCfg.provider.GenerateMetrics()
 	metrics.MarkReadOnly()
 	b.ReportAllocs()
-
-	for b.Loop() {
+	b.ResetTimer()
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
 		b.StartTimer()
 		require.NoError(b, exporter.ConsumeMetrics(ctx, metrics))
 		b.StopTimer()
@@ -127,8 +129,9 @@ func benchmarkTraces(b *testing.B, batchSize int, mappingMode string) {
 	traces, _ := runnerCfg.provider.GenerateTraces()
 	traces.MarkReadOnly()
 	b.ReportAllocs()
-
-	for b.Loop() {
+	b.ResetTimer()
+	b.StopTimer()
+	for i := 0; i < b.N; i++ {
 		b.StartTimer()
 		require.NoError(b, exporter.ConsumeTraces(ctx, traces))
 		b.StopTimer()
@@ -168,9 +171,8 @@ func prepareBenchmark(
 	cfg.esCfg.LogsIndex = TestLogsIndex
 	cfg.esCfg.MetricsIndex = TestMetricsIndex
 	cfg.esCfg.TracesIndex = TestTracesIndex
-	// sending_queue::batch is defined as a default config
-	cfg.esCfg.QueueBatchConfig.Batch.Get().FlushTimeout = 10 * time.Millisecond
-	cfg.esCfg.QueueBatchConfig.NumConsumers = 1
+	cfg.esCfg.Flush.Interval = 10 * time.Millisecond
+	cfg.esCfg.NumWorkers = 1
 
 	tc, err := consumer.NewTraces(func(context.Context, ptrace.Traces) error {
 		return nil

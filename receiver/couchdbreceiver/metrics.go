@@ -134,7 +134,7 @@ func (c *couchdbScraper) recordCouchdbFileDescriptorOpenDataPoint(now pcommon.Ti
 func (c *couchdbScraper) recordCouchdbDatabaseOperationsDataPoint(now pcommon.Timestamp, stats map[string]any, errs *scrapererror.ScrapeErrors) {
 	operations := []metadata.AttributeOperation{metadata.AttributeOperationReads, metadata.AttributeOperationWrites}
 	keyPaths := [][]string{{"database_reads", "value"}, {"database_writes", "value"}}
-	for i := range operations {
+	for i := 0; i < len(operations); i++ {
 		key := keyPaths[i]
 		value, err := getValueFromBody(key, stats)
 		if err != nil {

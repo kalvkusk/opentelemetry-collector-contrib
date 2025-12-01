@@ -48,10 +48,10 @@ func decompressRequest(reader io.Reader, expectedSize, maxSize int) (body []byte
 	buffer, ok := tryBufferFromReader(reader)
 	if ok {
 		body, err = decompressFromBuffer(buffer, maxSize)
-		return body, err
+		return
 	}
 	body, err = decompressFromReader(reader, expectedSize, maxSize)
-	return body, err
+	return
 }
 
 func decompressFromReader(reader io.Reader, expectedSize, maxSize int) ([]byte, error) {

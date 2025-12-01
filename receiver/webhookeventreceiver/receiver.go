@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/goccy/go-json"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/julienschmidt/httprouter"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componentstatus"
@@ -45,7 +45,6 @@ type eventReceiver struct {
 	obsrecv             *receiverhelper.ObsReport
 	gzipPool            *sync.Pool
 	includeHeadersRegex *regexp.Regexp
-	maxRequestBodySize  int // Computed max token size for scanner (minimum 64KB)
 }
 
 func newLogsReceiver(params receiver.Settings, cfg Config, consumer consumer.Logs) (receiver.Logs, error) {
@@ -56,7 +55,6 @@ func newLogsReceiver(params receiver.Settings, cfg Config, consumer consumer.Log
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
-
 	var includeHeaderRegex *regexp.Regexp
 	if cfg.HeaderAttributeRegex != "" {
 		// Valdiate() call above has already ensured this will compile
@@ -85,7 +83,6 @@ func newLogsReceiver(params receiver.Settings, cfg Config, consumer consumer.Log
 		obsrecv:             obsrecv,
 		gzipPool:            &sync.Pool{New: func() any { return new(gzip.Reader) }},
 		includeHeadersRegex: includeHeaderRegex,
-		maxRequestBodySize:  int(cfg.MaxRequestBodySize),
 	}
 
 	return er, nil
@@ -111,7 +108,7 @@ func (er *eventReceiver) Start(ctx context.Context, host component.Host) error {
 	router.GET(er.cfg.HealthPath, er.handleHealthCheck)
 
 	// webhook server standup and configuration
-	er.server, err = er.cfg.ToServer(ctx, host.GetExtensions(), er.settings.TelemetrySettings, router)
+	er.server, err = er.cfg.ToServer(ctx, host, er.settings.TelemetrySettings, router)
 	if err != nil {
 		return err
 	}
@@ -161,7 +158,6 @@ func (er *eventReceiver) handleReq(w http.ResponseWriter, r *http.Request, _ htt
 
 	if r.Method != http.MethodPost {
 		er.failBadReq(ctx, w, http.StatusBadRequest, errInvalidRequestMethod)
-		er.obsrecv.EndLogsOp(ctx, metadata.Type.String(), 0, errInvalidRequestMethod)
 		return
 	}
 
@@ -169,7 +165,6 @@ func (er *eventReceiver) handleReq(w http.ResponseWriter, r *http.Request, _ htt
 		requiredHeaderValue := r.Header.Get(er.cfg.RequiredHeader.Key)
 		if requiredHeaderValue != er.cfg.RequiredHeader.Value {
 			er.failBadReq(ctx, w, http.StatusUnauthorized, errMissingRequiredHeader)
-			er.obsrecv.EndLogsOp(ctx, metadata.Type.String(), 0, errMissingRequiredHeader)
 			return
 		}
 	}
@@ -178,14 +173,12 @@ func (er *eventReceiver) handleReq(w http.ResponseWriter, r *http.Request, _ htt
 	// only support gzip if encoding header is set.
 	if encoding != "" && encoding != "gzip" {
 		er.failBadReq(ctx, w, http.StatusUnsupportedMediaType, errInvalidEncodingType)
-		er.obsrecv.EndLogsOp(ctx, metadata.Type.String(), 0, errInvalidEncodingType)
 		return
 	}
 
 	if r.ContentLength == 0 {
+		er.obsrecv.EndLogsOp(ctx, metadata.Type.String(), 0, nil)
 		er.failBadReq(ctx, w, http.StatusBadRequest, errEmptyResponseBody)
-		er.obsrecv.EndLogsOp(ctx, metadata.Type.String(), 0, errEmptyResponseBody)
-		return
 	}
 
 	bodyReader := r.Body
@@ -195,7 +188,6 @@ func (er *eventReceiver) handleReq(w http.ResponseWriter, r *http.Request, _ htt
 		err := reader.Reset(bodyReader)
 		if err != nil {
 			er.failBadReq(ctx, w, http.StatusBadRequest, err)
-			er.obsrecv.EndLogsOp(ctx, metadata.Type.String(), 0, err)
 			_, _ = io.ReadAll(r.Body)
 			_ = r.Body.Close()
 			return
@@ -206,17 +198,11 @@ func (er *eventReceiver) handleReq(w http.ResponseWriter, r *http.Request, _ htt
 
 	// send body into a scanner and then convert the request body into a log
 	sc := bufio.NewScanner(bodyReader)
-	ld, numLogs, err := er.reqToLog(sc, r.Header, r.URL.Query())
+	ld, numLogs := er.reqToLog(sc, r.Header, r.URL.Query())
+	consumerErr := er.logConsumer.ConsumeLogs(ctx, ld)
 
 	_ = bodyReader.Close()
 
-	if err != nil {
-		er.failBadReq(ctx, w, http.StatusBadRequest, err)
-		er.obsrecv.EndLogsOp(ctx, metadata.Type.String(), numLogs, err)
-		return
-	}
-
-	consumerErr := er.logConsumer.ConsumeLogs(ctx, ld)
 	if consumerErr != nil {
 		er.failBadReq(ctx, w, http.StatusInternalServerError, consumerErr)
 	} else {
@@ -241,7 +227,7 @@ func (er *eventReceiver) failBadReq(_ context.Context,
 	httpStatusCode int,
 	err error,
 ) {
-	jsonResp, err := json.Marshal(err.Error())
+	jsonResp, err := jsoniter.Marshal(err.Error())
 	if err != nil {
 		er.settings.Logger.Warn("failed to marshall error to json")
 	}

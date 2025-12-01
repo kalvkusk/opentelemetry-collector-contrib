@@ -62,11 +62,10 @@ func TestSetAttrOnScopeSpans_Many(t *testing.T) {
 }
 
 func BenchmarkSetAttrOnScopeSpans(b *testing.B) {
-	for b.Loop() {
-		b.StopTimer()
+	for n := 0; n < b.N; n++ {
 		traces := ptrace.NewTraces()
 
-		for range 5 {
+		for i := 0; i < 5; i++ {
 			rs := traces.ResourceSpans().AppendEmpty()
 			ss1 := rs.ScopeSpans().AppendEmpty()
 			ss1.Spans().AppendEmpty()
@@ -87,5 +86,6 @@ func BenchmarkSetAttrOnScopeSpans(b *testing.B) {
 
 		b.StartTimer()
 		SetAttrOnScopeSpans(traceData, "test.attr", "value")
+		b.StopTimer()
 	}
 }

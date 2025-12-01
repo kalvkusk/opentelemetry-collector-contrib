@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 )
@@ -79,6 +78,6 @@ func Test_CreateMurmur3Hash128Func(t *testing.T) {
 				},
 			},
 		})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, exprFunc)
 }

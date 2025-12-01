@@ -517,9 +517,10 @@ func Benchmark_ExporterPushLogs(b *testing.B) {
 		require.NoError(b, exp.shutdown(b.Context()))
 	}()
 
-	for b.Loop() {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
 		wg := sync.WaitGroup{}
-		for range 10 {
+		for i := 0; i < 10; i++ {
 			wg.Add(1)
 			go func() {
 				logs := logRecordsToLogs(exampleNLogs(128))

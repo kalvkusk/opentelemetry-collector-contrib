@@ -6,8 +6,7 @@ status:
     alpha: [metrics, traces, logs]
   distributions: [contrib]
   codeowners:
-    active: [dao-jun]
-    emeritus: [dmitryax]
+    active: [dmitryax, dao-jun]
 
 # TODO: Update the receiver to pass the tests
 tests:

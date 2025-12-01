@@ -8,13 +8,13 @@ The following telemetry is emitted by this component.
 
 ### otelcol_kafka_broker_closed
 
-The total number of connections closed. [Development]
+The total number of connections closed.
 
 Only produced when franz-go is enabled.
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 #### Attributes
 
@@ -24,13 +24,13 @@ Only produced when franz-go is enabled.
 
 ### otelcol_kafka_broker_connects
 
-The total number of connections opened. [Development]
+The total number of connections opened.
 
 Only produced when franz-go is enabled.
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 #### Attributes
 
@@ -41,13 +41,13 @@ Only produced when franz-go is enabled.
 
 ### otelcol_kafka_broker_throttling_duration
 
-The throttling duration in ms imposed by the broker when receiving messages. [Deprecated]
+The throttling duration in ms imposed by the broker when receiving messages. [deprecated]
 
 Only produced when franz-go is enabled. Deprecated in favor of kafka_broker_throttling_latency.
 
 | Unit | Metric Type | Value Type | Stability |
 | ---- | ----------- | ---------- | --------- |
-| ms | Histogram | Int | Deprecated |
+| ms | Histogram | Int | deprecated |
 
 #### Attributes
 
@@ -57,13 +57,13 @@ Only produced when franz-go is enabled. Deprecated in favor of kafka_broker_thro
 
 ### otelcol_kafka_broker_throttling_latency
 
-The throttling latency in seconds imposed by the broker when receiving records. [Development]
+The throttling latency in seconds imposed by the broker when receiving records.
 
 Only produced when franz-go is enabled.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| s | Histogram | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| s | Histogram | Double |
 
 #### Attributes
 
@@ -73,13 +73,13 @@ Only produced when franz-go is enabled.
 
 ### otelcol_kafka_receiver_bytes
 
-The size in bytes of received records seen by the broker. [Development]
+The size in bytes of received records seen by the broker.
 
 Only produced when franz-go is enabled.
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| By | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| By | Sum | Int | true |
 
 #### Attributes
 
@@ -92,11 +92,11 @@ Only produced when franz-go is enabled.
 
 ### otelcol_kafka_receiver_bytes_uncompressed
 
-The uncompressed size in bytes of received records seen by the client. [Development]
+The uncompressed size in bytes of received records seen by the client.
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| By | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| By | Sum | Int | true |
 
 #### Attributes
 
@@ -109,11 +109,11 @@ The uncompressed size in bytes of received records seen by the client. [Developm
 
 ### otelcol_kafka_receiver_current_offset
 
-Current message offset [Development]
+Current message offset
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| 1 | Gauge | Int |
 
 #### Attributes
 
@@ -124,13 +124,13 @@ Current message offset [Development]
 
 ### otelcol_kafka_receiver_latency
 
-The time it took in ms to receive a batch of messages. [Deprecated]
+The time it took in ms to receive a batch of messages. [deprecated]
 
 Only produced when franz-go is enabled. Deprecated in favor of kafka_receiver_read_latency.
 
 | Unit | Metric Type | Value Type | Stability |
 | ---- | ----------- | ---------- | --------- |
-| ms | Histogram | Int | Deprecated |
+| ms | Histogram | Int | deprecated |
 
 #### Attributes
 
@@ -143,13 +143,13 @@ Only produced when franz-go is enabled. Deprecated in favor of kafka_receiver_re
 
 ### otelcol_kafka_receiver_messages
 
-The number of received messages. [Deprecated]
+The number of received messages. [deprecated]
 
 Deprecated in favor of kafka_receiver_records.
 
 | Unit | Metric Type | Value Type | Monotonic | Stability |
 | ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Deprecated |
+| 1 | Sum | Int | true | deprecated |
 
 #### Attributes
 
@@ -162,11 +162,11 @@ Deprecated in favor of kafka_receiver_records.
 
 ### otelcol_kafka_receiver_offset_lag
 
-Current offset lag [Development]
+Current offset lag
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| 1 | Gauge | Int |
 
 #### Attributes
 
@@ -177,29 +177,29 @@ Current offset lag [Development]
 
 ### otelcol_kafka_receiver_partition_close
 
-Number of finished partitions [Development]
+Number of finished partitions
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 ### otelcol_kafka_receiver_partition_start
 
-Number of started partitions [Development]
+Number of started partitions
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 ### otelcol_kafka_receiver_read_latency
 
-The time it took in seconds to receive a batch of records. [Development]
+The time it took in seconds to receive a batch of records.
 
 Only produced when franz-go is enabled.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| s | Histogram | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| s | Histogram | Double |
 
 #### Attributes
 
@@ -212,11 +212,11 @@ Only produced when franz-go is enabled.
 
 ### otelcol_kafka_receiver_records
 
-The number of received records. [Development]
+The number of received records.
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 #### Attributes
 
@@ -229,7 +229,7 @@ The number of received records. [Development]
 
 ### otelcol_kafka_receiver_records_delay
 
-The time in seconds between producing and receiving a batch of records. [Development]
+The time in seconds between producing and receiving a batch of records.
 
 Optional, only reported when enabled via config.
 Note that this metric may slow down high-volume consuming.
@@ -237,9 +237,9 @@ Only produced when franz-go is enabled.
 This metric is reported with an assumption that the exporter and the receiver clocks are synchronized.
 
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| s | Histogram | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| s | Histogram | Double |
 
 #### Attributes
 
@@ -250,11 +250,11 @@ This metric is reported with an assumption that the exporter and the receiver cl
 
 ### otelcol_kafka_receiver_unmarshal_failed_log_records
 
-Number of log records failed to be unmarshaled [Development]
+Number of log records failed to be unmarshaled
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 #### Attributes
 
@@ -265,11 +265,11 @@ Number of log records failed to be unmarshaled [Development]
 
 ### otelcol_kafka_receiver_unmarshal_failed_metric_points
 
-Number of metric points failed to be unmarshaled [Development]
+Number of metric points failed to be unmarshaled
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 #### Attributes
 
@@ -280,11 +280,11 @@ Number of metric points failed to be unmarshaled [Development]
 
 ### otelcol_kafka_receiver_unmarshal_failed_profiles
 
-Number of profiles failed to be unmarshaled [Development]
+Number of profiles failed to be unmarshaled
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 #### Attributes
 
@@ -295,11 +295,11 @@ Number of profiles failed to be unmarshaled [Development]
 
 ### otelcol_kafka_receiver_unmarshal_failed_spans
 
-Number of spans failed to be unmarshaled [Development]
+Number of spans failed to be unmarshaled
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| 1 | Sum | Int | true |
 
 #### Attributes
 

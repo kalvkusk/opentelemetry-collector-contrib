@@ -50,11 +50,7 @@ func (f *baseFailoverRouter[C]) reportConsumerError(idx int) {
 }
 
 func (f *baseFailoverRouter[C]) Shutdown() {
-	select {
-	case <-f.done:
-	default:
-		close(f.done)
-	}
+	close(f.done)
 }
 
 func newBaseFailoverRouter[C any](provider consumerProvider[C], cfg *Config) (*baseFailoverRouter[C], error) {

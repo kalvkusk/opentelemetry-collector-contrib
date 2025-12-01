@@ -99,7 +99,7 @@ func TestTUDPServerTransportIsOpen(t *testing.T) {
 	}()
 
 	go func() {
-		for range 4 {
+		for i := 0; i < 4; i++ {
 			time.Sleep(1 * time.Millisecond)
 			trans.IsOpen()
 		}

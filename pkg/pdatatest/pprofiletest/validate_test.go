@@ -45,7 +45,7 @@ func Test_validateProfile(t *testing.T) {
 				return dic
 			}(),
 			profile: pprofile.NewProfile(),
-			wantErr: assert.NoError,
+			wantErr: assert.Error,
 		},
 		{
 			name: "invalid sample",
@@ -56,8 +56,28 @@ func Test_validateProfile(t *testing.T) {
 			}(),
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
-				s := pp.Samples().AppendEmpty()
+				pp.SampleType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				pp.PeriodType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				s := pp.Sample().AppendEmpty()
 				s.SetLinkIndex(42)
+				return pp
+			}(),
+			wantErr: assert.Error,
+		},
+		{
+			name: "invalid comment string index",
+			dictionary: func() pprofile.ProfilesDictionary {
+				dic := pprofile.NewProfilesDictionary()
+				dic.StringTable().Append("")
+				return dic
+			}(),
+			profile: func() pprofile.Profile {
+				pp := pprofile.NewProfile()
+				pp.SampleType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				pp.PeriodType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				s := pp.Sample().AppendEmpty()
+				s.Values().Append(0)
+				pp.CommentStrindices().Append(1)
 				return pp
 			}(),
 			wantErr: assert.Error,
@@ -71,8 +91,11 @@ func Test_validateProfile(t *testing.T) {
 			}(),
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
-				s := pp.Samples().AppendEmpty()
+				pp.SampleType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				pp.PeriodType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				s := pp.Sample().AppendEmpty()
 				s.Values().Append(0)
+				pp.CommentStrindices().Append(0)
 				pp.AttributeIndices().Append(1)
 				return pp
 			}(),
@@ -89,8 +112,11 @@ func Test_validateProfile(t *testing.T) {
 			}(),
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
-				s := pp.Samples().AppendEmpty()
+				pp.SampleType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				pp.PeriodType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				s := pp.Sample().AppendEmpty()
 				s.Values().Append(0)
+				pp.CommentStrindices().Append(0)
 				pp.AttributeIndices().Append(0)
 				return pp
 			}(),
@@ -107,8 +133,11 @@ func Test_validateProfile(t *testing.T) {
 			}(),
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
-				s := pp.Samples().AppendEmpty()
+				pp.SampleType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				pp.PeriodType().SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
+				s := pp.Sample().AppendEmpty()
 				s.Values().Append(0)
+				pp.CommentStrindices().Append(0)
 				pp.AttributeIndices().Append(0)
 				return pp
 			}(),
@@ -160,6 +189,7 @@ func Test_validateSampleTypes(t *testing.T) {
 			}(),
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
+				pp.SampleType().SetAggregationTemporality(pprofile.AggregationTemporalityCumulative)
 				return pp
 			}(),
 			wantErr: assert.NoError,
@@ -173,7 +203,7 @@ func Test_validateSampleTypes(t *testing.T) {
 			}(),
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
-				pp.SampleType().SetTypeStrindex(3)
+				pp.SampleType().SetAggregationTemporality(3)
 				return pp
 			}(),
 			wantErr: assert.Error,
@@ -200,6 +230,16 @@ func Test_validateValueType(t *testing.T) {
 			wantErr:    assert.Error,
 		},
 		{
+			name: "invalid aggregation temporality",
+			dictionary: func() pprofile.ProfilesDictionary {
+				dic := pprofile.NewProfilesDictionary()
+				dic.StringTable().Append("")
+				return dic
+			}(),
+			valueType: pprofile.NewValueType(),
+			wantErr:   assert.Error,
+		},
+		{
 			name: "unit string index out of range",
 			dictionary: func() pprofile.ProfilesDictionary {
 				dic := pprofile.NewProfilesDictionary()
@@ -208,6 +248,7 @@ func Test_validateValueType(t *testing.T) {
 			}(),
 			valueType: func() pprofile.ValueType {
 				pp := pprofile.NewValueType()
+				pp.SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
 				pp.SetUnitStrindex(1)
 				return pp
 			}(),
@@ -222,6 +263,7 @@ func Test_validateValueType(t *testing.T) {
 			}(),
 			valueType: func() pprofile.ValueType {
 				pp := pprofile.NewValueType()
+				pp.SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
 				return pp
 			}(),
 			wantErr: assert.NoError,
@@ -235,6 +277,7 @@ func Test_validateValueType(t *testing.T) {
 			}(),
 			valueType: func() pprofile.ValueType {
 				pp := pprofile.NewValueType()
+				pp.SetAggregationTemporality(pprofile.AggregationTemporalityCumulative)
 				return pp
 			}(),
 			wantErr: assert.NoError,
@@ -265,8 +308,8 @@ func Test_validateSamples(t *testing.T) {
 			dictionary: pprofile.NewProfilesDictionary(),
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
-				pp.Samples().AppendEmpty()
-				pp.Samples().AppendEmpty()
+				pp.Sample().AppendEmpty()
+				pp.Sample().AppendEmpty()
 				return pp
 			}(),
 			wantErr: assert.NoError,
@@ -276,8 +319,8 @@ func Test_validateSamples(t *testing.T) {
 			dictionary: pprofile.NewProfilesDictionary(),
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
-				pp.Samples().AppendEmpty()
-				s := pp.Samples().AppendEmpty()
+				pp.Sample().AppendEmpty()
+				s := pp.Sample().AppendEmpty()
 				s.TimestampsUnixNano().Append(123)
 				return pp
 			}(),
@@ -348,7 +391,7 @@ func Test_validateSample(t *testing.T) {
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
 				pp.SetTime(1)
-				pp.SetDurationNano(1)
+				pp.SetDuration(1)
 				return pp
 			}(),
 			sample: func() pprofile.Sample {
@@ -364,7 +407,7 @@ func Test_validateSample(t *testing.T) {
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
 				pp.SetTime(1)
-				pp.SetDurationNano(1)
+				pp.SetDuration(1)
 				return pp
 			}(),
 			sample: func() pprofile.Sample {
@@ -380,7 +423,7 @@ func Test_validateSample(t *testing.T) {
 			profile: func() pprofile.Profile {
 				pp := pprofile.NewProfile()
 				pp.SetTime(1)
-				pp.SetDurationNano(1)
+				pp.SetDuration(1)
 				return pp
 			}(),
 			sample: func() pprofile.Sample {
@@ -476,7 +519,7 @@ func Test_validateLocation(t *testing.T) {
 			location: func() pprofile.Location {
 				l := pprofile.NewLocation()
 				l.AttributeIndices().Append(0)
-				l.Lines().AppendEmpty()
+				l.Line().AppendEmpty()
 				return l
 			}(),
 			wantErr: assert.NoError,

@@ -78,9 +78,9 @@ func checkProfileType(dic pprofile.ProfilesDictionary, profile pprofile.Profile)
 // stackPayloads creates a slice of StackPayloads from the given ResourceProfiles,
 // ScopeProfiles, and ProfileContainer.
 func stackPayloads(dic pprofile.ProfilesDictionary, resource pcommon.Resource, scope pcommon.InstrumentationScope, profile pprofile.Profile) ([]StackPayload, error) {
-	unsymbolizedLeafFramesSet := make(map[frameID]struct{}, profile.Samples().Len())
+	unsymbolizedLeafFramesSet := make(map[frameID]struct{}, profile.Sample().Len())
 	unsymbolizedExecutablesSet := make(map[libpf.FileID]struct{})
-	stackPayload := make([]StackPayload, 0, profile.Samples().Len())
+	stackPayload := make([]StackPayload, 0, profile.Sample().Len())
 
 	hostMetadata := newHostMetadata(dic, resource, scope, profile)
 
@@ -92,7 +92,7 @@ func stackPayloads(dic pprofile.ProfilesDictionary, resource pcommon.Resource, s
 		frequency = 1
 	}
 
-	for _, sample := range profile.Samples().All() {
+	for _, sample := range profile.Sample().All() {
 		frames, frameTypes, leafFrame, err := stackFrames(dic, sample)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create stackframes: %w", err)
@@ -226,9 +226,6 @@ func stackTraceEvent(dic pprofile.ProfilesDictionary, traceID string, sample ppr
 		K8sNamespaceName: hostMetadata[string(semconv.K8SNamespaceNameKey)],
 		Count:            1, // Elasticsearch v9.2+ doesn't read the count value any more.
 		Frequency:        frequency,
-		HostName:         hostMetadata[string(semconv.HostNameKey)],
-		ProjectID:        2, // Use a project ID other than 1 to not conflict with ECH default value.
-		ServiceName:      hostMetadata[string(semconv.ServiceNameKey)],
 	}
 
 	// Store event-specific attributes.
@@ -254,8 +251,7 @@ func stackTraceEvent(dic pprofile.ProfilesDictionary, traceID string, sample ppr
 
 func stackTrace(stackTraceID string, frames []StackFrame, frameTypes []libpf.FrameType) StackTrace {
 	frameIDs := make([]string, 0, len(frames))
-	for i := range frames {
-		f := &frames[i]
+	for _, f := range frames {
 		frameIDs = append(frameIDs, f.DocID)
 	}
 
@@ -282,7 +278,7 @@ func stackFrames(dic pprofile.ProfilesDictionary, sample pprofile.Sample) ([]Sta
 	locations := getLocations(dic, stack)
 	totalFrames := 0
 	for _, location := range locations {
-		totalFrames += location.Lines().Len()
+		totalFrames += location.Line().Len()
 	}
 	frameTypes := make([]libpf.FrameType, 0, totalFrames)
 
@@ -293,17 +289,17 @@ func stackFrames(dic pprofile.ProfilesDictionary, sample pprofile.Sample) ([]Sta
 			continue
 		}
 
-		frameTypeStr, err := getStringFromAttribute(dic, location, string(semconv.ProfileFrameTypeKey))
+		frameTypeStr, err := getStringFromAttribute(dic, location, "profile.frame.type")
 		if err != nil {
 			return nil, nil, nil, err
 		}
 		frameTypes = append(frameTypes, libpf.FrameTypeFromString(frameTypeStr))
 
-		functionNames := make([]string, 0, location.Lines().Len())
-		fileNames := make([]string, 0, location.Lines().Len())
-		lineNumbers := make([]int32, 0, location.Lines().Len())
+		functionNames := make([]string, 0, location.Line().Len())
+		fileNames := make([]string, 0, location.Line().Len())
+		lineNumbers := make([]int32, 0, location.Line().Len())
 
-		for _, line := range location.Lines().All() {
+		for _, line := range location.Line().All() {
 			if line.FunctionIndex() < int32(dic.FunctionTable().Len()) {
 				functionNames = append(functionNames, getString(dic, int(dic.FunctionTable().At(int(line.FunctionIndex())).NameStrindex())))
 				fileNames = append(fileNames, getString(dic, int(dic.FunctionTable().At(int(line.FunctionIndex())).FilenameStrindex())))
@@ -342,7 +338,7 @@ func getFrameID(dic pprofile.ProfilesDictionary, location pprofile.Location) *fr
 	if fileID.IsZero() {
 		// Synthesize a file ID if the htlhash build ID is not available.
 		hasher := xxhash.New()
-		for _, line := range location.Lines().All() {
+		for _, line := range location.Line().All() {
 			f := getFunction(dic, int(line.FunctionIndex()))
 			_, _ = hasher.WriteString(getString(dic, int(f.NameStrindex())))
 			_, _ = hasher.WriteString(getString(dic, int(f.FilenameStrindex())))
@@ -356,8 +352,8 @@ func getFrameID(dic pprofile.ProfilesDictionary, location pprofile.Location) *fr
 	var addressOrLineno uint64
 	if location.Address() > 0 {
 		addressOrLineno = location.Address()
-	} else if location.Lines().Len() > 0 {
-		addressOrLineno = uint64(location.Lines().At(location.Lines().Len() - 1).Line())
+	} else if location.Line().Len() > 0 {
+		addressOrLineno = uint64(location.Line().At(location.Line().Len() - 1).Line())
 	}
 
 	fID := newFrameID(fileID, libpf.AddressOrLineno(addressOrLineno))
@@ -376,6 +372,7 @@ var errMissingAttribute = errors.New("missing attribute")
 // of the profile if the attribute key matches the expected attrKey.
 func getStringFromAttribute(dic pprofile.ProfilesDictionary, record attributable, attrKey string) (string, error) {
 	lenAttrTable := dic.AttributeTable().Len()
+
 	for _, idx32 := range record.AttributeIndices().All() {
 		idx := int(idx32)
 
@@ -474,8 +471,9 @@ func stackTraceID(frames []StackFrame) (string, error) {
 
 func getLocations(dic pprofile.ProfilesDictionary, stack pprofile.Stack) []pprofile.Location {
 	locations := make([]pprofile.Location, 0, stack.LocationIndices().Len())
-	for _, i := range stack.LocationIndices().All() {
-		locations = append(locations, dic.LocationTable().At(int(i)))
+
+	for i := range stack.LocationIndices().All() {
+		locations = append(locations, dic.LocationTable().At(i))
 	}
 
 	return locations

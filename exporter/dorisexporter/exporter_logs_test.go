@@ -26,14 +26,16 @@ func TestPushLogData(t *testing.T) {
 	config := createDefaultConfig().(*Config)
 	config.Endpoint = fmt.Sprintf("http://127.0.0.1:%d", port)
 	config.CreateSchema = false
-	require.NoError(t, config.Validate())
+
+	err = config.Validate()
+	require.NoError(t, err)
 
 	logger := zap.NewNop()
 	exporter := newLogsExporter(logger, config, componenttest.NewNopTelemetrySettings())
 
 	ctx := t.Context()
 
-	client, err := createDorisHTTPClient(ctx, config, componenttest.NewNopHost(), componenttest.NewNopTelemetrySettings())
+	client, err := createDorisHTTPClient(ctx, config, nil, componenttest.NewNopTelemetrySettings())
 	require.NoError(t, err)
 	require.NotNil(t, client)
 
@@ -43,15 +45,13 @@ func TestPushLogData(t *testing.T) {
 		_ = exporter.shutdown(ctx)
 	}()
 
-	srvMux := http.NewServeMux()
 	server := &http.Server{
 		ReadTimeout: 3 * time.Second,
 		Addr:        fmt.Sprintf(":%d", port),
-		Handler:     srvMux,
 	}
 
 	go func() {
-		srvMux.HandleFunc("/api/otel/otel_logs/_stream_load", func(w http.ResponseWriter, _ *http.Request) {
+		http.HandleFunc("/api/otel/otel_logs/_stream_load", func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"Status":"Success"}`))
 		})
@@ -78,7 +78,7 @@ func simpleLogs(count int) plog.Logs {
 	sl.Scope().SetVersion("1.0.0")
 	sl.Scope().Attributes().PutStr("lib", "doris")
 	timestamp := time.Now()
-	for i := range count {
+	for i := 0; i < count; i++ {
 		r := sl.LogRecords().AppendEmpty()
 		r.SetTimestamp(pcommon.NewTimestampFromTime(timestamp))
 		r.SetObservedTimestamp(pcommon.NewTimestampFromTime(timestamp))

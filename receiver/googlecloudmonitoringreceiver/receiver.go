@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -280,6 +279,13 @@ func (mr *monitoringReceiver) convertGCPTimeSeriesToMetrics(metrics pmetric.Metr
 			}
 		}
 
+		// Add metric-specific labels if they are present
+		if len(timeSeries.GetMetric().Labels) > 0 {
+			for k, v := range timeSeries.GetMetric().GetLabels() {
+				resource.Attributes().PutStr(k, v)
+			}
+		}
+
 		// Store the newly created ResourceMetrics in the map
 		resourceMetricsMap[resourceKey] = rm
 	}
@@ -328,20 +334,19 @@ func (mr *monitoringReceiver) convertGCPTimeSeriesToMetrics(metrics pmetric.Metr
 
 // Helper function to generate a unique key for a resource based on its attributes
 func generateResourceKey(resourceType string, labels map[string]string, timeSeries *monitoringpb.TimeSeries) string {
-	var key strings.Builder
-	key.WriteString(resourceType)
+	key := resourceType
 	for k, v := range labels {
-		key.WriteString(k + v)
+		key += k + v
 	}
 	if timeSeries != nil {
 		for k, v := range timeSeries.Metric.Labels {
-			key.WriteString(k + v)
+			key += k + v
 		}
 		if timeSeries.Resource.Labels != nil {
 			for k, v := range timeSeries.Resource.Labels {
-				key.WriteString(k + v)
+				key += k + v
 			}
 		}
 	}
-	return key.String()
+	return key
 }

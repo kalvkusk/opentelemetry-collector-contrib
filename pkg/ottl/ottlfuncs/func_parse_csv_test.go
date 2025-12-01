@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -548,7 +549,7 @@ func Test_ParseCSV(t *testing.T) {
 				return
 			}
 
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			resultMap, ok := result.(pcommon.Map)
 			require.True(t, ok)

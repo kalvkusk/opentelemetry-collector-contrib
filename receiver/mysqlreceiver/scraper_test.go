@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/go-version"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +18,6 @@ import (
 	"go.opentelemetry.io/collector/config/confignet"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 	"go.opentelemetry.io/collector/scraper/scrapererror"
-	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest/plogtest"
@@ -63,9 +61,8 @@ func TestScrape(t *testing.T) {
 		cfg.MetricsBuilderConfig.Metrics.MysqlConnectionCount.Enabled = true
 
 		cfg.LogsBuilderConfig.Events.DbServerQuerySample.Enabled = true
-		cfg.LogsBuilderConfig.Events.DbServerTopQuery.Enabled = true
 
-		scraper := newMySQLScraper(receivertest.NewNopSettings(metadata.Type), cfg, newCache[int64](100), newTTLCache[string](0, time.Hour*24*365*10))
+		scraper := newMySQLScraper(receivertest.NewNopSettings(metadata.Type), cfg)
 		scraper.sqlclient = &mockClient{
 			globalStatsFile:             "global_stats",
 			innodbStatsFile:             "innodb_stats",
@@ -76,7 +73,6 @@ func TestScrape(t *testing.T) {
 			tableLockWaitEventStatsFile: "table_lock_wait_event_stats",
 			replicaStatusFile:           "replica_stats",
 			querySamplesFile:            "query_samples",
-			topQueriesFile:              "top_queries",
 		}
 
 		scraper.renameCommands = true
@@ -91,29 +87,15 @@ func TestScrape(t *testing.T) {
 		require.NoError(t, pmetrictest.CompareMetrics(expectedMetrics, actualMetrics,
 			pmetrictest.IgnoreMetricDataPointsOrder(), pmetrictest.IgnoreStartTimestamp(), pmetrictest.IgnoreTimestamp()))
 
-		actualQuerySamples, err := scraper.scrapeQuerySampleFunc(t.Context())
+		actualLogs, err := scraper.scrapeLog(t.Context())
 		require.NoError(t, err)
-		expectedQuerySampleFile := filepath.Join("testdata", "scraper", "expectedQuerySamples.yaml")
+		expectedLogFile := filepath.Join("testdata", "scraper", "expectedLogs.yaml")
 		// Uncomment this to regenerate the expected logs file
-		// golden.WriteLogs(t, expectedQuerySampleFile, actualQuerySamples)
-		expectedQuerySample, err := golden.ReadLogs(expectedQuerySampleFile)
+		// golden.WriteLogs(t, expectedLogFile, actualLogs)
+		expectedLogs, err := golden.ReadLogs(expectedLogFile)
 		require.NoError(t, err)
 
-		require.NoError(t, plogtest.CompareLogs(actualQuerySamples, expectedQuerySample,
-			plogtest.IgnoreTimestamp()))
-
-		// Scrape top queries
-		scraper.cacheAndDiff("mysql", "c16f24f908846019a741db580f6545a5933e9435a7cf1579c50794a6ca287739", "count_star", 1)
-		scraper.cacheAndDiff("mysql", "c16f24f908846019a741db580f6545a5933e9435a7cf1579c50794a6ca287739", "sum_timer_wait", 1)
-		actualTopQueries, err := scraper.scrapeTopQueryFunc(t.Context())
-		require.NoError(t, err)
-		expectedTopQueriesFile := filepath.Join("testdata", "scraper", "expectedTopQueries.yaml")
-		// Uncomment this to regenerate the expected logs file
-		// golden.WriteLogs(t, expectedTopQueriesFile, actualTopQueries)
-		expectedTopQueries, err := golden.ReadLogs(expectedTopQueriesFile)
-		require.NoError(t, err)
-
-		require.NoError(t, plogtest.CompareLogs(actualTopQueries, expectedTopQueries,
+		require.NoError(t, plogtest.CompareLogs(actualLogs, expectedLogs,
 			plogtest.IgnoreTimestamp()))
 	})
 
@@ -130,7 +112,7 @@ func TestScrape(t *testing.T) {
 		cfg.MetricsBuilderConfig.Metrics.MysqlTableLockWaitWriteCount.Enabled = true
 		cfg.MetricsBuilderConfig.Metrics.MysqlTableLockWaitWriteTime.Enabled = true
 
-		scraper := newMySQLScraper(receivertest.NewNopSettings(metadata.Type), cfg, newCache[int64](100), newTTLCache[string](0, time.Hour*24*365*10))
+		scraper := newMySQLScraper(receivertest.NewNopSettings(metadata.Type), cfg)
 		scraper.sqlclient = &mockClient{
 			globalStatsFile:             "global_stats_partial",
 			innodbStatsFile:             "innodb_stats_empty",
@@ -170,7 +152,7 @@ func TestScrapeBufferPoolPagesMiscOutOfBounds(t *testing.T) {
 	cfg.Password = "otel"
 	cfg.AddrConfig = confignet.AddrConfig{Endpoint: "localhost:3306"}
 
-	scraper := newMySQLScraper(receivertest.NewNopSettings(metadata.Type), cfg, newCache[int64](100), newTTLCache[string](0, time.Hour*24*365*10))
+	scraper := newMySQLScraper(receivertest.NewNopSettings(metadata.Type), cfg)
 	scraper.sqlclient = &mockClient{
 		globalStatsFile:             "global_stats_oob",
 		innodbStatsFile:             "innodb_stats_empty",
@@ -202,7 +184,6 @@ type mockClient struct {
 	tableLockWaitEventStatsFile string
 	replicaStatusFile           string
 	querySamplesFile            string
-	topQueriesFile              string
 }
 
 func readFile(fname string) (map[string]string, error) {
@@ -506,38 +487,6 @@ func (c *mockClient) getQuerySamples(uint64) ([]querySample, error) {
 	}
 
 	return samples, nil
-}
-
-func (c *mockClient) getTopQueries(uint64, uint64) ([]topQuery, error) {
-	var queries []topQuery
-	file, err := os.Open(filepath.Join("testdata", "scraper", c.topQueriesFile+".txt"))
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		var q topQuery
-		text := strings.Split(scanner.Text(), "\t")
-
-		q.schemaName = text[0]
-		q.digest = text[1]
-		q.digestText = text[2]
-		q.countStar, _ = parseInt(text[3])
-		q.sumTimerWaitInPicoSeconds, _ = parseInt(text[4])
-		q.querySampleText = text[5]
-
-		queries = append(queries, q)
-	}
-
-	return queries, nil
-}
-
-func (*mockClient) explainQuery(_, _ string, _ *zap.Logger) string {
-	file, _ := os.ReadFile(filepath.Join("testdata", "obfuscate", "inputQueryPlan.json"))
-
-	return string(file)
 }
 
 func (*mockClient) Close() error {

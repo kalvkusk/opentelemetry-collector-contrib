@@ -6,7 +6,6 @@ package zipkinv1
 import (
 	"encoding/hex"
 	"encoding/json"
-	"maps"
 	"os"
 	"strconv"
 	"testing"
@@ -181,7 +180,9 @@ func TestMultipleJSONV1BatchesToTraces(t *testing.T) {
 				sps = map[string]ptrace.Span{}
 				got[k] = map[string]ptrace.Span{}
 			}
-			maps.Copy(sps, v)
+			for kk, vv := range v {
+				sps[kk] = vv
+			}
 		}
 	}
 

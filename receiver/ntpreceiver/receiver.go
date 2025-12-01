@@ -16,8 +16,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/ntpreceiver/internal/metadata"
 )
 
-var queryWithOptions = ntp.QueryWithOptions
-
 type ntpScraper struct {
 	logger   *zap.Logger
 	mb       *metadata.MetricsBuilder
@@ -28,16 +26,12 @@ type ntpScraper struct {
 
 func (s *ntpScraper) scrape(context.Context) (pmetric.Metrics, error) {
 	options := ntp.QueryOptions{Version: s.version, Timeout: s.timeout}
-	response, err := queryWithOptions(s.endpoint, options)
+	response, err := ntp.QueryWithOptions(s.endpoint, options)
 	if err != nil {
-		return pmetric.NewMetrics(), err
+		return pmetric.Metrics{}, err
 	}
 	s.mb.RecordNtpOffsetDataPoint(pcommon.NewTimestampFromTime(time.Now()), response.ClockOffset.Nanoseconds())
-
-	rb := s.mb.NewResourceBuilder()
-	rb.SetNtpHost(s.endpoint)
-
-	s.mb.EmitForResource(metadata.WithResource(rb.Emit()))
+	s.mb.NewResourceBuilder().SetNtpHost(s.endpoint)
 	return s.mb.Emit(), nil
 }
 

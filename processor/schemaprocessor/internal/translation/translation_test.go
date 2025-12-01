@@ -444,9 +444,10 @@ func TestTranslationEquvialance_Traces(t *testing.T) {
 func BenchmarkCreatingTranslation(b *testing.B) {
 	log := zap.NewNop()
 
+	b.ResetTimer()
 	b.ReportAllocs()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		tn, err := newTranslator(
 			log,
 			"https://opentelemetry.io/schemas/1.9.0",
@@ -468,8 +469,9 @@ func BenchmarkUpgradingMetrics(b *testing.B) {
 	metrics := NewExampleMetrics(b, Version{1, 0, 0})
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		m := pmetric.NewMetrics()
 		metrics.CopyTo(m)
@@ -498,8 +500,9 @@ func BenchmarkUpgradingTraces(b *testing.B) {
 	traces := NewExampleSpans(b, Version{1, 0, 0})
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		t := ptrace.NewTraces()
 		traces.CopyTo(t)
@@ -528,8 +531,9 @@ func BenchmarkUpgradingLogs(b *testing.B) {
 	logs := NewExampleLogs(b, Version{1, 0, 0})
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		l := plog.NewLogs()
 		logs.CopyTo(l)

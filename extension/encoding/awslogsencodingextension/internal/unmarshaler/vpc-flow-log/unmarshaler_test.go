@@ -17,7 +17,6 @@ import (
 	conventions "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.uber.org/zap"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension/internal/constants"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest/plogtest"
 )
@@ -51,35 +50,26 @@ func TestUnmarshalLogs_PlainText(t *testing.T) {
 		reader               io.Reader
 		logsExpectedFilename string
 		expectedErr          string
-		featureGateEnabled   bool
 	}{
 		"valid_vpc_flow_log": {
 			reader:               readAndCompressLogFile(t, dir, "valid_vpc_flow_log.log"),
 			logsExpectedFilename: "valid_vpc_flow_log_expected.yaml",
-			featureGateEnabled:   false,
-		},
-		"valid_vpc_flow_log_iso8601": {
-			reader:               readAndCompressLogFile(t, dir, "valid_vpc_flow_log.log"),
-			logsExpectedFilename: "valid_vpc_flow_log_expected_iso8601.yaml",
-			featureGateEnabled:   true,
 		},
 		"vpc_flow_log_with_more_fields_than_allowed": {
-			reader:             readAndCompressLogFile(t, dir, "vpc_flow_log_too_few_fields.log"),
-			expectedErr:        "log line has less fields than the ones expected",
-			featureGateEnabled: false,
+			reader:      readAndCompressLogFile(t, dir, "vpc_flow_log_too_few_fields.log"),
+			expectedErr: "log line has less fields than the ones expected",
 		},
 		"vpc_flow_log_with_less_fields_than_required": {
-			reader:             readAndCompressLogFile(t, dir, "vpc_flow_log_too_many_fields.log"),
-			expectedErr:        "log line has more fields than the ones expected",
-			featureGateEnabled: false,
+			reader:      readAndCompressLogFile(t, dir, "vpc_flow_log_too_many_fields.log"),
+			expectedErr: "log line has more fields than the ones expected",
 		},
 	}
 
+	u, err := NewVPCFlowLogUnmarshaler(fileFormatPlainText, component.BuildInfo{}, zap.NewNop())
+	require.NoError(t, err)
+
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			u, err := NewVPCFlowLogUnmarshaler(constants.FileFormatPlainText, component.BuildInfo{}, zap.NewNop(), test.featureGateEnabled)
-			require.NoError(t, err)
-
 			logs, err := u.UnmarshalAWSLogs(test.reader)
 
 			if test.expectedErr != "" {
@@ -88,6 +78,7 @@ func TestUnmarshalLogs_PlainText(t *testing.T) {
 			}
 
 			require.NoError(t, err)
+
 			expectedLogs, err := golden.ReadLogs(filepath.Join(dir, test.logsExpectedFilename))
 			require.NoError(t, err)
 			require.NoError(t, plogtest.CompareLogs(expectedLogs, logs))

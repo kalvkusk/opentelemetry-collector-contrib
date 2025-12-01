@@ -7,6 +7,10 @@ receivers:
         endpoint: "localhost:4317"
 
 processors:
+  batch:
+    send_batch_max_size: 1000
+    send_batch_size: 100
+    timeout: 10s
   memory_limiter:
     check_interval: 1s
     limit_mib: 1000
@@ -16,8 +20,6 @@ exporters:
     api:
       key: ${env:DD_API_KEY}
       site: ${env:DD_SITE}
-    sending_queue:
-      batch:
 
 connectors:
   datadog/connector:
@@ -26,17 +28,17 @@ service:
   pipelines:
     traces:
       receivers: [otlp]
-      processors: [memory_limiter]
+      processors: [memory_limiter, batch]
       exporters: [datadog/connector]
     traces/sampling:
       receivers: [datadog/connector]
-      processors: [memory_limiter]
+      processors: [memory_limiter, batch]
       exporters: [datadog]
     metrics:
       receivers: [otlp, datadog/connector]
-      processors: [memory_limiter]
+      processors: [memory_limiter, batch]
       exporters: [datadog]
     logs:
       receivers: [otlp]
-      processors: [memory_limiter]
+      processors: [memory_limiter, batch]
       exporters: [datadog]

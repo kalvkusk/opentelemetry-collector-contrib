@@ -5,7 +5,6 @@ package vcenterreceiver // import "github.com/open-telemetry/opentelemetry-colle
 
 import (
 	"fmt"
-	"maps"
 	"time"
 
 	"github.com/vmware/govmomi/vim25/mo"
@@ -158,7 +157,9 @@ func (v *vcenterMetricScraper) processHosts(
 
 		// Populate master VM to CR relationship map from
 		// single Host based version of it
-		maps.Copy(vmRefToComputeRef, hsVMRefToComputeRef)
+		for vmRef, csRef := range hsVMRefToComputeRef {
+			vmRefToComputeRef[vmRef] = csRef
+		}
 	}
 
 	return vmRefToComputeRef
@@ -198,16 +199,14 @@ func (v *vcenterMetricScraper) buildHostMetrics(
 		v.recordHostPerformanceMetrics(hostPerfMetrics)
 	}
 
-	if v.hasEnabledVSANMetrics() {
-		if hs.Config == nil || hs.Config.VsanHostConfig == nil || hs.Config.VsanHostConfig.ClusterInfo == nil {
-			v.logger.Info("couldn't determine UUID necessary for vSAN metrics for host " + hs.Name)
-			v.mb.EmitForResource(metadata.WithResource(rb.Emit()))
-			return vmRefToComputeRef, nil
-		}
-		vSANMetrics := v.scrapeData.hostVSANMetricsByUUID[hs.Config.VsanHostConfig.ClusterInfo.NodeUuid]
-		if vSANMetrics != nil {
-			v.recordHostVSANMetrics(vSANMetrics)
-		}
+	if hs.Config == nil || hs.Config.VsanHostConfig == nil || hs.Config.VsanHostConfig.ClusterInfo == nil {
+		v.logger.Info("couldn't determine UUID necessary for vSAN metrics for host " + hs.Name)
+		v.mb.EmitForResource(metadata.WithResource(rb.Emit()))
+		return vmRefToComputeRef, nil
+	}
+	vSANMetrics := v.scrapeData.hostVSANMetricsByUUID[hs.Config.VsanHostConfig.ClusterInfo.NodeUuid]
+	if vSANMetrics != nil {
+		v.recordHostVSANMetrics(vSANMetrics)
 	}
 	v.mb.EmitForResource(metadata.WithResource(rb.Emit()))
 
@@ -334,11 +333,9 @@ func (v *vcenterMetricScraper) buildVMMetrics(
 		v.recordVMPerformanceMetrics(perfMetrics)
 	}
 
-	if v.hasEnabledVSANMetrics() {
-		vSANMetrics := v.scrapeData.vmVSANMetricsByUUID[vm.Config.InstanceUuid]
-		if vSANMetrics != nil {
-			v.recordVMVSANMetrics(vSANMetrics)
-		}
+	vSANMetrics := v.scrapeData.vmVSANMetricsByUUID[vm.Config.InstanceUuid]
+	if vSANMetrics != nil {
+		v.recordVMVSANMetrics(vSANMetrics)
 	}
 	v.mb.EmitForResource(metadata.WithResource(rb.Emit()))
 
@@ -384,19 +381,16 @@ func (v *vcenterMetricScraper) buildClusterMetrics(
 	}
 	// Record and emit Cluster metric data points
 	v.recordClusterStats(ts, cr, vmGroupInfo)
+	vSANConfig := cr.ConfigurationEx.(*types.ClusterConfigInfoEx).VsanConfigInfo
+	if vSANConfig == nil || vSANConfig.Enabled == nil || !*vSANConfig.Enabled || vSANConfig.DefaultConfig == nil {
+		v.logger.Info("couldn't determine UUID necessary for vSAN metrics for cluster " + cr.Name)
+		v.mb.EmitForResource(metadata.WithResource(rb.Emit()))
+		return err
+	}
 
-	if v.hasEnabledVSANMetrics() {
-		vSANConfig := cr.ConfigurationEx.(*types.ClusterConfigInfoEx).VsanConfigInfo
-		if vSANConfig == nil || vSANConfig.Enabled == nil || !*vSANConfig.Enabled || vSANConfig.DefaultConfig == nil {
-			v.logger.Info("couldn't determine UUID necessary for vSAN metrics for cluster " + cr.Name)
-			v.mb.EmitForResource(metadata.WithResource(rb.Emit()))
-			return err
-		}
-
-		vSANMetrics := v.scrapeData.clusterVSANMetricsByUUID[vSANConfig.DefaultConfig.Uuid]
-		if vSANMetrics != nil {
-			v.recordClusterVSANMetrics(vSANMetrics)
-		}
+	vSANMetrics := v.scrapeData.clusterVSANMetricsByUUID[vSANConfig.DefaultConfig.Uuid]
+	if vSANMetrics != nil {
+		v.recordClusterVSANMetrics(vSANMetrics)
 	}
 
 	v.mb.EmitForResource(metadata.WithResource(rb.Emit()))

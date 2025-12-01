@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/collector/pipeline"
 	"go.uber.org/zap"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector/internal/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottldatapoint"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/ottllog"
@@ -101,7 +102,7 @@ func (r *router[C]) buildParsers(table []RoutingTableItem, settings component.Te
 	var errs error
 	if buildResource {
 		parser, err := ottlresource.NewParser(
-			standardFunctions[ottlresource.TransformContext](),
+			common.StandardFunctions[ottlresource.TransformContext](),
 			settings,
 		)
 		if err == nil {
@@ -112,7 +113,7 @@ func (r *router[C]) buildParsers(table []RoutingTableItem, settings component.Te
 	}
 	if buildSpan {
 		parser, err := ottlspan.NewParser(
-			spanFunctions(),
+			common.SpanFunctions(),
 			settings,
 		)
 		if err == nil {
@@ -123,7 +124,7 @@ func (r *router[C]) buildParsers(table []RoutingTableItem, settings component.Te
 	}
 	if buildMetric {
 		parser, err := ottlmetric.NewParser(
-			standardFunctions[ottlmetric.TransformContext](),
+			common.StandardFunctions[ottlmetric.TransformContext](),
 			settings,
 		)
 		if err == nil {
@@ -134,7 +135,7 @@ func (r *router[C]) buildParsers(table []RoutingTableItem, settings component.Te
 	}
 	if buildDataPoint {
 		parser, err := ottldatapoint.NewParser(
-			standardFunctions[ottldatapoint.TransformContext](),
+			common.StandardFunctions[ottldatapoint.TransformContext](),
 			settings,
 		)
 		if err == nil {
@@ -145,7 +146,7 @@ func (r *router[C]) buildParsers(table []RoutingTableItem, settings component.Te
 	}
 	if buildLog {
 		parser, err := ottllog.NewParser(
-			standardFunctions[ottllog.TransformContext](),
+			common.StandardFunctions[ottllog.TransformContext](),
 			settings,
 		)
 		if err == nil {
@@ -245,7 +246,7 @@ func (r *router[C]) registerRouteConsumers() (err error) {
 				route.logStatement = statement
 			}
 		} else {
-			var pipelineNames []string
+			pipelineNames := []string{}
 			for _, pipeline := range item.Pipelines {
 				pipelineNames = append(pipelineNames, pipeline.String())
 			}

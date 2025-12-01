@@ -123,12 +123,13 @@ func benchmarkCompressor(b *testing.B, format string, length int) {
 	require.NotNil(b, compressor, "Must have a valid compressor")
 
 	data := make([]byte, length)
-	for i := range length {
+	for i := 0; i < length; i++ {
 		data[i] = byte(rand.Int32())
 	}
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		out, err := compressor(data)
 		assert.NoError(b, err, "Must not error when processing data")
 		assert.NotNil(b, out, "Must have a valid byte array after")
@@ -177,12 +178,12 @@ func concurrentCompressFunc(t *testing.T) {
 	// since it is where the chances of having race conditions are bigger
 	dataLength := 131072
 
-	for range numWorkers {
+	for j := 0; j < numWorkers; j++ {
 		go func() {
 			defer wg.Done()
 
 			data := make([]byte, dataLength)
-			for i := range dataLength {
+			for i := 0; i < dataLength; i++ {
 				data[i] = byte(rand.Int32())
 			}
 

@@ -15,7 +15,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/internal/ctxcommon"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/internal/ctxerror"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/internal/ctxprofilecommon"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl/contexts/internal/ctxutil"
 )
 
@@ -25,7 +24,7 @@ func PathGetSetter[K Context](path ottl.Path[K]) (ottl.GetSetter[K], error) {
 	}
 	switch path.Name() {
 	case "sample_type":
-		return accessSampleType(path)
+		return accessSampleType[K](), nil
 	case "sample":
 		return accessSample[K](), nil
 	case "time_unix_nano":
@@ -37,9 +36,11 @@ func PathGetSetter[K Context](path ottl.Path[K]) (ottl.GetSetter[K], error) {
 	case "duration":
 		return accessDuration[K](), nil
 	case "period_type":
-		return accessPeriodType[K](path)
+		return accessPeriodType[K](), nil
 	case "period":
 		return accessPeriod[K](), nil
+	case "comment_string_indices":
+		return accessCommentStringIndices[K](), nil
 	case "profile_id":
 		nextPath := path.Next()
 		if nextPath != nil {
@@ -58,13 +59,10 @@ func PathGetSetter[K Context](path ottl.Path[K]) (ottl.GetSetter[K], error) {
 	case "original_payload":
 		return accessOriginalPayload[K](), nil
 	case "attributes":
-		attributable := func(ctx K) (pprofile.ProfilesDictionary, ctxprofilecommon.ProfileAttributable) {
-			return ctx.GetProfilesDictionary(), ctx.GetProfile()
-		}
 		if path.Keys() == nil {
-			return ctxprofilecommon.AccessAttributes[K](attributable), nil
+			return accessAttributes[K](), nil
 		}
-		return ctxprofilecommon.AccessAttributesKey[K](path.Keys(), attributable), nil
+		return accessAttributesKey(path.Keys()), nil
 	default:
 		return nil, ctxerror.New(path.Name(), path.String(), Name, DocRef)
 	}
@@ -73,11 +71,11 @@ func PathGetSetter[K Context](path ottl.Path[K]) (ottl.GetSetter[K], error) {
 func accessSample[K Context]() ottl.StandardGetSetter[K] {
 	return ottl.StandardGetSetter[K]{
 		Getter: func(_ context.Context, tCtx K) (any, error) {
-			return tCtx.GetProfile().Samples(), nil
+			return tCtx.GetProfile().Sample(), nil
 		},
 		Setter: func(_ context.Context, tCtx K, val any) error {
 			if v, ok := val.(pprofile.SampleSlice); ok {
-				v.CopyTo(tCtx.GetProfile().Samples())
+				v.CopyTo(tCtx.GetProfile().Sample())
 			}
 			return nil
 		},
@@ -115,14 +113,11 @@ func accessTime[K Context]() ottl.StandardGetSetter[K] {
 func accessDurationUnixNano[K Context]() ottl.StandardGetSetter[K] {
 	return ottl.StandardGetSetter[K]{
 		Getter: func(_ context.Context, tCtx K) (any, error) {
-			return int64(tCtx.GetProfile().DurationNano()), nil
+			return tCtx.GetProfile().Duration().AsTime().UnixNano(), nil
 		},
 		Setter: func(_ context.Context, tCtx K, val any) error {
 			if t, ok := val.(int64); ok {
-				if t < 0 {
-					return errors.New("duration_unix_nano must be non-negative")
-				}
-				tCtx.GetProfile().SetDurationNano(uint64(t))
+				tCtx.GetProfile().SetDuration(pcommon.NewTimestampFromTime(time.Unix(0, t)))
 			}
 			return nil
 		},
@@ -132,25 +127,29 @@ func accessDurationUnixNano[K Context]() ottl.StandardGetSetter[K] {
 func accessDuration[K Context]() ottl.StandardGetSetter[K] {
 	return ottl.StandardGetSetter[K]{
 		Getter: func(_ context.Context, tCtx K) (any, error) {
-			return int64(tCtx.GetProfile().DurationNano()), nil
+			return tCtx.GetProfile().Duration().AsTime(), nil
 		},
 		Setter: func(_ context.Context, tCtx K, val any) error {
-			if t, ok := val.(int64); ok {
-				if t < 0 {
-					return errors.New("duration_unix_nano must be non-negative")
-				}
-				tCtx.GetProfile().SetDurationNano(uint64(t))
+			if t, ok := val.(time.Time); ok {
+				tCtx.GetProfile().SetDuration(pcommon.NewTimestampFromTime(t))
 			}
 			return nil
 		},
 	}
 }
 
-func accessPeriodType[K Context](path ottl.Path[K]) (ottl.GetSetter[K], error) {
-	periodTypeTarget := func(tCtx K) pprofile.ValueType {
-		return tCtx.GetProfile().PeriodType()
+func accessPeriodType[K Context]() ottl.StandardGetSetter[K] {
+	return ottl.StandardGetSetter[K]{
+		Getter: func(_ context.Context, tCtx K) (any, error) {
+			return tCtx.GetProfile().PeriodType(), nil
+		},
+		Setter: func(_ context.Context, tCtx K, val any) error {
+			if v, ok := val.(pprofile.ValueType); ok {
+				v.CopyTo(tCtx.GetProfile().PeriodType())
+			}
+			return nil
+		},
 	}
-	return valueTypeGetterSetter(path, periodTypeTarget)
 }
 
 func accessPeriod[K Context]() ottl.StandardGetSetter[K] {
@@ -167,11 +166,29 @@ func accessPeriod[K Context]() ottl.StandardGetSetter[K] {
 	}
 }
 
-func accessSampleType[K Context](path ottl.Path[K]) (ottl.GetSetter[K], error) {
-	sampleTypeTarget := func(tCtx K) pprofile.ValueType {
-		return tCtx.GetProfile().SampleType()
+func accessCommentStringIndices[K Context]() ottl.StandardGetSetter[K] {
+	return ottl.StandardGetSetter[K]{
+		Getter: func(_ context.Context, tCtx K) (any, error) {
+			return ctxutil.GetCommonIntSliceValues[int32](tCtx.GetProfile().CommentStrindices()), nil
+		},
+		Setter: func(_ context.Context, tCtx K, val any) error {
+			return ctxutil.SetCommonIntSliceValues[int32](tCtx.GetProfile().CommentStrindices(), val)
+		},
 	}
-	return valueTypeGetterSetter(path, sampleTypeTarget)
+}
+
+func accessSampleType[K Context]() ottl.StandardGetSetter[K] {
+	return ottl.StandardGetSetter[K]{
+		Getter: func(_ context.Context, tCtx K) (any, error) {
+			return tCtx.GetProfile().SampleType(), nil
+		},
+		Setter: func(_ context.Context, tCtx K, val any) error {
+			if v, ok := val.(pprofile.ValueType); ok {
+				v.CopyTo(tCtx.GetProfile().SampleType())
+			}
+			return nil
+		},
+	}
 }
 
 func accessProfileID[K Context]() ottl.StandardGetSetter[K] {
@@ -264,4 +281,64 @@ func accessOriginalPayload[K Context]() ottl.StandardGetSetter[K] {
 			return nil
 		},
 	}
+}
+
+func accessAttributes[K Context]() ottl.StandardGetSetter[K] {
+	return ottl.StandardGetSetter[K]{
+		Getter: func(_ context.Context, tCtx K) (any, error) {
+			return pprofile.FromAttributeIndices(tCtx.GetProfilesDictionary().AttributeTable(), tCtx.GetProfile(), tCtx.GetProfilesDictionary()), nil
+		},
+		Setter: func(_ context.Context, tCtx K, val any) error {
+			m, err := ctxutil.GetMap(val)
+			if err != nil {
+				return err
+			}
+			tCtx.GetProfile().AttributeIndices().FromRaw([]int32{})
+			for k, v := range m.All() {
+				if err := pprofile.PutAttribute(tCtx.GetProfilesDictionary().AttributeTable(), tCtx.GetProfile(), tCtx.GetProfilesDictionary(), k, v); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
+	}
+}
+
+func accessAttributesKey[K Context](key []ottl.Key[K]) ottl.StandardGetSetter[K] {
+	return ottl.StandardGetSetter[K]{
+		Getter: func(ctx context.Context, tCtx K) (any, error) {
+			return ctxutil.GetMapValue[K](ctx, tCtx, pprofile.FromAttributeIndices(tCtx.GetProfilesDictionary().AttributeTable(), tCtx.GetProfile(), tCtx.GetProfilesDictionary()), key)
+		},
+		Setter: func(ctx context.Context, tCtx K, val any) error {
+			newKey, err := ctxutil.GetMapKeyName(ctx, tCtx, key[0])
+			if err != nil {
+				return err
+			}
+			v := getAttributeValue(tCtx, *newKey)
+			err = ctxutil.SetIndexableValue[K](ctx, tCtx, v, val, key[1:])
+			if err != nil {
+				return err
+			}
+			return pprofile.PutAttribute(tCtx.GetProfilesDictionary().AttributeTable(), tCtx.GetProfile(), tCtx.GetProfilesDictionary(), *newKey, v)
+		},
+	}
+}
+
+func getAttributeValue[K Context](tCtx K, key string) pcommon.Value {
+	// Find the index of the attribute in the profile's attribute indices
+	// and return the corresponding value from the attribute table.
+	table := tCtx.GetProfilesDictionary().AttributeTable()
+	strTable := tCtx.GetProfilesDictionary().StringTable()
+
+	for _, tableIndex := range tCtx.GetProfile().AttributeIndices().All() {
+		attr := table.At(int(tableIndex))
+		if strTable.At(int(attr.KeyStrindex())) == key {
+			// Copy the value because OTTL expects to do inplace updates for the values.
+			v := pcommon.NewValueEmpty()
+			attr.Value().CopyTo(v)
+			return v
+		}
+	}
+
+	return pcommon.NewValueEmpty()
 }

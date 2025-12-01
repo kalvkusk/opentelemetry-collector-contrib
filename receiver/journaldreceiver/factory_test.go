@@ -46,7 +46,7 @@ func TestCreateAndShutdown(t *testing.T) {
 		assert.NoError(t, receiver.Shutdown(ctx))
 	} else {
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, pipeline.ErrSignalNotSupported)
+		assert.IsType(t, pipeline.ErrSignalNotSupported, err)
 		assert.Nil(t, receiver)
 	}
 }

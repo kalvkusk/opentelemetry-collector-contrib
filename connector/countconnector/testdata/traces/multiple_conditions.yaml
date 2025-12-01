@@ -15,8 +15,7 @@ resourceMetrics:
               aggregationTemporality: 1
               dataPoints:
                 - asInt: "4"
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127923826000"
               isMonotonic: true
           - description: Span event count if ...
             name: spanevent.count.if
@@ -24,8 +23,7 @@ resourceMetrics:
               aggregationTemporality: 1
               dataPoints:
                 - asInt: "16"
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127923826000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector
@@ -45,8 +43,7 @@ resourceMetrics:
               aggregationTemporality: 1
               dataPoints:
                 - asInt: "4"
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127923836000"
               isMonotonic: true
           - description: Span event count if ...
             name: spanevent.count.if
@@ -54,8 +51,7 @@ resourceMetrics:
               aggregationTemporality: 1
               dataPoints:
                 - asInt: "16"
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127923836000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector
@@ -72,8 +68,7 @@ resourceMetrics:
               aggregationTemporality: 1
               dataPoints:
                 - asInt: "2"
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127923843000"
               isMonotonic: true
           - description: Span event count if ...
             name: spanevent.count.if
@@ -81,8 +76,7 @@ resourceMetrics:
               aggregationTemporality: 1
               dataPoints:
                 - asInt: "8"
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127923843000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector
@@ -95,8 +89,7 @@ resourceMetrics:
               aggregationTemporality: 1
               dataPoints:
                 - asInt: "2"
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127923849000"
               isMonotonic: true
           - description: Span event count if ...
             name: spanevent.count.if
@@ -104,8 +97,7 @@ resourceMetrics:
               aggregationTemporality: 1
               dataPoints:
                 - asInt: "8"
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127923849000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector

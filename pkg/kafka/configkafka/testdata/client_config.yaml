@@ -95,6 +95,3 @@ kafka/foo:
     retry:
       max: 10
       backoff: 5s
-
-kafka/not_use_leader_epoch:
-  use_leader_epoch: false

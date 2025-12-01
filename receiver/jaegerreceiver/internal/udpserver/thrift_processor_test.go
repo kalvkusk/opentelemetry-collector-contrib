@@ -51,7 +51,7 @@ func createProcessor(t *testing.T, tFactory thrift.TProtocolFactory, handler Age
 	require.NoError(t, err)
 
 	go processor.Serve()
-	for range 1000 {
+	for i := 0; i < 1000; i++ {
 		if processor.IsServing() {
 			break
 		}

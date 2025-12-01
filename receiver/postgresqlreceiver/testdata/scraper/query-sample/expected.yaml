@@ -45,12 +45,11 @@ resourceLogs:
               - key: postgresql.query_id
                 value:
                   stringValue: "123131231231"
-              - key: postgresql.total_exec_time
-                value:
-                  doubleValue: 1.2
             body: {}
             eventName: db.server.query_sample
-            timeUnixNano: "1758612388939691000"
+            spanId: ""
+            timeUnixNano: "1749235653491769000"
+            traceId: ""
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/postgresqlreceiver
           version: latest

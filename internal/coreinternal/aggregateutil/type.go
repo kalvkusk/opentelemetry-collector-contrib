@@ -5,7 +5,6 @@ package aggregateutil // import "github.com/open-telemetry/opentelemetry-collect
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -37,7 +36,13 @@ const (
 var AggregationTypes = []AggregationType{Sum, Mean, Min, Max, Median, Count}
 
 func (at AggregationType) IsValid() bool {
-	return slices.Contains(AggregationTypes, at)
+	for _, aggregationType := range AggregationTypes {
+		if at == aggregationType {
+			return true
+		}
+	}
+
+	return false
 }
 
 func GetSupportedAggregationFunctionsList() string {

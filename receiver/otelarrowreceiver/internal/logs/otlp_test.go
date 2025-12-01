@@ -141,7 +141,7 @@ func TestExport_AdmissionLimitExceeded(t *testing.T) {
 
 	var expectSuccess atomic.Int32
 
-	for range 10 {
+	for i := 0; i < 10; i++ {
 		go func() {
 			defer wait.Done()
 			_, err := logsClient.Export(t.Context(), req)

@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -58,8 +57,6 @@ type DimensionClient struct {
 	metricsConverter translation.MetricsConverter
 	// ExcludeProperties will filter DimensionUpdate content to not submit undesired metadata.
 	ExcludeProperties []dpfilters.PropertyFilter
-	// dropTags specifies whether tags should be omitted or not. Default value is false.
-	dropTags bool
 }
 
 type queuedDimension struct {
@@ -84,7 +81,6 @@ type DimensionClientOptions struct {
 	MaxIdleConnsPerHost int
 	IdleConnTimeout     time.Duration
 	Timeout             time.Duration
-	DropTags            bool
 }
 
 // NewDimensionClient returns a new client
@@ -121,7 +117,6 @@ func NewDimensionClient(options DimensionClientOptions) *DimensionClient {
 		logUpdates:        options.LogUpdates,
 		metricsConverter:  options.MetricsConverter,
 		ExcludeProperties: options.ExcludeProperties,
-		dropTags:          options.DropTags,
 	}
 }
 
@@ -180,7 +175,9 @@ func (dc *DimensionClient) acceptDimension(dimUpdate *DimensionUpdate) error {
 func mergeProperties(propMaps ...map[string]*string) map[string]*string {
 	out := map[string]*string{}
 	for _, propMap := range propMaps {
-		maps.Copy(out, propMap)
+		for k, v := range propMap {
+			out[k] = v
+		}
 	}
 	return out
 }
@@ -191,7 +188,9 @@ func mergeProperties(propMaps ...map[string]*string) map[string]*string {
 func mergeTags(tagSets ...map[string]bool) map[string]bool {
 	out := map[string]bool{}
 	for _, tagSet := range tagSets {
-		maps.Copy(out, tagSet)
+		for k, v := range tagSet {
+			out[k] = v
+		}
 	}
 	return out
 }
@@ -346,11 +345,6 @@ func (dc *DimensionClient) makePatchRequest(ctx context.Context, dim *DimensionU
 }
 
 func (dc *DimensionClient) filterDimensionUpdate(update *DimensionUpdate) *DimensionUpdate {
-	// clear tags list if dropTags option is set
-	if dc.dropTags {
-		update.Tags = nil
-	}
-
 	for _, excludeRule := range dc.ExcludeProperties {
 		if excludeRule.DimensionName.Matches(update.Name) && excludeRule.DimensionValue.Matches(update.Value) {
 			for k, v := range update.Properties {

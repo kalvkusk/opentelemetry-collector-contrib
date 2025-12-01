@@ -8,11 +8,11 @@ The following telemetry is emitted by this component.
 
 ### otelcol_loadbalancer_backend_latency
 
-Response latency in ms for the backends. [Development]
+Response latency in ms for the backends.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| ms | Histogram | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| ms | Histogram | Int |
 
 #### Attributes
 
@@ -22,11 +22,11 @@ Response latency in ms for the backends. [Development]
 
 ### otelcol_loadbalancer_backend_outcome
 
-Number of successes and failures for each endpoint. [Development]
+Number of successes and failures for each endpoint.
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| {outcomes} | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| {outcomes} | Sum | Int | true |
 
 #### Attributes
 
@@ -36,11 +36,11 @@ Number of successes and failures for each endpoint. [Development]
 
 ### otelcol_loadbalancer_num_backend_updates
 
-Number of times the list of backends was updated. [Development]
+Number of times the list of backends was updated.
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| {updates} | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| {updates} | Sum | Int | true |
 
 #### Attributes
 
@@ -50,11 +50,11 @@ Number of times the list of backends was updated. [Development]
 
 ### otelcol_loadbalancer_num_backends
 
-Current number of backends in use. [Development]
+Current number of backends in use.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| {backends} | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {backends} | Gauge | Int |
 
 #### Attributes
 
@@ -64,11 +64,11 @@ Current number of backends in use. [Development]
 
 ### otelcol_loadbalancer_num_resolutions
 
-Number of times the resolver has triggered new resolutions. [Development]
+Number of times the resolver has triggered new resolutions.
 
-| Unit | Metric Type | Value Type | Monotonic | Stability |
-| ---- | ----------- | ---------- | --------- | --------- |
-| {resolutions} | Sum | Int | true | Development |
+| Unit | Metric Type | Value Type | Monotonic |
+| ---- | ----------- | ---------- | --------- |
+| {resolutions} | Sum | Int | true |
 
 #### Attributes
 

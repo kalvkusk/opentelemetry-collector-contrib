@@ -61,56 +61,47 @@ func (*logsConnector) Capabilities() consumer.Capabilities {
 
 func (c *logsConnector) ConsumeLogs(ctx context.Context, ld plog.Logs) error {
 	groups := make(map[consumer.Logs]plog.Logs)
-	matched := plog.NewLogs()
+	var errs error
 	for i := 0; i < len(c.router.routeSlice) && ld.ResourceLogs().Len() > 0; i++ {
-		var errs error
 		route := c.router.routeSlice[i]
+		matchedLogs := plog.NewLogs()
 		switch route.statementContext {
 		case "request":
 			if route.requestCondition.matchRequest(ctx) {
-				// all logs are routed
-				ld.MoveTo(matched)
+				groupAllLogs(groups, route.consumer, ld)
+				ld = plog.NewLogs() // all logs have been routed
 			}
 		case "", "resource":
-			plogutil.MoveResourcesIf(ld, matched,
+			plogutil.MoveResourcesIf(ld, matchedLogs,
 				func(rl plog.ResourceLogs) bool {
 					rtx := ottlresource.NewTransformContext(rl.Resource(), rl)
 					_, isMatch, err := route.resourceStatement.Execute(ctx, rtx)
-					// If error during statement evaluation consider it as not a match.
-					if err != nil {
-						errs = errors.Join(errs, err)
-						return false
-					}
+					errs = errors.Join(errs, err)
 					return isMatch
 				},
 			)
 		case "log":
-			plogutil.MoveRecordsWithContextIf(ld, matched,
+			plogutil.MoveRecordsWithContextIf(ld, matchedLogs,
 				func(rl plog.ResourceLogs, sl plog.ScopeLogs, lr plog.LogRecord) bool {
 					ltx := ottllog.NewTransformContext(lr, sl.Scope(), rl.Resource(), sl, rl)
 					_, isMatch, err := route.logStatement.Execute(ctx, ltx)
-					// If error during statement evaluation consider it as not a match.
-					if err != nil {
-						errs = errors.Join(errs, err)
-						return false
-					}
+					errs = errors.Join(errs, err)
 					return isMatch
 				},
 			)
 		}
-		if errs != nil && c.config.ErrorMode == ottl.PropagateError {
-			return errs
+		if errs != nil {
+			if c.config.ErrorMode == ottl.PropagateError {
+				return errs
+			}
+			groupAllLogs(groups, c.router.defaultConsumer, matchedLogs)
 		}
-		groupAllLogs(groups, route.consumer, matched)
+		groupAllLogs(groups, route.consumer, matchedLogs)
 	}
 	// anything left wasn't matched by any route. Send to default consumer
 	groupAllLogs(groups, c.router.defaultConsumer, ld)
-	var errs error
 	for consumer, group := range groups {
-		err := consumer.ConsumeLogs(ctx, group)
-		if err != nil {
-			errs = errors.Join(errs, err)
-		}
+		errs = errors.Join(errs, consumer.ConsumeLogs(ctx, group))
 	}
 	return errs
 }
@@ -120,16 +111,23 @@ func groupAllLogs(
 	cons consumer.Logs,
 	logs plog.Logs,
 ) {
-	if cons == nil {
-		return
+	for i := 0; i < logs.ResourceLogs().Len(); i++ {
+		groupLogs(groups, cons, logs.ResourceLogs().At(i))
 	}
-	if logs.ResourceLogs().Len() == 0 {
+}
+
+func groupLogs(
+	groups map[consumer.Logs]plog.Logs,
+	cons consumer.Logs,
+	logs plog.ResourceLogs,
+) {
+	if cons == nil {
 		return
 	}
 	group, ok := groups[cons]
 	if !ok {
 		group = plog.NewLogs()
-		groups[cons] = group
 	}
-	logs.ResourceLogs().MoveAndAppendTo(group.ResourceLogs())
+	logs.CopyTo(group.ResourceLogs().AppendEmpty())
+	groups[cons] = group
 }

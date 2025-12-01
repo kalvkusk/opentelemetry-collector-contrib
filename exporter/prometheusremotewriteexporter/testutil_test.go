@@ -97,20 +97,18 @@ var (
 	emptySummary   = "emptySummary"
 
 	// Category 2: invalid type and temporality combination
-	emptyCumulativeSum              = "emptyCumulativeSum"
-	emptyCumulativeHistogram        = "emptyCumulativeHistogram"
-	metricWithInvalidTranslatedName = "metricWithInvalidTranslatedName"
+	emptyCumulativeSum       = "emptyCumulativeSum"
+	emptyCumulativeHistogram = "emptyCumulativeHistogram"
 
 	// different metrics that will not pass validate metrics and will cause the exporter to return an error
 	invalidMetrics = map[string]pmetric.Metric{
-		empty:                           pmetric.NewMetric(),
-		emptyGauge:                      getEmptyGaugeMetric(emptyGauge),
-		emptySum:                        getEmptySumMetric(emptySum),
-		emptyHistogram:                  getEmptyHistogramMetric(emptyHistogram),
-		emptySummary:                    getEmptySummaryMetric(emptySummary),
-		emptyCumulativeSum:              getEmptyCumulativeSumMetric(emptyCumulativeSum),
-		emptyCumulativeHistogram:        getEmptyCumulativeHistogramMetric(emptyCumulativeHistogram),
-		metricWithInvalidTranslatedName: getMetricWithInvalidTranslatedName(),
+		empty:                    pmetric.NewMetric(),
+		emptyGauge:               getEmptyGaugeMetric(emptyGauge),
+		emptySum:                 getEmptySumMetric(emptySum),
+		emptyHistogram:           getEmptyHistogramMetric(emptyHistogram),
+		emptySummary:             getEmptySummaryMetric(emptySummary),
+		emptyCumulativeSum:       getEmptyCumulativeSumMetric(emptyCumulativeSum),
+		emptyCumulativeHistogram: getEmptyCumulativeHistogramMetric(emptyCumulativeHistogram),
 	}
 	staleNaNIntGauge       = "staleNaNIntGauge"
 	staleNaNDoubleGauge    = "staleNaNDoubleGauge"
@@ -209,7 +207,7 @@ func getMetricsFromMetricList(metricList ...pmetric.Metric) pmetric.Metrics {
 	rm := metrics.ResourceMetrics().AppendEmpty()
 	ilm := rm.ScopeMetrics().AppendEmpty()
 	ilm.Metrics().EnsureCapacity(len(metricList))
-	for i := range metricList {
+	for i := 0; i < len(metricList); i++ {
 		metricList[i].CopyTo(ilm.Metrics().AppendEmpty())
 	}
 
@@ -323,19 +321,6 @@ func getHistogramMetricEmptyDataPoint(name string, attributes pcommon.Map, ts ui
 	return metric
 }
 
-func getMetricWithInvalidTranslatedName() pmetric.Metric {
-	metric := pmetric.NewMetric()
-	metric.SetName("!@#$%^&*()")
-	dp := metric.SetEmptyGauge().DataPoints().AppendEmpty()
-	dp.SetIntValue(10)
-	dp.Attributes().PutStr("label1", "value1")
-	dp.Attributes().PutStr("label2", "value2")
-
-	dp.SetStartTimestamp(pcommon.Timestamp(0))
-	dp.SetTimestamp(pcommon.Timestamp(1000))
-	return metric
-}
-
 func getExpHistogramMetric(
 	name string,
 	attributes pcommon.Map,
@@ -420,7 +405,7 @@ func getQuantiles(bounds, values []float64) pmetric.SummaryDataPointValueAtQuant
 	quantiles := pmetric.NewSummaryDataPointValueAtQuantileSlice()
 	quantiles.EnsureCapacity(len(bounds))
 
-	for i := range bounds {
+	for i := 0; i < len(bounds); i++ {
 		quantile := quantiles.AppendEmpty()
 		quantile.SetQuantile(bounds[i])
 		quantile.SetValue(values[i])

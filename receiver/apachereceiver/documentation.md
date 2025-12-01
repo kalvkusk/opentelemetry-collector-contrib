@@ -16,86 +16,86 @@ metrics:
 
 The number of connections in different asynchronous states reported by Apache's server-status.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| {connections} | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {connections} | Gauge | Int |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| connection_state | The asynchronous connection state reported by Apache's server-status. | Str: ``writing``, ``keepalive``, ``closing`` | Recommended |
+| connection_state | The asynchronous connection state reported by Apache's server-status. | Str: ``writing``, ``keepalive``, ``closing`` | false |
 
 ### apache.cpu.load
 
 Current load of the CPU.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| % | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| % | Gauge | Double |
 
 ### apache.cpu.time
 
 Jiffs used by processes of given category.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {jiff} | Sum | Double | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {jiff} | Sum | Double | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| level | Level of processes. | Str: ``self``, ``children`` | Recommended |
-| mode | Mode of processes. | Str: ``system``, ``user`` | Recommended |
+| level | Level of processes. | Str: ``self``, ``children`` | false |
+| mode | Mode of processes. | Str: ``system``, ``user`` | false |
 
 ### apache.current_connections
 
 The number of active connections currently attached to the HTTP server.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {connections} | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {connections} | Sum | Int | Cumulative | false |
 
 ### apache.load.1
 
 The average server load during the last minute.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| % | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| % | Gauge | Double |
 
 ### apache.load.15
 
 The average server load during the last 15 minutes.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| % | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| % | Gauge | Double |
 
 ### apache.load.5
 
 The average server load during the last 5 minutes.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| % | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| % | Gauge | Double |
 
 ### apache.request.time
 
 Total time spent on handling requests.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| ms | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| ms | Sum | Int | Cumulative | true |
 
 ### apache.requests
 
 The number of requests serviced by the HTTP server per second.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {requests} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {requests} | Sum | Int | Cumulative | true |
 
 ### apache.scoreboard
 
@@ -103,45 +103,45 @@ The number of workers in each state.
 
 The [apache scoreboard](https://metacpan.org/pod/Apache::Scoreboard#DESCRIPTION) is an encoded representation of the state of all the server's workers. This metric decodes the scoreboard and presents a count of workers in each state.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {workers} | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {workers} | Sum | Int | Cumulative | false |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| state | The state of a connection. | Str: ``open``, ``waiting``, ``starting``, ``reading``, ``sending``, ``keepalive``, ``dnslookup``, ``closing``, ``logging``, ``finishing``, ``idle_cleanup``, ``unknown`` | Recommended |
+| state | The state of a connection. | Str: ``open``, ``waiting``, ``starting``, ``reading``, ``sending``, ``keepalive``, ``dnslookup``, ``closing``, ``logging``, ``finishing``, ``idle_cleanup``, ``unknown`` | false |
 
 ### apache.traffic
 
 Total HTTP server traffic.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| By | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| By | Sum | Int | Cumulative | true |
 
 ### apache.uptime
 
 The amount of time that the server has been running in seconds.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| s | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| s | Sum | Int | Cumulative | true |
 
 ### apache.workers
 
 The number of workers currently attached to the HTTP server.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {workers} | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {workers} | Sum | Int | Cumulative | false |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| state | The state of workers. | Str: ``busy``, ``idle`` | Recommended |
+| state | The state of workers. | Str: ``busy``, ``idle`` | false |
 
 ## Resource Attributes
 

@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	gojson "github.com/goccy/go-json"
+	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/entry"
@@ -31,6 +31,7 @@ type Input struct {
 	newCmd func(ctx context.Context, cursor []byte) cmd
 
 	persister           operator.Persister
+	json                jsoniter.API
 	convertMessageBytes bool
 	cancel              context.CancelFunc
 	wg                  sync.WaitGroup
@@ -207,7 +208,7 @@ func (operator *Input) runJournalctl(ctx context.Context, jctl *journalctl) erro
 
 func (operator *Input) parseJournalEntry(line []byte) (*entry.Entry, string, error) {
 	var body map[string]any
-	err := gojson.Unmarshal(line, &body)
+	err := operator.json.Unmarshal(line, &body)
 	if err != nil {
 		return nil, "", err
 	}

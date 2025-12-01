@@ -52,7 +52,7 @@ func TestTraceDataToLogService(t *testing.T) {
 		t.Errorf("Failed load log key value pairs from %q: %v", resultLogFile, err)
 		return
 	}
-	for j := range gotLogs {
+	for j := 0; j < len(gotLogs); j++ {
 		sort.Sort(logKeyValuePairs(gotLogPairs[j]))
 		sort.Sort(logKeyValuePairs(wantLogs[j]))
 		assert.Equal(t, wantLogs[j], gotLogPairs[j])

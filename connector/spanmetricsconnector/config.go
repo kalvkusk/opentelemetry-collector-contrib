@@ -41,7 +41,6 @@ type Config struct {
 	// - span.kind
 	// - span.kind
 	// - status.code
-	// - collector.instance.id This dimensions never added unless enable feature-gate connector.spanmetrics.includeCollectorInstanceID
 	// The dimensions will be fetched from the span's attributes. Examples of some conventionally used attributes:
 	// https://github.com/open-telemetry/opentelemetry-collector/blob/main/model/semconv/opentelemetry.go.
 	Dimensions        []Dimension `mapstructure:"dimensions"`
@@ -94,11 +93,6 @@ type Config struct {
 	IncludeInstrumentationScope []string `mapstructure:"include_instrumentation_scope"`
 
 	AggregationCardinalityLimit int `mapstructure:"aggregation_cardinality_limit"`
-
-	// Add the resource attributes to the resulting metrics (disabled by default)
-	// This option enables the old behavior
-	// https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/42103
-	AddResourceAttributes bool `mapstructure:"add_resource_attributes"`
 }
 
 type HistogramConfig struct {
@@ -200,12 +194,7 @@ func (c Config) GetDeltaTimestampCacheSize() int {
 // validateDimensions checks duplicates for reserved dimensions and additional dimensions.
 func validateDimensions(dimensions []Dimension) error {
 	labelNames := make(map[string]struct{})
-	intervalLabels := []string{serviceNameKey, spanKindKey, statusCodeKey, spanNameKey}
-	if includeCollectorInstanceID.IsEnabled() {
-		intervalLabels = append(intervalLabels, collectorInstanceKey)
-	}
-
-	for _, key := range intervalLabels {
+	for _, key := range []string{serviceNameKey, spanKindKey, statusCodeKey, spanNameKey} {
 		labelNames[key] = struct{}{}
 	}
 

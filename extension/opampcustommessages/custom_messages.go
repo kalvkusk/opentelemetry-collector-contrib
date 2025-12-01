@@ -9,8 +9,6 @@ import "github.com/open-telemetry/opamp-go/protobufs"
 // CustomCapabilityRegisterOptions represents extra options that can be use in CustomCapabilityRegistry.Register
 type CustomCapabilityRegisterOptions struct {
 	MaxQueuedMessages int
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // DefaultCustomCapabilityRegisterOptions returns the default options for CustomCapabilityRegisterOptions

@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension/xextension/storage"
@@ -66,8 +65,10 @@ func (r *Reader) Process(ctx context.Context, token string, fileAttributes map[s
 	}
 
 	// Copy resultant attributes over current set of attributes (upsert)
-	// fileAttributes is an output parameter
-	maps.Copy(fileAttributes, ent.Attributes)
+	for k, v := range ent.Attributes {
+		// fileAttributes is an output parameter
+		fileAttributes[k] = v
+	}
 	return nil
 }
 

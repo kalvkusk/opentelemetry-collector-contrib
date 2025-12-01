@@ -20,16 +20,17 @@ import (
 )
 
 func basicProfiles() pprofiletest.Profiles {
-	r := pcommon.NewResource()
-	r.Attributes().PutStr("key1", "value1")
 	return pprofiletest.Profiles{
 		ResourceProfiles: []pprofiletest.ResourceProfile{
 			{
-				Resource: r,
+				Resource: pprofiletest.Resource{
+					Attributes: []pprofiletest.Attribute{
+						{Key: "key1", Value: "value1"},
+					},
+				},
 				ScopeProfiles: []pprofiletest.ScopeProfile{
 					{
-						Scope: pcommon.NewInstrumentationScope(),
-						Profiles: []pprofiletest.Profile{
+						Profile: []pprofiletest.Profile{
 							{
 								SampleType: []pprofiletest.ValueType{
 									{Typ: "samples", Unit: "count"},
@@ -118,7 +119,7 @@ func TestSerializeProfile(t *testing.T) {
 
 				profile.AttributeIndices().Append(2)
 
-				sample := profile.Samples().AppendEmpty()
+				sample := profile.Sample().AppendEmpty()
 				sample.TimestampsUnixNano().Append(0)
 				sample.AttributeIndices().Append(3)
 				sample.SetStackIndex(0)
@@ -139,7 +140,6 @@ func TestSerializeProfile(t *testing.T) {
 					"host.id":                       "localhost",
 					"process.executable.name":       "libc.so.6",
 					"process.thread.name":           "",
-					"profiling.project.id":          json.Number("2"),
 				},
 				{
 					"script": map[string]any{
@@ -234,8 +234,9 @@ func BenchmarkSerializeProfile(b *testing.B) {
 	}
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		_ = ser.SerializeProfile(profiles.Dictionary(), resource.Resource(), scope.Scope(), profile, pushData)
 	}
 }

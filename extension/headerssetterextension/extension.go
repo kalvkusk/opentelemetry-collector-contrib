@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/extensionauth"
-	"go.opentelemetry.io/collector/extension/extensioncapabilities"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/credentials"
 
@@ -26,98 +25,27 @@ type header struct {
 }
 
 var (
-	_ extension.Extension             = (*headerSetterExtension)(nil)
-	_ extensionauth.HTTPClient        = (*headerSetterExtension)(nil)
-	_ extensionauth.GRPCClient        = (*headerSetterExtension)(nil)
-	_ extensioncapabilities.Dependent = (*headerSetterExtension)(nil)
+	_ extension.Extension      = (*headerSetterExtension)(nil)
+	_ extensionauth.HTTPClient = (*headerSetterExtension)(nil)
+	_ extensionauth.GRPCClient = (*headerSetterExtension)(nil)
 )
 
 type headerSetterExtension struct {
 	component.StartFunc
 	component.ShutdownFunc
 
-	headers        []header
-	additionalAuth *component.ID
-	host           component.Host
-}
-
-// Dependencies implements extensioncapabilities.Dependent.
-func (h *headerSetterExtension) Dependencies() []component.ID {
-	if h.additionalAuth == nil {
-		return nil
-	}
-	return []component.ID{*h.additionalAuth}
-}
-
-// Start stores the host for later use in getting the additional auth extension.
-func (h *headerSetterExtension) Start(_ context.Context, host component.Host) error {
-	h.host = host
-	return nil
-}
-
-// getAdditionalAuthExtension retrieves the configured additional auth extension if present.
-// Returns nil if no additional auth is configured.
-func (h *headerSetterExtension) getAdditionalAuthExtension() (component.Component, error) {
-	if h.additionalAuth == nil || h.host == nil {
-		return nil, nil
-	}
-
-	ext := h.host.GetExtensions()[*h.additionalAuth]
-	if ext == nil {
-		return nil, fmt.Errorf("auth extension %v not found", h.additionalAuth)
-	}
-
-	return ext, nil
+	headers []header
 }
 
 // PerRPCCredentials implements extensionauth.GRPCClient.
 func (h *headerSetterExtension) PerRPCCredentials() (credentials.PerRPCCredentials, error) {
-	var baseCredentials credentials.PerRPCCredentials
-
-	// If additional_auth is configured, chain with it first
-	ext, err := h.getAdditionalAuthExtension()
-	if err != nil {
-		return nil, err
-	}
-
-	if ext != nil {
-		if grpcClient, ok := ext.(extensionauth.GRPCClient); ok {
-			baseCredentials, err = grpcClient.PerRPCCredentials()
-			if err != nil {
-				return nil, fmt.Errorf("failed to get PerRPCCredentials from %v: %w", h.additionalAuth, err)
-			}
-		}
-	}
-
-	return &headersPerRPC{
-		headers:         h.headers,
-		baseCredentials: baseCredentials,
-	}, nil
+	return &headersPerRPC{headers: h.headers}, nil
 }
 
 // RoundTripper implements extensionauth.HTTPClient.
 func (h *headerSetterExtension) RoundTripper(base http.RoundTripper) (http.RoundTripper, error) {
-	// If additional_auth is configured, chain with it first
-	baseRT := base
-
-	ext, err := h.getAdditionalAuthExtension()
-	if err != nil {
-		return nil, err
-	}
-
-	if ext != nil {
-		// Check if it implements HTTPClient
-		if httpClient, ok := ext.(extensionauth.HTTPClient); ok {
-			baseRT, err = httpClient.RoundTripper(base)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get RoundTripper from %v: %w", h.additionalAuth, err)
-			}
-		}
-	}
-
-	// Now wrap with our headers
 	return &headersRoundTripper{
-		base:    baseRT,
+		base:    base,
 		headers: h.headers,
 	}, nil
 }
@@ -173,46 +101,21 @@ func newHeadersSetterExtension(cfg *Config, logger *zap.Logger) (*headerSetterEx
 		headers = append(headers, header{action: a, source: s})
 	}
 
-	ext := &headerSetterExtension{
-		headers:        headers,
-		additionalAuth: cfg.AdditionalAuth,
-	}
-
-	// Enable Start method if additional_auth is configured
-	if cfg.AdditionalAuth != nil {
-		ext.StartFunc = ext.Start
-	}
-
-	return ext, nil
+	return &headerSetterExtension{headers: headers}, nil
 }
 
 // headersPerRPC is a gRPC credentials.PerRPCCredentials implementation sets
 // headers with values extracted from provided sources.
 type headersPerRPC struct {
-	headers         []header
-	baseCredentials credentials.PerRPCCredentials
+	headers []header
 }
 
 // GetRequestMetadata returns the request metadata to be used with the RPC.
 func (h *headersPerRPC) GetRequestMetadata(
 	ctx context.Context,
-	uri ...string,
+	_ ...string,
 ) (map[string]string, error) {
-	// Start with base credentials if available
-	metadata := make(map[string]string)
-
-	if h.baseCredentials != nil {
-		baseMetadata, err := h.baseCredentials.GetRequestMetadata(ctx, uri...)
-		if err != nil {
-			return nil, err
-		}
-		// Copy base metadata
-		for k, v := range baseMetadata {
-			metadata[k] = v
-		}
-	}
-
-	// Now apply our headers on top
+	metadata := make(map[string]string, len(h.headers))
 	for _, header := range h.headers {
 		value, err := header.source.Get(ctx)
 		if err != nil {
@@ -223,12 +126,10 @@ func (h *headersPerRPC) GetRequestMetadata(
 	return metadata, nil
 }
 
-// RequireTransportSecurity returns whether transport security is required.
-// If chained with another auth extension, delegate to it.
-func (h *headersPerRPC) RequireTransportSecurity() bool {
-	if h.baseCredentials != nil {
-		return h.baseCredentials.RequireTransportSecurity()
-	}
+// RequireTransportSecurity always returns false for this implementation.
+// The header setter is not sending auth data, so it should not require
+// a transport security.
+func (*headersPerRPC) RequireTransportSecurity() bool {
 	return false
 }
 

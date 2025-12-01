@@ -61,8 +61,8 @@ func BenchmarkMatchAttributes(b *testing.B) {
 	notMatchingMap.PutStr("anotherKey", "anotherVal")
 
 	b.ReportAllocs()
-
-	for b.Loop() {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
 		matcher.Match(matchingMap)
 		matcher.Match(notMatchingMap)
 	}

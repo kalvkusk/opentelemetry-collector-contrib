@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -42,8 +43,7 @@ type MetricTypeConfig struct {
 // any type of metrics need implement it.
 type MetricsModel interface {
 	// Add used to bind MetricsMetaData to a specific metric then put them into a slice
-	Add(resAttr pcommon.Map, resURL string, scopeInstr pcommon.InstrumentationScope, scopeURL string, metrics pmetric.Metric)
-
+	Add(resAttr pcommon.Map, resURL string, scopeInstr pcommon.InstrumentationScope, scopeURL string, metrics any, name, description, unit string) error
 	// insert is used to insert metric data to clickhouse
 	insert(ctx context.Context, db driver.Conn) error
 }
@@ -203,4 +203,14 @@ func convertValueAtQuantile(valueAtQuantile pmetric.SummaryDataPointValueAtQuant
 		values = append(values, value.Value())
 	}
 	return quantiles, values
+}
+
+func newPlaceholder(count int) *string {
+	var b strings.Builder
+	for i := 0; i < count; i++ {
+		b.WriteString(",?")
+	}
+	b.WriteString("),")
+	placeholder := strings.Replace(b.String(), ",", "(", 1)
+	return &placeholder
 }

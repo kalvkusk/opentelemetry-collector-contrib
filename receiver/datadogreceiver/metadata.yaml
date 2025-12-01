@@ -3,7 +3,7 @@ type: datadog
 status:
   class: receiver
   stability:
-    alpha: [traces, metrics, logs]
+    alpha: [traces, metrics]
   distributions: [contrib]
   codeowners:
     active: [boostchicken, gouthamve, MovieStoreGuy]

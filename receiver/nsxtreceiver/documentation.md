@@ -16,82 +16,82 @@ metrics:
 
 The average amount of CPU being used by the node.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| % | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| % | Gauge | Double |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| class | The CPU usage of the architecture allocated for either DPDK (datapath) or non-DPDK (services) processes. | Str: ``datapath``, ``services`` | Recommended |
+| class | The CPU usage of the architecture allocated for either DPDK (datapath) or non-DPDK (services) processes. | Str: ``datapath``, ``services`` | false |
 
 ### nsxt.node.filesystem.usage
 
 The amount of storage space used by the node.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| By | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| By | Sum | Int | Cumulative | false |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| state | The state of storage space. | Str: ``used``, ``available`` | Recommended |
+| state | The state of storage space. | Str: ``used``, ``available`` | false |
 
 ### nsxt.node.filesystem.utilization
 
 The percentage of storage space utilized.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| % | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| % | Gauge | Double |
 
 ### nsxt.node.memory.cache.usage
 
 The size of the node's memory cache.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| KBy | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| KBy | Sum | Int | Cumulative | false |
 
 ### nsxt.node.memory.usage
 
 The memory usage of the node.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| KBy | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| KBy | Sum | Int | Cumulative | false |
 
 ### nsxt.node.network.io
 
 The number of bytes which have flowed through the network interface.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| By | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| By | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| direction | The direction of network flow. | Str: ``received``, ``transmitted`` | Recommended |
+| direction | The direction of network flow. | Str: ``received``, ``transmitted`` | false |
 
 ### nsxt.node.network.packet.count
 
 The number of packets which have flowed through the network interface on the node.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {packets} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {packets} | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| direction | The direction of network flow. | Str: ``received``, ``transmitted`` | Recommended |
-| type | The type of packet counter. | Str: ``dropped``, ``errored``, ``success`` | Recommended |
+| direction | The direction of network flow. | Str: ``received``, ``transmitted`` | false |
+| type | The type of packet counter. | Str: ``dropped``, ``errored``, ``success`` | false |
 
 ## Resource Attributes
 

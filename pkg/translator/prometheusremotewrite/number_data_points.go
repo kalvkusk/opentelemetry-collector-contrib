@@ -11,20 +11,23 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
-	"go.uber.org/multierr"
 )
 
 func (c *prometheusConverter) addGaugeNumberDataPoints(dataPoints pmetric.NumberDataPointSlice,
 	resource pcommon.Resource, settings Settings, name string,
-) error {
-	var errs error
+) {
 	for x := 0; x < dataPoints.Len(); x++ {
 		pt := dataPoints.At(x)
-		labels, err := createAttributes(resource, pt.Attributes(), settings.ExternalLabels, nil, true, c.labelNamer, model.MetricNameLabel, name)
-		if err != nil {
-			errs = multierr.Append(errs, err)
-			continue
-		}
+		labels := createAttributes(
+			resource,
+			pt.Attributes(),
+			settings.ExternalLabels,
+			nil,
+			true,
+			c.labelNamer,
+			model.MetricNameLabel,
+			name,
+		)
 		sample := &prompb.Sample{
 			// convert ns to ms
 			Timestamp: convertTimeStamp(pt.Timestamp()),
@@ -40,20 +43,23 @@ func (c *prometheusConverter) addGaugeNumberDataPoints(dataPoints pmetric.Number
 		}
 		c.addSample(sample, labels)
 	}
-	return errs
 }
 
 func (c *prometheusConverter) addSumNumberDataPoints(dataPoints pmetric.NumberDataPointSlice,
 	resource pcommon.Resource, _ pmetric.Metric, settings Settings, name string,
-) error {
-	var errs error
+) {
 	for x := 0; x < dataPoints.Len(); x++ {
 		pt := dataPoints.At(x)
-		lbls, err := createAttributes(resource, pt.Attributes(), settings.ExternalLabels, nil, true, c.labelNamer, model.MetricNameLabel, name)
-		if err != nil {
-			errs = multierr.Append(errs, err)
-			continue
-		}
+		lbls := createAttributes(
+			resource,
+			pt.Attributes(),
+			settings.ExternalLabels,
+			nil,
+			true,
+			c.labelNamer,
+			model.MetricNameLabel,
+			name,
+		)
 		sample := &prompb.Sample{
 			// convert ns to ms
 			Timestamp: convertTimeStamp(pt.Timestamp()),
@@ -73,5 +79,4 @@ func (c *prometheusConverter) addSumNumberDataPoints(dataPoints pmetric.NumberDa
 			ts.Exemplars = append(ts.Exemplars, exemplars...)
 		}
 	}
-	return errs
 }

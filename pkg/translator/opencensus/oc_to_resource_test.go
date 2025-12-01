@@ -57,7 +57,8 @@ func BenchmarkOcNodeResourceToInternal(b *testing.B) {
 	ocNode := generateOcNode()
 	ocResource := generateOcResource()
 
-	for b.Loop() {
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
 		resource := pcommon.NewResource()
 		ocNodeResourceToInternal(ocNode, ocResource, resource)
 		if ocNode.Identifier.Pid != 123 {
@@ -78,7 +79,8 @@ func BenchmarkOcResourceNodeUnmarshal(b *testing.B) {
 		b.Fail()
 	}
 
-	for b.Loop() {
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
 		unmarshalOc := &agenttracepb.ExportTraceServiceRequest{}
 		if err := proto.Unmarshal(bytes, unmarshalOc); err != nil {
 			b.Fail()

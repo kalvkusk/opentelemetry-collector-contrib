@@ -34,7 +34,7 @@ func ParallelRaceCompute(tb testing.TB, count int, fn func() error) {
 		start = make(chan struct{})
 		wg    sync.WaitGroup
 	)
-	for range count {
+	for i := 0; i < count; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

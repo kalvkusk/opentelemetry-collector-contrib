@@ -11,8 +11,6 @@ import (
 // ScopeNameParser is a helper that parses severity onto an entry.
 type ScopeNameParser struct {
 	ParseFrom entry.Field `mapstructure:"parse_from,omitempty"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // NewScopeNameParser creates a new scope parser with default values

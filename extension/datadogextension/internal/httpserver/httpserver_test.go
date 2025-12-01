@@ -217,8 +217,7 @@ const successfulInstanceResponse = `{
       "version": ""
     },
     "full_configuration": "",
-    "health_status": "",
-    "collector_resource_attributes": {}
+    "health_status": ""
   },
   "uuid": "test-uuid"
 }`
@@ -292,9 +291,8 @@ func TestHandleMetadata(t *testing.T) {
 					Hostname: "test-hostname",
 					UUID:     "test-uuid",
 					Metadata: payload.OtelCollector{
-						FullComponents:              []payload.CollectorModule{},
-						ActiveComponents:            []payload.ServiceComponent{},
-						CollectorResourceAttributes: map[string]string{},
+						FullComponents:   []payload.CollectorModule{},
+						ActiveComponents: []payload.ServiceComponent{},
 					},
 				},
 			}
@@ -367,7 +365,7 @@ func TestHandleMetadataConcurrency(t *testing.T) {
 	var wg sync.WaitGroup
 	responses := make([]*httptest.ResponseRecorder, numRequests)
 
-	for i := range numRequests {
+	for i := 0; i < numRequests; i++ {
 		wg.Add(1)
 		go func(index int) {
 			defer wg.Done()
@@ -598,7 +596,7 @@ func TestServerStopConcurrency(t *testing.T) {
 	const numStops = 5
 	var wg sync.WaitGroup
 
-	for i := range numStops {
+	for i := 0; i < numStops; i++ {
 		wg.Add(1)
 		go func(_ int) {
 			defer wg.Done()

@@ -51,7 +51,6 @@ type TracesConfig struct {
 	// For the best experience with `peer.service`, it is recommended to also enable `compute_stats_by_span_kind`.
 	// If enabling both causes the datadog exporter to consume too many resources, try disabling `compute_stats_by_span_kind` first.
 	// If the overhead remains high, it will be due to a high cardinality of `peer.service` values from the traces. You may need to check your instrumentation.
-	//
 	// Deprecated: Please use PeerTagsAggregation instead
 	PeerServiceAggregation bool `mapstructure:"peer_service_aggregation"`
 
@@ -165,10 +164,6 @@ func (c *TracesConnectorConfig) Validate() error {
 		return err
 	}
 
-	if c.IgnoreMissingDatadogFields {
-		return errors.New("ignore_missing_datadog_fields is not yet supported in the connector")
-	}
-
 	if c.TraceBuffer < 0 {
 		return errors.New("trace buffer must be non-negative")
 	}
@@ -177,16 +172,4 @@ func (c *TracesConnectorConfig) Validate() error {
 		return errors.New("bucket interval must be non-negative")
 	}
 	return nil
-}
-
-// ConnectorComponentConfig defines the configuration for the Datadog connector component
-type ConnectorComponentConfig struct {
-	// Traces defines the Traces specific configuration
-	Traces TracesConnectorConfig `mapstructure:"traces"`
-	// prevent unkeyed literal initialization
-	_ struct{}
-}
-
-func (c *ConnectorComponentConfig) Validate() error {
-	return c.Traces.Validate()
 }

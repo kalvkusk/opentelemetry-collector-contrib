@@ -31,8 +31,7 @@ func newTracesExporter(cfg component.Config, set exporter.Settings) (*tracesExpo
 }
 
 type tracesExporter struct {
-	grpcTracesExporter ptraceotlp.GRPCClient
-	httpTracesExporter httpTracesExporter
+	traceExporter ptraceotlp.GRPCClient
 	*signalExporter
 }
 
@@ -41,11 +40,7 @@ func (e *tracesExporter) start(ctx context.Context, host component.Host) (err er
 	if err := e.startSignalExporter(ctx, host, wrapper); err != nil {
 		return err
 	}
-	if e.config.Protocol == httpProtocol {
-		e.httpTracesExporter = newHTTPTracesExporter(e.clientHTTP, e.config)
-	} else {
-		e.grpcTracesExporter = ptraceotlp.NewGRPCClient(e.clientConn)
-	}
+	e.traceExporter = ptraceotlp.NewGRPCClient(e.clientConn)
 	return nil
 }
 
@@ -62,15 +57,7 @@ func (e *tracesExporter) pushTraces(ctx context.Context, td ptrace.Traces) error
 		resourceSpan.Resource().Attributes().PutStr(cxSubsystemNameAttrName, subsystem)
 	}
 
-	er := ptraceotlp.NewExportRequestFromTraces(td)
-	var resp ptraceotlp.ExportResponse
-	var err error
-
-	if e.config.Protocol == httpProtocol {
-		resp, err = e.httpTracesExporter.Export(ctx, er)
-	} else {
-		resp, err = e.grpcTracesExporter.Export(e.enhanceContext(ctx), er, e.callOptions...)
-	}
+	resp, err := e.traceExporter.Export(e.enhanceContext(ctx), ptraceotlp.NewExportRequestFromTraces(td), e.callOptions...)
 	if err != nil {
 		return e.processError(err)
 	}

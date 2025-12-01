@@ -6,7 +6,6 @@ package windowsperfcountersreceiver // import "github.com/open-telemetry/opentel
 import (
 	"errors"
 	"fmt"
-	"slices"
 
 	"go.opentelemetry.io/collector/scraper/scraperhelper"
 	"go.uber.org/multierr"
@@ -108,8 +107,11 @@ func (c *Config) Validate() error {
 			}
 		}
 
-		if slices.Contains(pc.Instances, "") {
-			errs = multierr.Append(errs, fmt.Errorf("perf counter for object %q includes an empty instance", pc.Object))
+		for _, instance := range pc.Instances {
+			if instance == "" {
+				errs = multierr.Append(errs, fmt.Errorf("perf counter for object %q includes an empty instance", pc.Object))
+				break
+			}
 		}
 	}
 

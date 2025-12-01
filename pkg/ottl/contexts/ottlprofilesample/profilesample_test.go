@@ -6,9 +6,9 @@ package ottlprofilesample // import "github.com/open-telemetry/opentelemetry-col
 import (
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pprofile"
 
@@ -86,18 +86,18 @@ func Test_newPathGetSetter_Cache(t *testing.T) {
 				return testCache
 			}
 			accessor, err := pathExpressionParser(cacheGetter)(tt.path)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			profileSample, profile := createProfileSampleTelemetry()
 
 			tCtx := NewTransformContext(profileSample, profile, pprofile.NewProfilesDictionary(), pcommon.NewInstrumentationScope(), pcommon.NewResource(), pprofile.NewScopeProfiles(), pprofile.NewResourceProfiles())
 			got, err := accessor.Get(t.Context(), tCtx)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.orig, got)
 
 			tCtx = NewTransformContext(profileSample, pprofile.NewProfile(), pprofile.NewProfilesDictionary(), pcommon.NewInstrumentationScope(), pcommon.NewResource(), pprofile.NewScopeProfiles(), pprofile.NewResourceProfiles())
 			err = accessor.Set(t.Context(), tCtx, tt.newVal)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			exProfileSample, exProfile := createProfileSampleTelemetry()
 			exCache := pcommon.NewMap()
@@ -177,10 +177,10 @@ func Test_newPathGetSetter_higherContextPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			accessor, err := pathExpressionParser(cacheGetter)(tt.path)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			got, err := accessor.Get(t.Context(), ctx)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
@@ -188,13 +188,13 @@ func Test_newPathGetSetter_higherContextPath(t *testing.T) {
 
 func createProfileSampleTelemetry() (pprofile.Sample, pprofile.Profile) {
 	profile := pprofile.NewProfile()
-	sample := profile.Samples().AppendEmpty()
+	sample := profile.Sample().AppendEmpty()
 	sample.SetLinkIndex(42)
 
 	timestamps := sample.TimestampsUnixNano()
 	if timestamps.Len() == 0 {
 		timestamps.EnsureCapacity(1)
-		timestamps.Append(1704067200) // January 1, 2024 00:00:00 UTC
+		timestamps.Append(uint64(time.Now().Unix()))
 	}
 
 	values := sample.Values()

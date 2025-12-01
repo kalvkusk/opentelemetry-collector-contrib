@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -121,7 +120,7 @@ func Test_convertGaugeToSum(t *testing.T) {
 			exprFunc, _ := convertGaugeToSum(tt.stringAggTemp, tt.monotonic)
 
 			_, err := exprFunc(nil, ctx)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			expected := pmetric.NewMetric()
 			tt.want(expected)

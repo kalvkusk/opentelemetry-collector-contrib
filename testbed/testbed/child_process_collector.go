@@ -13,7 +13,6 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"slices"
 	"sort"
 	"strconv"
 	"sync"
@@ -25,8 +24,6 @@ import (
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/process"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/common/testutil"
 )
 
 // childProcessCollector implements the OtelcolRunner interface as a child process on the same machine executing
@@ -120,9 +117,8 @@ func (cp *childProcessCollector) PrepareConfig(t *testing.T, configStr string) (
 	configCleanup = func() {
 		// NoOp
 	}
-
 	var file *os.File
-	file, err = os.CreateTemp(testutil.TempDir(t), "agent*.yaml")
+	file, err = os.CreateTemp(t.TempDir(), "agent*.yaml")
 	if err != nil {
 		log.Printf("%s", err)
 		return configCleanup, err
@@ -496,7 +492,12 @@ func (cp *childProcessCollector) GetTotalConsumption() *ResourceConsumption {
 }
 
 func containsConfig(s []string) bool {
-	return slices.Contains(s, "--config")
+	for _, a := range s {
+		if a == "--config" {
+			return true
+		}
+	}
+	return false
 }
 
 // Copied from cpu.TimesStat.Total(), since that func is deprecated.

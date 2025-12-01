@@ -1369,40 +1369,6 @@ func createHealthCheckCollectorConf(t *testing.T, nopPipeline bool) (cfg *bytes.
 	return &confmapBuf, h[:], 13133
 }
 
-func createHostMetricsCollectorConf(t *testing.T) (*bytes.Buffer, []byte) {
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	// Create output files
-	// The testing package will automatically clean these up after each test.
-	tempDir := t.TempDir()
-	outputFile, err := os.CreateTemp(tempDir, "output_*.json")
-	require.NoError(t, err)
-	t.Cleanup(func() { outputFile.Close() })
-
-	colCfgTpl, err := os.ReadFile(path.Join(wd, "testdata", "collector", "hostmetrics_pipeline.yaml"))
-	require.NoError(t, err)
-
-	templ, err := template.New("").Parse(string(colCfgTpl))
-	require.NoError(t, err)
-
-	var confmapBuf bytes.Buffer
-	err = templ.Execute(
-		&confmapBuf,
-		map[string]string{
-			"outputLogFile": outputFile.Name(),
-		},
-	)
-	require.NoError(t, err)
-
-	h := sha256.New()
-	if _, err := io.Copy(h, bytes.NewBuffer(confmapBuf.Bytes())); err != nil {
-		log.Fatal(err)
-	}
-
-	return &confmapBuf, h.Sum(nil)
-}
-
 // Wait for the Supervisor to connect to or disconnect from the OpAMP server
 func waitForSupervisorConnection(connection chan bool, connected bool) {
 	select {
@@ -2012,7 +1978,7 @@ func TestSupervisorLogging(t *testing.T) {
 	storageDir := t.TempDir()
 	remoteCfgFilePath := filepath.Join(storageDir, "last_recv_remote_config.dat")
 
-	collectorCfg, hash := createHostMetricsCollectorConf(t)
+	collectorCfg, hash, _, _ := createSimplePipelineCollectorConf(t)
 	remoteCfgProto := &protobufs.AgentRemoteConfig{
 		Config: &protobufs.AgentConfigMap{
 			ConfigMap: map[string]*protobufs.AgentConfigFile{
@@ -2032,9 +1998,7 @@ func TestSupervisorLogging(t *testing.T) {
 		},
 	})
 	defer server.shutdown()
-	server.start()
 
-	// manually create supervisor and logger for this test
 	supervisorLogFilePath := filepath.Join(storageDir, "supervisor_log.log")
 	cfgFile := getSupervisorConfig(t, "logging", map[string]string{
 		"url":         server.addr,
@@ -2042,6 +2006,7 @@ func TestSupervisorLogging(t *testing.T) {
 		"log_level":   "0",
 		"log_file":    supervisorLogFilePath,
 	})
+
 	cfg, err := config.Load(cfgFile.Name())
 	require.NoError(t, err)
 	logger, err := telemetry.NewLogger(cfg.Telemetry.Logs)
@@ -2051,27 +2016,23 @@ func TestSupervisorLogging(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, s.Start(t.Context()))
 
+	// Start the server and wait for the supervisor to connect
+	server.start()
 	waitForSupervisorConnection(server.supervisorConnected, true)
 	require.True(t, connected.Load(), "Supervisor failed to connect")
-	// give the collector some time to write to the log file
-	time.Sleep(5 * time.Second)
+
 	s.Shutdown()
 
 	// Read from log file checking for Info level logs
 	logFile, err := os.Open(supervisorLogFilePath)
 	require.NoError(t, err)
 
-	reader := bufio.NewReader(logFile)
+	scanner := bufio.NewScanner(logFile)
 	seenCollectorLog := false
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			break
-		}
-		line = strings.TrimRight(line, "\r\n")
-
+	for scanner.Scan() {
+		line := scanner.Bytes()
 		var log logEntry
-		err = json.Unmarshal([]byte(line), &log)
+		err := json.Unmarshal(line, &log)
 		require.NoError(t, err)
 
 		level, err := zapcore.ParseLevel(log.Level)
@@ -2155,14 +2116,14 @@ func TestSupervisorRemoteConfigApplyStatus(t *testing.T) {
 				},
 			})
 
+			// TODO: Remove time.Sleep below, see https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/42550
+			time.Sleep(100 * time.Millisecond)
 			// Check that the status is set to APPLYING
-			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				statusVal := remoteConfigStatus.Load()
-				require.NotNil(c, statusVal) // not set yet
-				status := statusVal.(*protobufs.RemoteConfigStatus)
+			require.Eventually(t, func() bool {
+				status := remoteConfigStatus.Load().(*protobufs.RemoteConfigStatus)
 				t.Log("status", status.Status)
-				assert.Equal(c, protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLYING, status.Status)
-			}, 5*time.Second, 100*time.Millisecond)
+				return status.Status == protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLYING
+			}, 5*time.Second, 100*time.Millisecond, "Remote config status was not set to APPLYING")
 
 			// Wait for collector to become healthy
 			require.Eventually(t, func() bool {
@@ -2213,6 +2174,12 @@ func TestSupervisorRemoteConfigApplyStatus(t *testing.T) {
 						ConfigHash: badHash,
 					},
 				})
+
+				// Check that the status is set to APPLYING
+				require.Eventually(t, func() bool {
+					status, ok := remoteConfigStatus.Load().(*protobufs.RemoteConfigStatus)
+					return ok && status.Status == protobufs.RemoteConfigStatuses_RemoteConfigStatuses_APPLYING
+				}, 5*time.Second, 200*time.Millisecond, "Remote config status was not set to APPLYING for bad config")
 
 				// Wait for the health checks to fail
 				require.Eventually(t, func() bool {

@@ -398,7 +398,7 @@ func Test_ParseStatements_ConverterNilReturn(t *testing.T) {
 
 	statements := mockGetter{values: []string{`set(dummy.attributes["bar"], "foo")`}}
 	result, err := pc.ParseStatements(statements)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, result)
 }
 
@@ -622,7 +622,7 @@ func Test_ParseConditions_ConverterNilReturn(t *testing.T) {
 
 	conditions := mockGetter{values: []string{`dummy.attributes["bar"] == "foo"`}}
 	result, err := pc.ParseConditions(conditions)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, result)
 }
 
@@ -817,7 +817,7 @@ func Test_ParseValueExpressions_ConverterNilReturn(t *testing.T) {
 
 	expressions := mockGetter{values: []string{`dummy.attributes["bar"]`}}
 	result, err := pc.ParseValueExpressions(expressions)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, result)
 }
 

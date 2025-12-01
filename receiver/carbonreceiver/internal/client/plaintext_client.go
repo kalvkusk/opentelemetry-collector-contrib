@@ -103,7 +103,7 @@ func (g *Graphite) SendMetric(metric Metric) error {
 // SputterThenSendMetric method sends a bad partial metric, then the whole metric across.
 func (g *Graphite) SputterThenSendMetric(metric Metric) error {
 	str := metric.String()
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		if _, err := fmt.Fprint(g.Conn, ""); err != nil {
 			return err
 		}

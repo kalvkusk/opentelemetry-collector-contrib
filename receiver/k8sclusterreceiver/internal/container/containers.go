@@ -4,7 +4,6 @@
 package container // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver/internal/container"
 
 import (
-	"regexp"
 	"time"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -16,6 +15,7 @@ import (
 	metadataPkg "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/experimentalmetricmetadata"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver/internal/constants"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver/internal/metadata"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/k8sclusterreceiver/internal/utils"
 )
 
 const (
@@ -82,8 +82,7 @@ func RecordSpecMetrics(logger *zap.Logger, mb *metadata.MetricsBuilder, c corev1
 	rb := mb.NewResourceBuilder()
 	var containerID string
 	var imageStr string
-	for i := range pod.Status.ContainerStatuses {
-		cs := pod.Status.ContainerStatuses[i]
+	for _, cs := range pod.Status.ContainerStatuses {
 		if cs.Name != c.Name {
 			continue
 		}
@@ -134,7 +133,7 @@ func RecordSpecMetrics(logger *zap.Logger, mb *metadata.MetricsBuilder, c corev1
 	rb.SetK8sPodName(pod.Name)
 	rb.SetK8sNodeName(pod.Spec.NodeName)
 	rb.SetK8sNamespaceName(pod.Namespace)
-	rb.SetContainerID(stripContainerID(containerID))
+	rb.SetContainerID(utils.StripContainerID(containerID))
 	rb.SetK8sContainerName(c.Name)
 	image, err := docker.ParseImageName(imageStr)
 	if err != nil {
@@ -186,7 +185,7 @@ func GetMetadata(pod *corev1.Pod, cs corev1.ContainerStatus, logger *zap.Logger)
 	return &metadata.KubernetesMetadata{
 		EntityType:    "container",
 		ResourceIDKey: string(conventions.ContainerIDKey),
-		ResourceID:    metadataPkg.ResourceID(stripContainerID(cs.ContainerID)),
+		ResourceID:    metadataPkg.ResourceID(utils.StripContainerID(cs.ContainerID)),
 		Metadata:      mdata,
 	}
 }
@@ -196,11 +195,4 @@ func boolToInt64(b bool) int64 {
 		return 1
 	}
 	return 0
-}
-
-var re = regexp.MustCompile(`^[\w_-]+://`)
-
-// stripContainerID returns a pure container id without the runtime scheme://.
-func stripContainerID(id string) string {
-	return re.ReplaceAllString(id, "")
 }

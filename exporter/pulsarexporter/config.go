@@ -44,21 +44,15 @@ type Authentication struct {
 	Token  configoptional.Optional[Token]  `mapstructure:"token"`
 	Athenz configoptional.Optional[Athenz] `mapstructure:"athenz"`
 	OAuth2 configoptional.Optional[OAuth2] `mapstructure:"oauth2"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 type TLS struct {
 	CertFile string `mapstructure:"cert_file"`
 	KeyFile  string `mapstructure:"key_file"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 type Token struct {
 	Token configopaque.String `mapstructure:"token"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 type Athenz struct {
@@ -72,11 +66,9 @@ type Athenz struct {
 }
 
 type OAuth2 struct {
-	IssuerURL  string `mapstructure:"issuer_url"`
-	ClientID   string `mapstructure:"client_id"`
-	Audience   string `mapstructure:"audience"`
-	PrivateKey string `mapstructure:"private_key"`
-	Scope      string `mapstructure:"scope"`
+	IssuerURL string `mapstructure:"issuer_url"`
+	ClientID  string `mapstructure:"client_id"`
+	Audience  string `mapstructure:"audience"`
 }
 
 // Producer defines configuration for producer
@@ -115,12 +107,9 @@ func (cfg *Config) auth() pulsar.Authentication {
 	if authentication.OAuth2.HasValue() {
 		oauth2Cfg := authentication.OAuth2.Get()
 		return pulsar.NewAuthenticationOAuth2(map[string]string{
-			"type":       "client_credentials",
-			"issuerUrl":  oauth2Cfg.IssuerURL,
-			"clientId":   oauth2Cfg.ClientID,
-			"audience":   oauth2Cfg.Audience,
-			"scope":      oauth2Cfg.Scope,
-			"privateKey": oauth2Cfg.PrivateKey,
+			"issuerUrl": oauth2Cfg.IssuerURL,
+			"clientId":  oauth2Cfg.ClientID,
+			"audience":  oauth2Cfg.Audience,
 		})
 	}
 	if authentication.Athenz.HasValue() {

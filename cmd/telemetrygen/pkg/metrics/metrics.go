@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"math/rand/v2"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -21,12 +20,12 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen/internal/log"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen/internal/common"
 )
 
 // Start starts the metric telemetry generator
 func Start(cfg *Config) error {
-	logger, err := log.CreateLogger(cfg.SkipSettingGRPCLogger)
+	logger, err := common.CreateLogger(cfg.SkipSettingGRPCLogger)
 	if err != nil {
 		return err
 	}
@@ -83,9 +82,6 @@ func run(c *Config, expF exporterFunc, logger *zap.Logger) error {
 			logger:                 logger.With(zap.Int("worker", i)),
 			index:                  i,
 			clock:                  &realClock{},
-			loadSize:               c.LoadSize,
-			rand:                   rand.New(rand.NewPCG(uint64(time.Now().UnixNano()+int64(i)), 0)),
-			allowFailures:          c.AllowExportFailures,
 		}
 		exp, err := expF()
 		if err != nil {

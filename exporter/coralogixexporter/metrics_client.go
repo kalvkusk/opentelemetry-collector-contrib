@@ -31,8 +31,7 @@ func newMetricsExporter(cfg component.Config, set exporter.Settings) (*metricsEx
 }
 
 type metricsExporter struct {
-	grpcMetricsExporter pmetricotlp.GRPCClient
-	httpMetricsExporter httpMetricsExporter
+	metricExporter pmetricotlp.GRPCClient
 	*signalExporter
 }
 
@@ -41,11 +40,7 @@ func (e *metricsExporter) start(ctx context.Context, host component.Host) (err e
 	if err := e.startSignalExporter(ctx, host, wrapper); err != nil {
 		return err
 	}
-	if e.config.Protocol == httpProtocol {
-		e.httpMetricsExporter = newHTTPMetricsExporter(e.clientHTTP, e.config)
-	} else {
-		e.grpcMetricsExporter = pmetricotlp.NewGRPCClient(e.clientConn)
-	}
+	e.metricExporter = pmetricotlp.NewGRPCClient(e.clientConn)
 	return nil
 }
 
@@ -62,15 +57,7 @@ func (e *metricsExporter) pushMetrics(ctx context.Context, md pmetric.Metrics) e
 		resourceMetric.Resource().Attributes().PutStr(cxSubsystemNameAttrName, subsystem)
 	}
 
-	er := pmetricotlp.NewExportRequestFromMetrics(md)
-	var resp pmetricotlp.ExportResponse
-	var err error
-	if e.config.Protocol == httpProtocol {
-		resp, err = e.httpMetricsExporter.Export(ctx, er)
-	} else {
-		resp, err = e.grpcMetricsExporter.Export(e.enhanceContext(ctx), er, e.callOptions...)
-	}
-
+	resp, err := e.metricExporter.Export(e.enhanceContext(ctx), pmetricotlp.NewExportRequestFromMetrics(md), e.callOptions...)
 	if err != nil {
 		return e.processError(err)
 	}

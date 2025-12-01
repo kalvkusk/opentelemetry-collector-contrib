@@ -340,7 +340,7 @@ func Test_FromMetrics(t *testing.T) {
 				dp.SetSum(123.4)
 				dp.SetCount(111)
 				qvs := dp.QuantileValues()
-				for i := range 4 {
+				for i := 0; i < 4; i++ {
 					qv := qvs.AppendEmpty()
 					qv.SetQuantile(0.25 * float64(i+1))
 					qv.SetValue(float64(i))

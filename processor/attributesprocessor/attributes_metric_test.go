@@ -450,7 +450,7 @@ func BenchmarkAttributes_FilterMetricsByName(b *testing.B) {
 		md := generateMetricData(tc.name, tc.inputAttributes)
 
 		b.Run(tc.name, func(b *testing.B) {
-			for b.Loop() {
+			for i := 0; i < b.N; i++ {
 				assert.NoError(b, mp.ConsumeMetrics(b.Context(), md))
 			}
 		})

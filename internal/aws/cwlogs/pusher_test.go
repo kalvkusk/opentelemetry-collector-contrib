@@ -89,7 +89,7 @@ func TestLogEventBatch_sortLogEvents(t *testing.T) {
 		},
 	}
 
-	for i := range totalEvents {
+	for i := 0; i < totalEvents; i++ {
 		timestamp := rand.Int()
 		logEvent := NewEvent(
 			int64(timestamp),
@@ -150,7 +150,7 @@ func TestPusher_addLogEventBatch(t *testing.T) {
 	c := cap(p.logEventBatch.putLogEventsInput.LogEvents)
 	logEvent := NewEvent(timestampMs, msg)
 
-	for range c {
+	for i := 0; i < c; i++ {
 		p.logEventBatch.putLogEventsInput.LogEvents = append(p.logEventBatch.putLogEventsInput.LogEvents, logEvent.InputLogEvent)
 	}
 

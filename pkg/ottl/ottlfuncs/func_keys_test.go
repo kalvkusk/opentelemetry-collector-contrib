@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
@@ -38,7 +37,7 @@ func Test_keys(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m := pcommon.NewMap()
 			err := m.FromRaw(tt.target)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			target := ottl.StandardPMapGetter[any]{
 				Getter: func(context.Context, any) (any, error) {
 					return m, nil
@@ -46,11 +45,11 @@ func Test_keys(t *testing.T) {
 			}
 			expected := pcommon.NewSlice()
 			err = expected.FromRaw(tt.expected)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			exprFunc := keys[any](target)
 			rv, err := exprFunc(nil, nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			rvSlice := rv.(pcommon.Slice)
 			raw := rvSlice.AsRaw()
 

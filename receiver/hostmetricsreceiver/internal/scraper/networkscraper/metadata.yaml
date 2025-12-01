@@ -27,43 +27,19 @@ attributes:
     type: string
 
 metrics:
-  system.network.connections:
+  system.network.packets:
     enabled: true
-    description: The number of connections.
-    unit: "{connections}"
-    stability:
-      level: development
+    description: The number of packets transferred.
+    unit: "{packets}"
     sum:
       value_type: int
       aggregation_temporality: cumulative
-      monotonic: false
-    attributes: [protocol, state]
-  system.network.conntrack.count:
-    enabled: false
-    description: The count of entries in conntrack table.
-    unit: "{entries}"
-    stability:
-      level: development
-    sum:
-      value_type: int
-      aggregation_temporality: cumulative
-      monotonic: false
-  system.network.conntrack.max:
-    enabled: false
-    description: The limit for entries in the conntrack table.
-    unit: "{entries}"
-    stability:
-      level: development
-    sum:
-      value_type: int
-      aggregation_temporality: cumulative
-      monotonic: false
+      monotonic: true
+    attributes: [device, direction]
   system.network.dropped:
     enabled: true
     description: The number of packets dropped.
     unit: "{packets}"
-    stability:
-      level: development
     sum:
       value_type: int
       aggregation_temporality: cumulative
@@ -73,8 +49,6 @@ metrics:
     enabled: true
     description: The number of errors encountered.
     unit: "{errors}"
-    stability:
-      level: development
     sum:
       value_type: int
       aggregation_temporality: cumulative
@@ -84,21 +58,33 @@ metrics:
     enabled: true
     description: The number of bytes transmitted and received.
     unit: "By"
-    stability:
-      level: development
     sum:
       value_type: int
       aggregation_temporality: cumulative
       monotonic: true
     attributes: [device, direction]
-  system.network.packets:
+  system.network.connections:
     enabled: true
-    description: The number of packets transferred.
-    unit: "{packets}"
-    stability:
-      level: development
+    description: The number of connections.
+    unit: "{connections}"
     sum:
       value_type: int
       aggregation_temporality: cumulative
-      monotonic: true
-    attributes: [device, direction]
+      monotonic: false
+    attributes: [protocol, state]
+  system.network.conntrack.count:
+    enabled: false
+    description: The count of entries in conntrack table.
+    unit: "{entries}"
+    sum:
+      value_type: int
+      aggregation_temporality: cumulative
+      monotonic: false
+  system.network.conntrack.max:
+    enabled: false
+    description: The limit for entries in the conntrack table.
+    unit: "{entries}"
+    sum:
+      value_type: int
+      aggregation_temporality: cumulative
+      monotonic: false

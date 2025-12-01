@@ -25,14 +25,13 @@ func (rac *ResourceAttributeConfig) Unmarshal(parser *confmap.Conf) error {
 	return nil
 }
 
-// ResourceAttributesConfig provides config for azuredetector resource attributes.
+// ResourceAttributesConfig provides config for resourcedetectionprocessor/azure resource attributes.
 type ResourceAttributesConfig struct {
 	AzureResourcegroupName ResourceAttributeConfig `mapstructure:"azure.resourcegroup.name"`
 	AzureVMName            ResourceAttributeConfig `mapstructure:"azure.vm.name"`
 	AzureVMScalesetName    ResourceAttributeConfig `mapstructure:"azure.vm.scaleset.name"`
 	AzureVMSize            ResourceAttributeConfig `mapstructure:"azure.vm.size"`
 	CloudAccountID         ResourceAttributeConfig `mapstructure:"cloud.account.id"`
-	CloudAvailabilityZone  ResourceAttributeConfig `mapstructure:"cloud.availability_zone"`
 	CloudPlatform          ResourceAttributeConfig `mapstructure:"cloud.platform"`
 	CloudProvider          ResourceAttributeConfig `mapstructure:"cloud.provider"`
 	CloudRegion            ResourceAttributeConfig `mapstructure:"cloud.region"`
@@ -56,9 +55,6 @@ func DefaultResourceAttributesConfig() ResourceAttributesConfig {
 		},
 		CloudAccountID: ResourceAttributeConfig{
 			Enabled: true,
-		},
-		CloudAvailabilityZone: ResourceAttributeConfig{
-			Enabled: false,
 		},
 		CloudPlatform: ResourceAttributeConfig{
 			Enabled: true,

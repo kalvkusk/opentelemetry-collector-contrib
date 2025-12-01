@@ -156,7 +156,6 @@ type DimensionClientConfig struct {
 	MaxConnsPerHost     int           `mapstructure:"max_conns_per_host"`
 	IdleConnTimeout     time.Duration `mapstructure:"idle_conn_timeout"`
 	Timeout             time.Duration `mapstructure:"timeout"`
-	DropTags            bool          `mapstructure:"drop_tags"`
 }
 
 func (cfg *Config) getMetricTranslator(done chan struct{}) (*translation.MetricTranslator, error) {
@@ -229,11 +228,10 @@ func (cfg *Config) Validate() error {
 		return errors.New(`cannot have a negative "timeout"`)
 	}
 
-	if cfg.SyncHostMetadata {
-		if err := gopsutilenv.ValidateRootPath(cfg.RootPath); err != nil {
-			return fmt.Errorf("invalid root_path: %w", err)
-		}
+	if err := gopsutilenv.ValidateRootPath(cfg.RootPath); err != nil {
+		return fmt.Errorf("invalid root_path: %w", err)
 	}
+
 	return nil
 }
 

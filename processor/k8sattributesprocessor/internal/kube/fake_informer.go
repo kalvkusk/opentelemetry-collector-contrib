@@ -4,7 +4,6 @@
 package kube // import "github.com/open-telemetry/opentelemetry-collector-contrib/processor/k8sattributesprocessor/internal/kube"
 
 import (
-	"context"
 	"sync"
 	"time"
 
@@ -41,10 +40,6 @@ func (f *FakeInformer) AddEventHandler(handler cache.ResourceEventHandler) (cach
 }
 
 func (f *FakeInformer) AddEventHandlerWithResyncPeriod(_ cache.ResourceEventHandler, _ time.Duration) (cache.ResourceEventHandlerRegistration, error) {
-	return f, nil
-}
-
-func (f *FakeInformer) AddEventHandlerWithOptions(cache.ResourceEventHandler, cache.HandlerOptions) (cache.ResourceEventHandlerRegistration, error) {
 	return f, nil
 }
 
@@ -139,10 +134,6 @@ func (c *FakeController) Run(stopCh <-chan struct{}) {
 	c.Unlock()
 }
 
-func (c *FakeController) RunWithContext(ctx context.Context) {
-	c.Run(ctx.Done())
-}
-
 func (c *FakeController) HasStopped() bool {
 	c.Lock()
 	defer c.Unlock()
@@ -154,10 +145,6 @@ func (*FakeController) LastSyncResourceVersion() string {
 }
 
 func (*FakeInformer) SetWatchErrorHandler(cache.WatchErrorHandler) error {
-	return nil
-}
-
-func (*FakeInformer) SetWatchErrorHandlerWithContext(cache.WatchErrorHandlerWithContext) error {
 	return nil
 }
 
@@ -173,15 +160,20 @@ func NewNoOpInformer(
 	}
 }
 
+func NewNoOpWorkloadInformer(
+	_ kubernetes.Interface,
+	_ string,
+) cache.SharedInformer {
+	return &NoOpInformer{
+		NoOpController: &NoOpController{},
+	}
+}
+
 func (f *NoOpInformer) AddEventHandler(handler cache.ResourceEventHandler) (cache.ResourceEventHandlerRegistration, error) {
 	return f.AddEventHandlerWithResyncPeriod(handler, time.Second)
 }
 
 func (f *NoOpInformer) AddEventHandlerWithResyncPeriod(cache.ResourceEventHandler, time.Duration) (cache.ResourceEventHandlerRegistration, error) {
-	return f, nil
-}
-
-func (f *NoOpInformer) AddEventHandlerWithOptions(cache.ResourceEventHandler, cache.HandlerOptions) (cache.ResourceEventHandlerRegistration, error) {
 	return f, nil
 }
 
@@ -212,10 +204,6 @@ func (c *NoOpController) Run(stopCh <-chan struct{}) {
 	}()
 }
 
-func (c *NoOpController) RunWithContext(ctx context.Context) {
-	c.Run(ctx.Done())
-}
-
 func (c *NoOpController) IsStopped() bool {
 	return c.hasStopped
 }
@@ -229,9 +217,5 @@ func (*NoOpController) LastSyncResourceVersion() string {
 }
 
 func (*NoOpController) SetWatchErrorHandler(cache.WatchErrorHandler) error {
-	return nil
-}
-
-func (*NoOpController) SetWatchErrorHandlerWithContext(cache.WatchErrorHandlerWithContext) error {
 	return nil
 }

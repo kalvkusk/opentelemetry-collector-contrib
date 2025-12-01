@@ -334,7 +334,7 @@ func sfxTypePtr(t sfxpb.MetricType) *sfxpb.MetricType {
 
 func buildNDimensions(n uint) []*sfxpb.Dimension {
 	d := make([]*sfxpb.Dimension, 0, n)
-	for i := range n {
+	for i := uint(0); i < n; i++ {
 		idx := int(i)
 		suffix := strconv.Itoa(idx)
 		d = append(d, &sfxpb.Dimension{

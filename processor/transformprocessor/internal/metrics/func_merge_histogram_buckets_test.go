@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -137,7 +136,7 @@ func TestMergeHistogramBuckets(t *testing.T) {
 				return
 			}
 
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.NotNil(t, exprFunc)
 
 			metric := pmetric.NewMetric()
@@ -162,7 +161,7 @@ func TestMergeHistogramBuckets(t *testing.T) {
 
 			result, err := exprFunc(t.Context(), ctx)
 
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Nil(t, result)
 
 			actualBounds := dp.ExplicitBounds().AsRaw()
@@ -205,13 +204,13 @@ func TestMergeHistogramBucketsNonHistogramDataPoint(t *testing.T) {
 	dp.SetDoubleValue(10.0)
 
 	exprFunc, err := mergeHistogramBuckets(0.5)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, exprFunc)
 
 	ctx := ottldatapoint.NewTransformContext(dp, metric, pmetric.NewMetricSlice(), pcommon.NewInstrumentationScope(), pcommon.NewResource(), pmetric.NewScopeMetrics(), pmetric.NewResourceMetrics())
 	result, err := exprFunc(t.Context(), ctx)
 
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, result)
 
 	assert.Equal(t, 10.0, dp.DoubleValue())

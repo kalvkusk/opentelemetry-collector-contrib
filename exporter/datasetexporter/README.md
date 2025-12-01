@@ -238,9 +238,6 @@ exporters:
       server_host: ${env:SERVER_HOST}
       # If server_host is not set, use the hostname value
       use_hostname: true
-    sending_queue:
-      # Enable batching
-      batch:
 
   dataset/traces:
     # DataSet API URL, https://app.eu.scalyr.com for DataSet EU instance
@@ -251,19 +248,17 @@ exporters:
       max_lifetime: 15s
       group_by:
         - resource_service.instance.id
-    sending_queue:
-      # Enable batching
-      batch:
 
 service:
   pipelines:
     logs:
       receivers: [otlp]
-      processors: [attributes]
+      processors: [batch, attributes]
       # add dataset among your exporters
       exporters: [dataset/logs]
     traces:
       receivers: [otlp]
+      processors: [batch]
       # add dataset among your exporters
       exporters: [dataset/traces]
 ```
@@ -308,6 +303,7 @@ To enable metrics you have to:
        metrics:
          # add prometheus among metrics receivers
          receivers: [prometheus]
+         processors: [batch]
          exporters: [otlphttp/prometheus, debug]
    ```
 

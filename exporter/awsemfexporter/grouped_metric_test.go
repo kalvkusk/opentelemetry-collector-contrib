@@ -498,9 +498,10 @@ func BenchmarkAddToGroupedMetric(b *testing.B) {
 	metrics := rms.At(0).ScopeMetrics().At(0).Metrics()
 	numMetrics := metrics.Len()
 
-	for b.Loop() {
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
 		groupedMetrics := make(map[any]*groupedMetric)
-		for i := range numMetrics {
+		for i := 0; i < numMetrics; i++ {
 			metadata := generateTestMetricMetadata("namespace", int64(1596151098037), "log-group", "log-stream", "cloudwatch-otel", metrics.At(i).Type(), 0)
 			err := addToGroupedMetric(metrics.At(i), groupedMetrics, metadata, true, nil, testCfg, emfCalcs)
 			assert.NoError(b, err)

@@ -102,11 +102,11 @@ func TestConsumeLogsManyLogsShouldSucceed(t *testing.T) {
 		err = logs.Start(t.Context(), componenttest.NewNopHost())
 		assert.NoError(t, err)
 
-		for bI := range maxBatchCount {
+		for bI := 0; bI < maxBatchCount; bI++ {
 			batch := plog.NewLogs()
 			rL := batch.ResourceLogs().AppendEmpty()
 			sL := rL.ScopeLogs().AppendEmpty()
-			for lI := range logsPerBatch {
+			for lI := 0; lI < logsPerBatch; lI++ {
 				key := fmt.Sprintf("%04d-%06d", bI, lI)
 				log := sL.LogRecords().AppendEmpty()
 				log.SetTimestamp(pcommon.NewTimestampFromTime(time.Now()))

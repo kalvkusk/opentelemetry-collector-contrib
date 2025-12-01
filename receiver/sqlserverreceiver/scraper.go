@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -148,7 +147,7 @@ func (s *sqlServerScraperHelper) ScrapeLogs(ctx context.Context) (plog.Logs, err
 	var resources pcommon.Resource
 	switch s.sqlQuery {
 	case getSQLServerQueryTextAndPlanQuery():
-		if int(math.Ceil(time.Since(s.lastExecutionTimestamp).Seconds())) < int(s.config.TopQueryCollection.CollectionInterval.Seconds()) {
+		if s.lastExecutionTimestamp.Add(s.config.TopQueryCollection.CollectionInterval).After(time.Now()) {
 			s.logger.Debug("Skipping the collection of top queries because the current time has not yet exceeded the last execution time plus the specified collection interval")
 			return plog.NewLogs(), nil
 		}
@@ -644,8 +643,9 @@ func (s *sqlServerScraperHelper) recordDatabaseQueryTextAndPlan(ctx context.Cont
 
 	rows, err := s.client.QueryRows(
 		ctx,
-		sql.Named("lookbackTime", -int(s.config.EffectiveLookbackTime().Seconds())),
-		sql.Named("maxSampleCount", s.config.MaxQuerySampleCount),
+		sql.Named("lookbackTime", -s.config.LookbackTime),
+		sql.Named("topNValue", s.config.TopQueryCount),
+		sql.Named("instanceName", s.config.InstanceName),
 	)
 	if err != nil {
 		if !errors.Is(err, sqlquery.ErrNullValueWarning) {

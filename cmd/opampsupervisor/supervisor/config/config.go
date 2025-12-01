@@ -20,7 +20,6 @@ import (
 
 	"github.com/open-telemetry/opamp-go/protobufs"
 	"go.opentelemetry.io/collector/config/confighttp"
-	"go.opentelemetry.io/collector/config/configopaque"
 	"go.opentelemetry.io/collector/config/configtelemetry"
 	"go.opentelemetry.io/collector/config/configtls"
 	"go.opentelemetry.io/collector/confmap"
@@ -98,8 +97,6 @@ func (s Supervisor) Validate() error {
 type Storage struct {
 	// Directory is the directory where the Supervisor will store its data.
 	Directory string `mapstructure:"directory"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // Capabilities is the set of capabilities that the Supervisor supports.
@@ -170,21 +167,6 @@ type OpAMPServer struct {
 	Endpoint string                 `mapstructure:"endpoint"`
 	Headers  http.Header            `mapstructure:"headers"`
 	TLS      configtls.ClientConfig `mapstructure:"tls,omitempty"`
-	// prevent unkeyed literal initialization
-	_ struct{}
-}
-
-func (o OpAMPServer) OpaqueHeaders() map[string][]configopaque.String {
-	opaque := make(map[string][]configopaque.String, len(o.Headers))
-
-	for key, values := range o.Headers {
-		opaque[key] = make([]configopaque.String, len(values))
-		for i, val := range values {
-			opaque[key][i] = configopaque.String(val)
-		}
-	}
-
-	return opaque
 }
 
 func (o OpAMPServer) Validate() error {
@@ -284,8 +266,6 @@ var SpecialConfigFiles = []SpecialConfigFile{
 type AgentDescription struct {
 	IdentifyingAttributes    map[string]string `mapstructure:"identifying_attributes"`
 	NonIdentifyingAttributes map[string]string `mapstructure:"non_identifying_attributes"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 type Telemetry struct {
@@ -296,14 +276,10 @@ type Telemetry struct {
 	Traces  otelconftelemetry.TracesConfig `mapstructure:"traces"`
 
 	Resource map[string]*string `mapstructure:"resource"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 type HealthCheck struct {
 	confighttp.ServerConfig `mapstructure:",squash"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 func (h HealthCheck) Port() int64 {
@@ -338,8 +314,6 @@ type Logs struct {
 type Metrics struct {
 	Level   configtelemetry.Level `mapstructure:"level"`
 	Readers []config.MetricReader `mapstructure:"readers"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // DefaultSupervisor returns the default supervisor config

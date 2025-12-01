@@ -14,10 +14,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	ltype "google.golang.org/genproto/googleapis/logging/type"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/googlecloudlogentryencodingextension/internal/auditlog"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/googlecloudlogentryencodingextension/internal/constants"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/googlecloudlogentryencodingextension/internal/proxynlb"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/googlecloudlogentryencodingextension/internal/vpcflowlog"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/golden"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatatest/plogtest"
 )
@@ -77,7 +73,7 @@ func TestHandleHTTPRequestField(t *testing.T) {
 				refererHeaderField:                        "referer",
 				requestServerDurationField:                float64(10),
 				string(semconv.UserAgentOriginalKey):      "test",
-				string(semconv.NetworkPeerAddressKey):     "127.0.0.2",
+				string(semconv.ClientAddressKey):          "127.0.0.2",
 				string(semconv.ServerAddressKey):          "127.0.0.3",
 			},
 		},
@@ -386,79 +382,15 @@ func TestHandleLogEntryFields(t *testing.T) {
 	logs := plog.NewLogs()
 	resourceLogs := logs.ResourceLogs().AppendEmpty()
 	resource := resourceLogs.Resource()
-	scopeLogs := resourceLogs.ScopeLogs().AppendEmpty()
+	logRecord := resourceLogs.ScopeLogs().AppendEmpty().LogRecords().AppendEmpty()
 	cfg := *createDefaultConfig().(*Config)
 
-	// add the rest of the log entry fields
-	err = handleLogEntryFields(resource.Attributes(), scopeLogs, l, cfg)
+	err = handleLogEntryFields(resource.Attributes(), logRecord, l, cfg)
 	require.NoError(t, err)
 
 	expected, err := golden.ReadLogs("testdata/log_entry_expected.yaml")
 	require.NoError(t, err)
 	require.NoError(t, plogtest.CompareLogs(expected, logs))
-}
-
-func TestGetEncodingFormat(t *testing.T) {
-	tests := []struct {
-		name           string
-		logType        string
-		expectedFormat string
-	}{
-		{
-			name:           "audit log activity",
-			logType:        auditlog.ActivityLogNameSuffix,
-			expectedFormat: constants.GCPFormatAuditLog,
-		},
-		{
-			name:           "audit log data access",
-			logType:        auditlog.DataAccessLogNameSuffix,
-			expectedFormat: constants.GCPFormatAuditLog,
-		},
-		{
-			name:           "audit log system event",
-			logType:        auditlog.SystemEventLogNameSuffix,
-			expectedFormat: constants.GCPFormatAuditLog,
-		},
-		{
-			name:           "audit log policy",
-			logType:        auditlog.PolicyLogNameSuffix,
-			expectedFormat: constants.GCPFormatAuditLog,
-		},
-		{
-			name:           "vpc flow log network management",
-			logType:        vpcflowlog.NetworkManagementNameSuffix,
-			expectedFormat: constants.GCPFormatVPCFlowLog,
-		},
-		{
-			name:           "vpc flow log compute",
-			logType:        vpcflowlog.ComputeNameSuffix,
-			expectedFormat: constants.GCPFormatVPCFlowLog,
-		},
-		{
-			name:           "proxy nlb log connections",
-			logType:        proxynlb.ConnectionsLogNameSuffix,
-			expectedFormat: constants.GCPFormatProxyNLBLog,
-		},
-		{
-			name:           "unknown log type",
-			logType:        "unknown-log-type",
-			expectedFormat: "",
-		},
-		{
-			name:           "empty log type",
-			logType:        "",
-			expectedFormat: "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			result := getEncodingFormat(tt.logType)
-			require.Equal(t, tt.expectedFormat, result)
-		})
-	}
 }
 
 func TestHandleJSONPayload(t *testing.T) {

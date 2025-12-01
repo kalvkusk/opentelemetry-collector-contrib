@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 	"go.uber.org/zap"
@@ -160,7 +159,7 @@ func TestScraperWithCPUNodeUtilization(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = r.Start(t.Context(), componenttest.NewNopHost())
+	err = r.Start(t.Context(), nil)
 	require.NoError(t, err)
 
 	// we wait until the watcher starts
@@ -239,7 +238,7 @@ func TestScraperWithMemoryNodeUtilization(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = r.Start(t.Context(), componenttest.NewNopHost())
+	err = r.Start(t.Context(), nil)
 	require.NoError(t, err)
 
 	// we wait until the watcher starts
@@ -355,6 +354,9 @@ func TestScraperWithPercentMetrics(t *testing.T) {
 			ContainerCPUTime: metadata.MetricConfig{
 				Enabled: false,
 			},
+			ContainerCPUUtilization: metadata.MetricConfig{
+				Enabled: false,
+			},
 			ContainerFilesystemAvailable: metadata.MetricConfig{
 				Enabled: false,
 			},
@@ -397,6 +399,9 @@ func TestScraperWithPercentMetrics(t *testing.T) {
 			K8sNodeCPUTime: metadata.MetricConfig{
 				Enabled: false,
 			},
+			K8sNodeCPUUtilization: metadata.MetricConfig{
+				Enabled: false,
+			},
 			K8sNodeFilesystemAvailable: metadata.MetricConfig{
 				Enabled: false,
 			},
@@ -431,6 +436,9 @@ func TestScraperWithPercentMetrics(t *testing.T) {
 				Enabled: false,
 			},
 			K8sPodCPUTime: metadata.MetricConfig{
+				Enabled: false,
+			},
+			K8sPodCPUUtilization: metadata.MetricConfig{
 				Enabled: false,
 			},
 			K8sPodFilesystemAvailable: metadata.MetricConfig{

@@ -3,10 +3,10 @@ type: awscloudwatchlogs
 status:
   class: exporter
   stability:
-    alpha: [logs]
+    unmaintained: [logs]
   distributions: [contrib]
   codeowners:
-    active: [yaten2302]
+    active: []
     emeritus: [bryan-aguilar, boostchicken, rapphil]
     seeking_new: true
 

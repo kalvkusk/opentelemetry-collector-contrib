@@ -26,7 +26,7 @@ func newWAFLogContent(b *testing.B, nLogs int) []byte {
 
 	compactedBytes := compacted.Bytes()
 	result := make([][]byte, nLogs)
-	for i := range nLogs {
+	for i := 0; i < nLogs; i++ {
 		result[i] = compactedBytes
 	}
 	return bytes.Join(result, []byte{'\n'})
@@ -53,7 +53,7 @@ func BenchmarkUnmarshalLogs(b *testing.B) {
 
 		b.Run(name, func(b *testing.B) {
 			b.ReportAllocs()
-			for b.Loop() {
+			for i := 0; i < b.N; i++ {
 				_, err := u.UnmarshalAWSLogs(bytes.NewReader(data))
 				require.NoError(b, err)
 			}

@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	pb "github.com/DataDog/datadog-agent/pkg/proto/pbgo/trace"
-	lru "github.com/hashicorp/golang-lru/v2"
+	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	vmsgp "github.com/vmihailenco/msgpack/v5"
@@ -148,14 +148,16 @@ func TestTracePayloadV07Unmarshalling(t *testing.T) {
 }
 
 func BenchmarkTranslatorv05(b *testing.B) {
-	for b.Loop() {
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
 		TestTracePayloadV05Unmarshalling(&testing.T{})
 	}
 	b.StopTimer()
 }
 
 func BenchmarkTranslatorv07(b *testing.B) {
-	for b.Loop() {
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
 		TestTracePayloadV07Unmarshalling(&testing.T{})
 	}
 	b.StopTimer()
@@ -187,7 +189,7 @@ func TestTracePayloadApiV02Unmarshalling(t *testing.T) {
 func agentPayloadFromTraces(traces *pb.Traces) (agentPayload pb.AgentPayload) {
 	numberOfTraces := 2
 	var tracerPayloads []*pb.TracerPayload
-	for i := range numberOfTraces {
+	for i := 0; i < numberOfTraces; i++ {
 		payload := &pb.TracerPayload{
 			LanguageName:    strconv.Itoa(i),
 			LanguageVersion: strconv.Itoa(i),
@@ -260,7 +262,7 @@ func TestToTraces64to128bits(t *testing.T) {
 	req.Header.Set(header.Lang, "go")
 
 	// Test 1: We reconstructed the 128 bits trace id on both spans
-	cache, _ := lru.NewWithEvict(2, func(_ uint64, _ pcommon.TraceID) {})
+	cache, _ := simplelru.NewLRU[uint64, pcommon.TraceID](2, func(_ uint64, _ pcommon.TraceID) {})
 
 	traces, _ := ToTraces(zap.NewNop(), payload, req, cache)
 	assert.Equal(t, 2, traces.SpanCount(), "Expected 2 spans")

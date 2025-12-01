@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 )
@@ -90,10 +89,10 @@ func Test_ConvertTextToElementsXML(t *testing.T) {
 				ElementName: ottl.NewTestingOptional(tt.elementName),
 			}
 			exprFunc, err := factory.CreateFunction(ottl.FunctionContext{}, args)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			result, err := exprFunc(t.Context(), nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want, result)
 		})
 	}
@@ -121,7 +120,7 @@ func TestCreateConvertTextToElementsXMLFunc(t *testing.T) {
 		fCtx, &ConvertTextToElementsXMLArguments[any]{
 			Target: invalidXMLGetter(),
 		})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, exprFunc)
 	_, err = exprFunc(t.Context(), nil)
 	assert.Error(t, err)

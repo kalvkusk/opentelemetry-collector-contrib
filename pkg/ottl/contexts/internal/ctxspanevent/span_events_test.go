@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 
@@ -406,14 +405,14 @@ func TestPathGetSetter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			accessor, err := ctxspanevent.PathGetSetter(tt.path)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			spanEvent := createTelemetry()
 
 			tCtx := newTestContext(spanEvent)
 
 			got, err := accessor.Get(t.Context(), tCtx)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.orig, got)
 
 			err = accessor.Set(t.Context(), tCtx, tt.newVal)
@@ -421,7 +420,7 @@ func TestPathGetSetter(t *testing.T) {
 				assert.Error(t, err)
 				return
 			}
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			exSpanEvent := createTelemetry()
 			tt.modified(exSpanEvent)

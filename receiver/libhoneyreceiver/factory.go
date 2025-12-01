@@ -41,8 +41,7 @@ func createDefaultConfig() component.Config {
 	return &Config{
 		HTTP: configoptional.Default(HTTPConfig{
 			ServerConfig: confighttp.ServerConfig{
-				Endpoint: endpointStr,
-				// The empty array means no decompression attempted.
+				Endpoint:              endpointStr,
 				CompressionAlgorithms: []string{},
 			},
 			TracesURLPaths: defaultTracesURLPaths,

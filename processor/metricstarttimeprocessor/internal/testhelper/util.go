@@ -195,7 +195,7 @@ func ExponentialHistogramPointSimplified(attributes []*KV, startTimestamp, times
 
 	var sum float64
 	var count uint64
-	for i := range bucketCount {
+	for i := 0; i < bucketCount; i++ {
 		positive.BucketCounts().Append(uint64(i + 1))
 		negative.BucketCounts().Append(uint64(i + 1))
 		count += uint64(i+1) + uint64(i+1)
@@ -207,7 +207,7 @@ func ExponentialHistogramPointSimplified(attributes []*KV, startTimestamp, times
 	return hdp
 }
 
-func NumberPointRaw(attributes []*KV, startTimestamp, timestamp pcommon.Timestamp) pmetric.NumberDataPoint {
+func DoublePointRaw(attributes []*KV, startTimestamp, timestamp pcommon.Timestamp) pmetric.NumberDataPoint {
 	ndp := pmetric.NewNumberDataPoint()
 	ndp.SetStartTimestamp(startTimestamp)
 	ndp.SetTimestamp(timestamp)
@@ -220,19 +220,13 @@ func NumberPointRaw(attributes []*KV, startTimestamp, timestamp pcommon.Timestam
 }
 
 func DoublePoint(attributes []*KV, startTimestamp, timestamp pcommon.Timestamp, value float64) pmetric.NumberDataPoint {
-	ndp := NumberPointRaw(attributes, startTimestamp, timestamp)
+	ndp := DoublePointRaw(attributes, startTimestamp, timestamp)
 	ndp.SetDoubleValue(value)
 	return ndp
 }
 
-func IntPoint(attributes []*KV, startTimestamp, timestamp pcommon.Timestamp, value int64) pmetric.NumberDataPoint {
-	ndp := NumberPointRaw(attributes, startTimestamp, timestamp)
-	ndp.SetIntValue(value)
-	return ndp
-}
-
 func DoublePointNoValue(attributes []*KV, startTimestamp, timestamp pcommon.Timestamp) pmetric.NumberDataPoint {
-	ndp := NumberPointRaw(attributes, startTimestamp, timestamp)
+	ndp := DoublePointRaw(attributes, startTimestamp, timestamp)
 	ndp.SetFlags(pmetric.DefaultDataPointFlags.WithNoRecordedValue(true))
 	return ndp
 }
@@ -285,7 +279,7 @@ func SummaryPoint(attributes []*KV, startTimestamp, timestamp pcommon.Timestamp,
 	sdp.SetSum(sum)
 
 	qvL := sdp.QuantileValues()
-	for i := range quantiles {
+	for i := 0; i < len(quantiles); i++ {
 		qvi := qvL.AppendEmpty()
 		qvi.SetQuantile(quantiles[i])
 		qvi.SetValue(values[i])

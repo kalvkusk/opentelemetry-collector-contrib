@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 )
@@ -38,12 +37,12 @@ func Test_MD5(t *testing.T) {
 					return tt.value, nil
 				},
 			})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			result, err := exprFunc(nil, nil)
 			if tt.err {
 				assert.Error(t, err)
 			} else {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.expected, result)
 		})
@@ -75,7 +74,7 @@ func Test_MD5Error(t *testing.T) {
 					return tt.value, nil
 				},
 			})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			_, err = exprFunc(nil, nil)
 			assert.ErrorContains(t, err, tt.expectedError)
 		})

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -45,103 +44,103 @@ func Test_Len(t *testing.T) {
 
 	plogLogRecordSlice := plog.NewLogRecordSlice()
 	plogLogRecordSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		plogLogRecordSlice.AppendEmpty()
 	}
 
 	plogResourceLogsSlice := plog.NewResourceLogsSlice()
 	plogResourceLogsSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		plogResourceLogsSlice.AppendEmpty()
 	}
 
 	plogScopeLogsSlice := plog.NewScopeLogsSlice()
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		plogScopeLogsSlice.AppendEmpty()
 	}
 	plogScopeLogsSlice.EnsureCapacity(5)
 
 	pmetricExemplarSlice := pmetric.NewExemplarSlice()
 	pmetricExemplarSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricExemplarSlice.AppendEmpty()
 	}
 
 	pmetricExponentialHistogramDataPointSlice := pmetric.NewExponentialHistogramDataPointSlice()
 	pmetricExponentialHistogramDataPointSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricExponentialHistogramDataPointSlice.AppendEmpty()
 	}
 
 	pmetricHistogramDataPointSlice := pmetric.NewHistogramDataPointSlice()
 	pmetricHistogramDataPointSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricHistogramDataPointSlice.AppendEmpty()
 	}
 
 	pmetricMetricSlice := pmetric.NewMetricSlice()
 	pmetricMetricSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricMetricSlice.AppendEmpty()
 	}
 
 	pmetricNumberDataPointSlice := pmetric.NewNumberDataPointSlice()
 	pmetricNumberDataPointSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricNumberDataPointSlice.AppendEmpty()
 	}
 
 	pmetricResourceSlice := pmetric.NewResourceMetricsSlice()
 	pmetricResourceSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricResourceSlice.AppendEmpty()
 	}
 
 	pmetricScopeMetricsSlice := pmetric.NewScopeMetricsSlice()
 	pmetricScopeMetricsSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricScopeMetricsSlice.AppendEmpty()
 	}
 
 	pmetricSummaryDataPointSlice := pmetric.NewSummaryDataPointSlice()
 	pmetricSummaryDataPointSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricSummaryDataPointSlice.AppendEmpty()
 	}
 
 	pmetricSummaryDataPointValueAtQuantileSlice := pmetric.NewSummaryDataPointValueAtQuantileSlice()
 	pmetricSummaryDataPointValueAtQuantileSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		pmetricSummaryDataPointValueAtQuantileSlice.AppendEmpty()
 	}
 
 	ptraceResourceSpansSlice := ptrace.NewResourceSpansSlice()
 	ptraceResourceSpansSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		ptraceResourceSpansSlice.AppendEmpty()
 	}
 
 	ptraceScopeSpansSlice := ptrace.NewScopeSpansSlice()
 	ptraceScopeSpansSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		ptraceScopeSpansSlice.AppendEmpty()
 	}
 
 	ptraceSpanEventSlice := ptrace.NewSpanEventSlice()
 	ptraceSpanEventSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		ptraceSpanEventSlice.AppendEmpty()
 	}
 
 	ptraceSpanLinkSlice := ptrace.NewSpanLinkSlice()
 	ptraceSpanLinkSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		ptraceSpanLinkSlice.AppendEmpty()
 	}
 
 	ptraceSpanSlice := ptrace.NewSpanSlice()
 	ptraceSpanSlice.EnsureCapacity(5)
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		ptraceSpanSlice.AppendEmpty()
 	}
 
@@ -290,7 +289,7 @@ func Test_Len(t *testing.T) {
 				},
 			})
 			result, err := exprFunc(t.Context(), nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -298,7 +297,7 @@ func Test_Len(t *testing.T) {
 
 func dummyMap(size int) map[string]any {
 	m := make(map[string]any, size)
-	for i := range size {
+	for i := 0; i < size; i++ {
 		m[strconv.Itoa(i)] = i
 	}
 	return m

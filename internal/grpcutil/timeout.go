@@ -78,7 +78,7 @@ func timeoutUnitToDuration(u timeoutUnit) (d time.Duration, ok bool) {
 		return time.Nanosecond, true
 	default:
 	}
-	return d, ok
+	return
 }
 
 // DecodeTimeout parses a string associated with the "grpc-timeout"

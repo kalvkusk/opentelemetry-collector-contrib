@@ -143,14 +143,14 @@ func parseBasicAuth(auth string) (*authData, error) {
 	}
 	decoded := string(decodedBytes)
 
-	before, after, ok := strings.Cut(decoded, ":")
-	if !ok {
+	si := strings.IndexByte(decoded, ':')
+	if si < 0 {
 		return nil, errInvalidFormat
 	}
 
 	return &authData{
-		username: before,
-		password: after,
+		username: decoded[:si],
+		password: decoded[si+1:],
 		raw:      encoded,
 	}, nil
 }

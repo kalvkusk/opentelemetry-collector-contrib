@@ -464,7 +464,7 @@ func TestCompareMetrics(t *testing.T) {
 			if tc.withoutOptions == nil {
 				assert.NoError(t, err)
 			} else {
-				assert.EqualError(t, err, tc.withoutOptions.Error())
+				assert.EqualError(t, tc.withoutOptions, err.Error())
 			}
 
 			if tc.compareOptions == nil {

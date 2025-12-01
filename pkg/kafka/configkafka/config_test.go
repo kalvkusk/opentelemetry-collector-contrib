@@ -52,8 +52,7 @@ func TestClientConfig(t *testing.T) {
 						Backoff: 5 * time.Second,
 					},
 				},
-				RackID:         "rack1",
-				UseLeaderEpoch: true,
+				RackID: "rack1",
 			},
 		},
 		"sasl_aws_msk_iam_oauthbearer": {
@@ -112,13 +111,6 @@ func TestClientConfig(t *testing.T) {
 				return cfg
 			}(),
 		},
-		"not_use_leader_epoch": {
-			expected: func() ClientConfig {
-				cfg := NewDefaultClientConfig()
-				cfg.UseLeaderEpoch = false
-				return cfg
-			}(),
-		},
 
 		// Invalid configurations
 		"brokers_required": {
@@ -160,11 +152,10 @@ func TestConsumerConfig(t *testing.T) {
 					Enable:   false,
 					Interval: 10 * time.Minute,
 				},
-				MinFetchSize:          10,
-				DefaultFetchSize:      1024,
-				MaxFetchSize:          4096,
-				MaxFetchWait:          1 * time.Second,
-				MaxPartitionFetchSize: 4096,
+				MinFetchSize:     10,
+				DefaultFetchSize: 1024,
+				MaxFetchSize:     4096,
+				MaxFetchWait:     1 * time.Second,
 			},
 		},
 
@@ -193,7 +184,6 @@ func TestProducerConfig(t *testing.T) {
 				},
 				FlushMaxMessages:       2,
 				AllowAutoTopicCreation: true,
-				Linger:                 10 * time.Millisecond,
 			},
 		},
 		"default_compression_level": {
@@ -207,7 +197,6 @@ func TestProducerConfig(t *testing.T) {
 				},
 				FlushMaxMessages:       2,
 				AllowAutoTopicCreation: true,
-				Linger:                 10 * time.Millisecond,
 			},
 		},
 		"snappy_compression": {
@@ -216,7 +205,6 @@ func TestProducerConfig(t *testing.T) {
 				RequiredAcks:           1,
 				Compression:            "snappy",
 				AllowAutoTopicCreation: true,
-				Linger:                 10 * time.Millisecond,
 			},
 		},
 		"disable_auto_topic_creation": {
@@ -225,25 +213,6 @@ func TestProducerConfig(t *testing.T) {
 				RequiredAcks:           1,
 				Compression:            "none",
 				AllowAutoTopicCreation: false,
-				Linger:                 10 * time.Millisecond,
-			},
-		},
-		"producer_linger": {
-			expected: ProducerConfig{
-				MaxMessageBytes:        1000000,
-				RequiredAcks:           1,
-				Compression:            "none",
-				AllowAutoTopicCreation: true,
-				Linger:                 100 * time.Millisecond,
-			},
-		},
-		"producer_linger_1s": {
-			expected: ProducerConfig{
-				MaxMessageBytes:        1000000,
-				RequiredAcks:           1,
-				Compression:            "none",
-				AllowAutoTopicCreation: true,
-				Linger:                 1 * time.Second,
 			},
 		},
 		"invalid_compression_level": {

@@ -6,7 +6,6 @@ package azuremonitorreceiver // import "github.com/open-telemetry/opentelemetry-
 import (
 	"context"
 	"fmt"
-	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -134,7 +133,7 @@ func (s *azureScraper) start(_ context.Context, host component.Host) (err error)
 	s.subscriptions = map[string]*azureSubscription{}
 	s.resources = map[string]map[string]*azureResource{}
 
-	return err
+	return
 }
 
 func (s *azureScraper) loadSubscription(sub azureSubscription) {
@@ -366,7 +365,7 @@ func (s *azureScraper) getResourceMetricsDefinitions(ctx context.Context, subscr
 
 		for _, v := range nextResult.Value {
 			metricName := *v.Name.Value
-			metricAggregations := getMetricAggregations(*v.Namespace, metricName, s.cfg.Metrics, convertAggregationsToStr(v.SupportedAggregationTypes))
+			metricAggregations := getMetricAggregations(*v.Namespace, metricName, s.cfg.Metrics)
 			if len(metricAggregations) == 0 {
 				continue
 			}
@@ -413,7 +412,10 @@ func (s *azureScraper) getResourceMetricsValues(ctx context.Context, subscriptio
 		start := 0
 
 		for start < len(metricsByGrain.metrics) {
-			end := min(start+s.cfg.MaximumNumberOfMetricsInACall, len(metricsByGrain.metrics))
+			end := start + s.cfg.MaximumNumberOfMetricsInACall
+			if end > len(metricsByGrain.metrics) {
+				end = len(metricsByGrain.metrics)
+			}
 
 			opts := getResourceMetricsValuesRequestOptions(
 				metricsByGrain.metrics,
@@ -442,7 +444,9 @@ func (s *azureScraper) getResourceMetricsValues(ctx context.Context, subscriptio
 						continue
 					}
 					attributes := map[string]*string{}
-					maps.Copy(attributes, res.attributes)
+					for name, value := range res.attributes {
+						attributes[name] = value
+					}
 					for _, value := range timeseriesElement.Metadatavalues {
 						name := metadataPrefix + *value.Name.Value
 						attributes[name] = value.Value
@@ -515,39 +519,30 @@ func (s *azureScraper) processTimeseriesData(
 	}
 }
 
-// getMetricAggregations returns a list of aggregations for a given namespace/metric.
-// Two parameters are considered to know the aggregation to choose
-// - a filter (given in configuration)
-// - a list of supported aggregations (given by the API)
-// If one namespace/metrics combination matches a provided filter,
-// > Then it returns the aggregations in the filter
-// > Otherwise it returns all supported aggregations.
-// Note that a special filter * is supported to return all supported aggregations explicitly.
-// /!\ It does not control the aggregations in the filters. If it's not in the supported list, it still lets it pass.
-func getMetricAggregations(metricNamespace, metricName string, filters NestedListAlias, supportedAggregations []string) []string {
+func getMetricAggregations(metricNamespace, metricName string, filters NestedListAlias) []string {
 	// default behavior when no metric filters specified: pass all metrics with all aggregations
 	if len(filters) == 0 {
-		return supportedAggregations
+		return aggregations
 	}
 
 	metricsFilters, ok := mapFindInsensitive(filters, metricNamespace)
-	// metric namespace isn't found, or it's empty: pass all metrics from the namespace
+	// metric namespace not found or it's empty: pass all metrics from the namespace
 	if !ok || len(metricsFilters) == 0 {
-		return supportedAggregations
+		return aggregations
 	}
 
 	aggregationsFilters, ok := mapFindInsensitive(metricsFilters, metricName)
-	// if the target metric is absent in the metrics map: filter out metric
+	// if target metric is absent in metrics map: filter out metric
 	if !ok {
 		return []string{}
 	}
 	// allow all aggregations if others are not specified
 	if len(aggregationsFilters) == 0 || slices.Contains(aggregationsFilters, filterAllAggregations) {
-		return supportedAggregations
+		return aggregations
 	}
 
-	// collect known aggregations without filtering on supported
-	var out []string
+	// collect known supported aggregations
+	out := []string{}
 	for _, filter := range aggregationsFilters {
 		for _, aggregation := range aggregations {
 			if strings.EqualFold(aggregation, filter) {
@@ -557,14 +552,6 @@ func getMetricAggregations(metricNamespace, metricName string, filters NestedLis
 	}
 
 	return out
-}
-
-func convertAggregationsToStr(aggregations []*armmonitor.AggregationType) []string {
-	var result []string
-	for _, aggr := range aggregations {
-		result = append(result, string(*aggr))
-	}
-	return result
 }
 
 func mapFindInsensitive[T any](m map[string]T, key string) (T, bool) {

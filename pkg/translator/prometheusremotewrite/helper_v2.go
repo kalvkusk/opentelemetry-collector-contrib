@@ -15,13 +15,12 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	conventions "go.opentelemetry.io/otel/semconv/v1.25.0"
-	"go.uber.org/multierr"
 )
 
 // addResourceTargetInfoV2 converts the resource to the target info metric.
-func (c *prometheusConverterV2) addResourceTargetInfoV2(resource pcommon.Resource, settings Settings, timestamp pcommon.Timestamp) error {
+func (c *prometheusConverterV2) addResourceTargetInfoV2(resource pcommon.Resource, settings Settings, timestamp pcommon.Timestamp) {
 	if settings.DisableTargetInfo || timestamp == 0 {
-		return nil
+		return
 	}
 
 	attributes := resource.Attributes()
@@ -39,7 +38,7 @@ func (c *prometheusConverterV2) addResourceTargetInfoV2(resource pcommon.Resourc
 	}
 	if nonIdentifyingAttrsCount == 0 {
 		// If we only have job + instance, then target_info isn't useful, so don't add it.
-		return nil
+		return
 	}
 
 	name := otlptranslator.TargetInfoMetricName
@@ -48,10 +47,7 @@ func (c *prometheusConverterV2) addResourceTargetInfoV2(resource pcommon.Resourc
 		name = settings.Namespace + "_" + name
 	}
 
-	labels, err := createAttributes(resource, attributes, settings.ExternalLabels, identifyingAttrs, false, c.labelNamer, model.MetricNameLabel, name)
-	if err != nil {
-		return err
-	}
+	labels := createAttributes(resource, attributes, settings.ExternalLabels, identifyingAttrs, false, c.labelNamer, model.MetricNameLabel, name)
 	haveIdentifier := false
 	for _, l := range labels {
 		if l.Name == model.JobLabel || l.Name == model.InstanceLabel {
@@ -62,7 +58,7 @@ func (c *prometheusConverterV2) addResourceTargetInfoV2(resource pcommon.Resourc
 
 	if !haveIdentifier {
 		// We need at least one identifying label to generate target_info.
-		return nil
+		return
 	}
 
 	sample := &writev2.Sample{
@@ -74,7 +70,6 @@ func (c *prometheusConverterV2) addResourceTargetInfoV2(resource pcommon.Resourc
 		Type: writev2.Metadata_METRIC_TYPE_GAUGE,
 		Help: "Target metadata",
 	})
-	return nil
 }
 
 // addSampleWithLabels is a helper function to create and add a sample with labels
@@ -97,16 +92,11 @@ func (c *prometheusConverterV2) addSampleWithLabels(sampleValue float64, timesta
 
 func (c *prometheusConverterV2) addSummaryDataPoints(dataPoints pmetric.SummaryDataPointSlice, resource pcommon.Resource,
 	settings Settings, baseName string, metadata metadata,
-) error {
-	var errs error
+) {
 	for x := 0; x < dataPoints.Len(); x++ {
 		pt := dataPoints.At(x)
 		timestamp := convertTimeStamp(pt.Timestamp())
-		baseLabels, err := createAttributes(resource, pt.Attributes(), settings.ExternalLabels, nil, false, c.labelNamer)
-		if err != nil {
-			errs = multierr.Append(errs, err)
-			continue
-		}
+		baseLabels := createAttributes(resource, pt.Attributes(), settings.ExternalLabels, nil, false, c.labelNamer)
 		noRecordedValue := pt.Flags().NoRecordedValue()
 
 		// Add sum and count samples
@@ -120,21 +110,15 @@ func (c *prometheusConverterV2) addSummaryDataPoints(dataPoints pmetric.SummaryD
 			c.addSampleWithLabels(qt.Value(), timestamp, noRecordedValue, baseName, baseLabels, quantileStr, percentileStr, metadata)
 		}
 	}
-	return errs
 }
 
 func (c *prometheusConverterV2) addHistogramDataPoints(dataPoints pmetric.HistogramDataPointSlice,
 	resource pcommon.Resource, settings Settings, baseName string, metadata metadata,
-) error {
-	var errs error
+) {
 	for x := 0; x < dataPoints.Len(); x++ {
 		pt := dataPoints.At(x)
 		timestamp := convertTimeStamp(pt.Timestamp())
-		baseLabels, err := createAttributes(resource, pt.Attributes(), settings.ExternalLabels, nil, false, c.labelNamer)
-		if err != nil {
-			errs = multierr.Append(errs, err)
-			continue
-		}
+		baseLabels := createAttributes(resource, pt.Attributes(), settings.ExternalLabels, nil, false, c.labelNamer)
 		noRecordedValue := pt.Flags().NoRecordedValue()
 
 		// If the sum is unset, it indicates the _sum metric point should be
@@ -161,5 +145,4 @@ func (c *prometheusConverterV2) addHistogramDataPoints(dataPoints pmetric.Histog
 
 		// TODO implement exemplars support
 	}
-	return errs
 }

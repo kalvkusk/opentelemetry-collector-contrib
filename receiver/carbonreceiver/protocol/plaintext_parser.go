@@ -18,15 +18,15 @@ var _ ParserConfig = (*PlaintextConfig)(nil)
 // BuildParser creates a new Parser instance that receives plaintext
 // Carbon data.
 func (*PlaintextConfig) BuildParser() (Parser, error) {
-	pathParser := &plaintextPathParser{}
-	return newParser(pathParser)
+	pathParser := &PlaintextPathParser{}
+	return NewParser(pathParser)
 }
 
-// plaintextPathParser converts a line of https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol,
+// PlaintextPathParser converts a line of https://graphite.readthedocs.io/en/latest/feeding-carbon.html#the-plaintext-protocol,
 // treating tags per spec at https://graphite.readthedocs.io/en/latest/tags.html#carbon.
-type plaintextPathParser struct{}
+type PlaintextPathParser struct{}
 
-// parsePath converts the <metric_path> of a Carbon line (see Parse function for
+// ParsePath converts the <metric_path> of a Carbon line (see Parse function for
 // description of the full line). The metric path is expected to be in the
 // following format:
 //
@@ -37,7 +37,7 @@ type plaintextPathParser struct{}
 //
 // tag is of the form "key=val", where key can contain any char except ";!^=" and
 // val can contain any char except ";~".
-func (*plaintextPathParser) parsePath(path string, parsedPath *parsedPath) error {
+func (*PlaintextPathParser) ParsePath(path string, parsedPath *ParsedPath) error {
 	parts := strings.SplitN(path, ";", 2)
 	if len(parts) < 1 || parts[0] == "" {
 		return fmt.Errorf("empty metric name extracted from path [%s]", path)
@@ -55,7 +55,8 @@ func (*plaintextPathParser) parsePath(path string, parsedPath *parsedPath) error
 		return nil
 	}
 
-	for tag := range strings.SplitSeq(parts[1], ";") {
+	tags := strings.Split(parts[1], ";")
+	for _, tag := range tags {
 		idx := strings.IndexByte(tag, '=')
 		if idx < 1 {
 			return fmt.Errorf("cannot parse metric path [%s]: incorrect key value separator for [%s]", path, tag)

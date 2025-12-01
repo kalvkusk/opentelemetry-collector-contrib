@@ -20,8 +20,6 @@ func NewOutputConfig(operatorID, operatorType string) OutputConfig {
 // OutputConfig provides a basic implementation of an output operator config.
 type OutputConfig struct {
 	BasicConfig `mapstructure:",squash"`
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // Build will build an output operator.
@@ -41,8 +39,6 @@ func (c OutputConfig) Build(set component.TelemetrySettings) (OutputOperator, er
 // OutputOperator provides a basic implementation of an output operator.
 type OutputOperator struct {
 	BasicOperator
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // CanProcess will always return true for an output operator.

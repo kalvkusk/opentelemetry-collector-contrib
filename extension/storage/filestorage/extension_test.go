@@ -61,28 +61,28 @@ func TestExtensionIntegrity(t *testing.T) {
 		myBytes := []byte(n.Name())
 
 		// Set my values
-		for i := range keys {
+		for i := 0; i < len(keys); i++ {
 			err := c.Set(ctx, keys[i], myBytes)
 			require.NoError(t, err)
 		}
 
 		// Repeatedly thrash client
-		for range 100 {
+		for j := 0; j < 100; j++ {
 			// Make sure my values are still mine
-			for i := range keys {
+			for i := 0; i < len(keys); i++ {
 				v, err := c.Get(ctx, keys[i])
 				require.NoError(t, err)
 				require.Equal(t, myBytes, v)
 			}
 
 			// Delete my values
-			for i := range keys {
+			for i := 0; i < len(keys); i++ {
 				err := c.Delete(ctx, keys[i])
 				require.NoError(t, err)
 			}
 
 			// Reset my values
-			for i := range keys {
+			for i := 0; i < len(keys); i++ {
 				err := c.Set(ctx, keys[i], myBytes)
 				require.NoError(t, err)
 			}
@@ -364,7 +364,7 @@ func TestCompaction(t *testing.T) {
 	require.Less(t, stats.Size(), newStats.Size())
 
 	// remove data from database
-	for i = range numEntries {
+	for i = 0; i < numEntries; i++ {
 		key = fmt.Sprintf("key_%d", i)
 		err = c.Delete(ctx, key)
 		require.NoError(t, err)
@@ -666,8 +666,7 @@ func TestRecreate(t *testing.T) {
 		require.NoError(t, ext.Shutdown(ctx))
 	}
 
-	// step 3: re-create the extension, but with Recreate=true and make sure that the data still exists
-	// (since recreate now only happens on panic, not always when recreate=true)
+	// step 3: re-create the extension, but with Recreate=true and make sure that the data is not preset
 	{
 		config.Recreate = true
 		ext, err := f.Create(ctx, extensiontest.NewNopSettings(f.Type()), config)
@@ -680,9 +679,9 @@ func TestRecreate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, client)
 
-		// The data should still exist since no panic occurred
+		// The data shouldn't exist.
 		val, err := client.Get(ctx, "key")
-		require.Equal(t, val, []byte("val"))
+		require.Nil(t, val)
 		require.NoError(t, err)
 
 		// close the extension

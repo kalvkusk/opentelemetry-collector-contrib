@@ -58,7 +58,7 @@ func (f *logsRouter) consumeByHealthyPipeline(ctx context.Context, ld plog.Logs)
 // sampleRetryConsumers iterates through all unhealthy consumers to re-establish a healthy connection
 func (f *logsRouter) sampleRetryConsumers(ctx context.Context, ld plog.Logs) bool {
 	stableIndex := f.pS.CurrentPipeline()
-	for i := range stableIndex {
+	for i := 0; i < stableIndex; i++ {
 		consumer := f.getConsumerAtIndex(i)
 		err := consumer.ConsumeLogs(ctx, ld)
 		if err == nil {
@@ -98,7 +98,7 @@ func newLogsToLogs(set connector.Settings, cfg component.Config, logs consumer.L
 	config := cfg.(*Config)
 	lr, ok := logs.(connector.LogsRouterAndConsumer)
 	if !ok {
-		return nil, errors.New("consumer is not of type LogsRouter")
+		return nil, errors.New("consumer is not of type MetricsRouter")
 	}
 
 	failover, err := newLogsRouter(lr.Consumer, config)

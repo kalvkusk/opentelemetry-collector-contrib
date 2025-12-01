@@ -36,10 +36,6 @@ func TestDetectAzureAvailable(t *testing.T) {
 		SubscriptionID:    "subscriptionID",
 		ResourceGroupName: "resourceGroup",
 		VMScaleSetName:    "myScaleset",
-		AvailabilityZone:  "availabilityZone",
-		OSProfile: azure.OSProfile{
-			ComputerName: "computerName",
-		},
 		TagsList: []azure.ComputeTagsListMetadata{
 			{
 				Name:  "tag1key",
@@ -67,7 +63,7 @@ func TestDetectAzureAvailable(t *testing.T) {
 	expected := map[string]any{
 		string(conventions.CloudProviderKey):  conventions.CloudProviderAzure.Value.AsString(),
 		string(conventions.CloudPlatformKey):  conventions.CloudPlatformAzureVM.Value.AsString(),
-		string(conventions.HostNameKey):       "computerName",
+		string(conventions.HostNameKey):       "name",
 		string(conventions.CloudRegionKey):    "location",
 		string(conventions.HostIDKey):         "vmID",
 		string(conventions.CloudAccountIDKey): "subscriptionID",

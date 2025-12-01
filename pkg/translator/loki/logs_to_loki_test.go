@@ -225,7 +225,7 @@ func TestLogsToLokiRequestWithGroupingByTenant(t *testing.T) {
 				assert.True(t, ok)
 
 				streams := request.Streams
-				for s := range streams {
+				for s := 0; s < len(streams); s++ {
 					gotStream := request.Streams[s]
 					wantStream := want.Streams[s]
 
@@ -431,7 +431,7 @@ func TestLogsToLokiRequestWithoutTenant(t *testing.T) {
 			// prepare
 			ld := plog.NewLogs()
 			ld.ResourceLogs().AppendEmpty()
-			for i := range 3 {
+			for i := 0; i < 3; i++ {
 				ld.ResourceLogs().At(0).ScopeLogs().AppendEmpty()
 				ld.ResourceLogs().At(0).ScopeLogs().At(i).LogRecords().AppendEmpty()
 				ld.ResourceLogs().At(0).ScopeLogs().At(i).LogRecords().At(0).SetTraceID([16]byte{byte(i + 1)})
@@ -487,7 +487,7 @@ func TestLogsToLokiRequestWithoutTenant(t *testing.T) {
 			assert.Equal(t, tt.expectedLabel, request.Streams[0].Labels)
 
 			entries := request.Streams[0].Entries
-			for i := range entries {
+			for i := 0; i < len(entries); i++ {
 				assert.Equal(t, tt.expectedLines[i], entries[i].Line)
 			}
 		})

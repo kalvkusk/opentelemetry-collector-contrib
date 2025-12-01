@@ -5,7 +5,6 @@ package solacereceiver
 
 import (
 	"context"
-	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,7 +122,9 @@ func TestMoveUnmarshallerMapClientSpanAttributes(t *testing.T) {
 			"messaging.operation.name": "move",
 			"messaging.operation.type": "move",
 		}
-		maps.Copy(base, attributes)
+		for key, val := range attributes {
+			base[key] = val
+		}
 		span := ptrace.NewSpan()
 		err := span.Attributes().FromRaw(base)
 		assert.NoError(t, err)

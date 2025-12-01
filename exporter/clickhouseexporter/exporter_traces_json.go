@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -19,78 +18,39 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/clickhouseexporter/internal/sqltemplates"
 )
 
-// anyTracesExporter is an interface that satisfies both the default map tracesExporter and the tracesJSONExporter
-type anyTracesExporter interface {
-	start(context.Context, component.Host) error
-	shutdown(context.Context) error
-	pushTraceData(ctx context.Context, td ptrace.Traces) error
-}
-
 type tracesJSONExporter struct {
-	cfg            *Config
-	logger         *zap.Logger
-	db             driver.Conn
-	insertSQL      string
-	schemaFeatures struct {
-		AttributeKeys bool
-	}
+	cfg       *Config
+	logger    *zap.Logger
+	db        driver.Conn
+	insertSQL string
 }
 
 func newTracesJSONExporter(logger *zap.Logger, cfg *Config) *tracesJSONExporter {
 	return &tracesJSONExporter{
-		cfg:    cfg,
-		logger: logger,
+		cfg:       cfg,
+		logger:    logger,
+		insertSQL: renderInsertTracesJSONSQL(cfg),
 	}
 }
 
 func (e *tracesJSONExporter) start(ctx context.Context, _ component.Host) error {
-	opt, err := e.cfg.buildClickHouseOptions()
+	dsn, err := e.cfg.buildDSN()
 	if err != nil {
 		return err
 	}
 
-	e.db, err = internal.NewClickhouseClientFromOptions(opt)
+	e.db, err = internal.NewClickhouseClient(dsn)
 	if err != nil {
 		return err
 	}
 
 	if e.cfg.shouldCreateSchema() {
-		if createDBErr := internal.CreateDatabase(ctx, e.db, e.cfg.database(), e.cfg.clusterString()); createDBErr != nil {
-			return createDBErr
+		if err := internal.CreateDatabase(ctx, e.db, e.cfg.database(), e.cfg.clusterString()); err != nil {
+			return err
 		}
 
-		if createTableErr := createTraceJSONTables(ctx, e.cfg, e.db); createTableErr != nil {
-			return createTableErr
-		}
-	}
-
-	err = e.detectSchemaFeatures(ctx)
-	if err != nil {
-		return fmt.Errorf("schema detection: %w", err)
-	}
-
-	e.renderInsertTracesJSONSQL()
-
-	return nil
-}
-
-const (
-	tracesJSONColumnResourceAttributesKeys = "ResourceAttributesKeys"
-	tracesJSONColumnSpanAttributesKeys     = "SpanAttributesKeys"
-)
-
-func (e *tracesJSONExporter) detectSchemaFeatures(ctx context.Context) error {
-	columnNames, err := internal.GetTableColumns(ctx, e.db, e.cfg.database(), e.cfg.TracesTableName)
-	if err != nil {
-		return err
-	}
-
-	for _, name := range columnNames {
-		switch name {
-		case tracesJSONColumnResourceAttributesKeys:
-			e.schemaFeatures.AttributeKeys = true
-		case tracesJSONColumnSpanAttributesKeys:
-			e.schemaFeatures.AttributeKeys = true
+		if err := createTraceJSONTables(ctx, e.cfg, e.db); err != nil {
+			return err
 		}
 	}
 
@@ -101,7 +61,6 @@ func (e *tracesJSONExporter) shutdown(_ context.Context) error {
 	if e.db != nil {
 		if err := e.db.Close(); err != nil {
 			e.logger.Warn("failed to close json traces db connection", zap.Error(err))
-			return err
 		}
 	}
 
@@ -124,7 +83,7 @@ func (e *tracesJSONExporter) pushTraceData(ctx context.Context, td ptrace.Traces
 	var spanCount int
 	rsSpans := td.ResourceSpans()
 	rsLen := rsSpans.Len()
-	for i := range rsLen {
+	for i := 0; i < rsLen; i++ {
 		spans := rsSpans.At(i)
 		res := spans.Resource()
 		resAttr := res.Attributes()
@@ -134,13 +93,8 @@ func (e *tracesJSONExporter) pushTraceData(ctx context.Context, td ptrace.Traces
 			return fmt.Errorf("failed to marshal json trace resource attributes: %w", resAttrErr)
 		}
 
-		var resAttrKeys []string
-		if e.schemaFeatures.AttributeKeys {
-			resAttrKeys = internal.UniqueFlattenedAttributes(resAttr)
-		}
-
 		ssRootLen := spans.ScopeSpans().Len()
-		for j := range ssRootLen {
+		for j := 0; j < ssRootLen; j++ {
 			scopeSpanRoot := spans.ScopeSpans().At(j)
 			scopeSpanScope := scopeSpanRoot.Scope()
 			scopeName := scopeSpanScope.Name()
@@ -148,12 +102,11 @@ func (e *tracesJSONExporter) pushTraceData(ctx context.Context, td ptrace.Traces
 			scopeSpans := scopeSpanRoot.Spans()
 
 			ssLen := scopeSpans.Len()
-			for k := range ssLen {
+			for k := 0; k < ssLen; k++ {
 				span := scopeSpans.At(k)
 				spanStatus := span.Status()
 				spanDurationNanos := span.EndTimestamp() - span.StartTimestamp()
-				spanAttr := span.Attributes()
-				spanAttrBytes, spanAttrErr := json.Marshal(spanAttr.AsRaw())
+				spanAttrBytes, spanAttrErr := json.Marshal(span.Attributes().AsRaw())
 				if spanAttrErr != nil {
 					return fmt.Errorf("failed to marshal json trace span attributes: %w", spanAttrErr)
 				}
@@ -167,8 +120,7 @@ func (e *tracesJSONExporter) pushTraceData(ctx context.Context, td ptrace.Traces
 					return fmt.Errorf("failed to convert json trace links: %w", linksErr)
 				}
 
-				columnValues := make([]any, 0, 24)
-				columnValues = append(columnValues,
+				appendErr := batch.Append(
 					span.StartTimestamp().AsTime(),
 					span.TraceID().String(),
 					span.SpanID().String(),
@@ -192,13 +144,6 @@ func (e *tracesJSONExporter) pushTraceData(ctx context.Context, td ptrace.Traces
 					linksTraceStates,
 					linksAttrs,
 				)
-
-				if e.schemaFeatures.AttributeKeys {
-					spanAttrKeys := internal.UniqueFlattenedAttributes(spanAttr)
-					columnValues = append(columnValues, resAttrKeys, spanAttrKeys)
-				}
-
-				appendErr := batch.Append(columnValues...)
 				if appendErr != nil {
 					return fmt.Errorf("failed to append json trace row: %w", appendErr)
 				}
@@ -238,7 +183,7 @@ func convertEventsJSON(events ptrace.SpanEventSlice) (times []time.Time, names, 
 		attrs = append(attrs, string(eventAttrBytes))
 	}
 
-	return times, names, attrs, err
+	return
 }
 
 func convertLinksJSON(links ptrace.SpanLinkSlice) (traceIDs, spanIDs, states, attrs []string, err error) {
@@ -255,23 +200,11 @@ func convertLinksJSON(links ptrace.SpanLinkSlice) (traceIDs, spanIDs, states, at
 		attrs = append(attrs, string(linkAttrBytes))
 	}
 
-	return traceIDs, spanIDs, states, attrs, err
+	return
 }
 
-func (e *tracesJSONExporter) renderInsertTracesJSONSQL() {
-	var featureColumnNames strings.Builder
-	var featureColumnPositions strings.Builder
-
-	if e.schemaFeatures.AttributeKeys {
-		featureColumnNames.WriteString(", ")
-		featureColumnNames.WriteString(tracesJSONColumnResourceAttributesKeys)
-		featureColumnNames.WriteString(", ")
-		featureColumnNames.WriteString(tracesJSONColumnSpanAttributesKeys)
-
-		featureColumnPositions.WriteString(", ?, ?, ?")
-	}
-
-	e.insertSQL = fmt.Sprintf(sqltemplates.TracesJSONInsert, e.cfg.database(), e.cfg.TracesTableName, featureColumnNames.String(), featureColumnPositions.String())
+func renderInsertTracesJSONSQL(cfg *Config) string {
+	return fmt.Sprintf(sqltemplates.TracesJSONInsert, cfg.database(), cfg.TracesTableName)
 }
 
 func renderCreateTracesJSONTableSQL(cfg *Config) string {

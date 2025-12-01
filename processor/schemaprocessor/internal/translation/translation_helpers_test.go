@@ -50,7 +50,7 @@ func NewExampleLogs(tb testing.TB, at Version) plog.Logs {
 
 	logs := plog.NewLogs()
 
-	for range 10 {
+	for i := 0; i < 10; i++ {
 		log := logs.ResourceLogs().AppendEmpty()
 		log.SetSchemaUrl(schemaURL)
 
@@ -102,14 +102,14 @@ func NewExampleMetrics(tb testing.TB, at Version) pmetric.Metrics {
 	schemaURL := fmt.Sprint("https://example.com/", at.String())
 
 	metrics := pmetric.NewMetrics()
-	for range 10 {
+	for i := 0; i < 10; i++ {
 		metric := metrics.ResourceMetrics().AppendEmpty()
 		metric.SetSchemaUrl(schemaURL)
 
 		sMetric := metric.ScopeMetrics().AppendEmpty()
 		sMetric.SetSchemaUrl(schemaURL)
 
-		for range 5 {
+		for j := 0; j < 5; j++ {
 			switch at {
 			case Version{1, 7, 0}, Version{1, 5, 0}:
 				metric.Resource().Attributes().PutStr("test.name", tb.Name())
@@ -255,7 +255,7 @@ func NewExampleSpans(tb testing.TB, at Version) ptrace.Traces {
 	schemaURL := fmt.Sprint("https://example.com/", at.String())
 	traces := ptrace.NewTraces()
 
-	for range 10 {
+	for i := 0; i < 10; i++ {
 		traces := traces.ResourceSpans().AppendEmpty()
 		traces.SetSchemaUrl(schemaURL)
 

@@ -82,18 +82,13 @@ func (a *Adjuster) AdjustMetrics(_ context.Context, metrics pmetric.Metrics) (pm
 					dataPoints := metric.Sum().DataPoints()
 					for l := 0; l < dataPoints.Len(); l++ {
 						dp := dataPoints.At(l)
-						if st := dp.StartTimestamp(); st != 0 && st != dp.Timestamp() {
-							// Report point as is if the start timestamp is already set.
-							continue
-						}
 						refTsi, found := tsm.Get(metric, dp.Attributes())
 						if !found {
 							refTsi.Number = datapointstorage.NumberInfo{StartTime: startTimeTs}
 						} else if refTsi.IsResetSum(dp) {
 							refTsi.Number.StartTime = pcommon.NewTimestampFromTime(dp.Timestamp().AsTime().Add(-1 * time.Millisecond))
 						}
-						refTsi.Number.PreviousDoubleValue = dp.DoubleValue()
-						refTsi.Number.PreviousIntValue = dp.IntValue()
+						refTsi.Number.PreviousValue = dp.DoubleValue()
 						dp.SetStartTimestamp(refTsi.Number.StartTime)
 					}
 
@@ -101,10 +96,6 @@ func (a *Adjuster) AdjustMetrics(_ context.Context, metrics pmetric.Metrics) (pm
 					dataPoints := metric.Summary().DataPoints()
 					for l := 0; l < dataPoints.Len(); l++ {
 						dp := dataPoints.At(l)
-						if st := dp.StartTimestamp(); st != 0 && st != dp.Timestamp() {
-							// Report point as is if the start timestamp is already set.
-							continue
-						}
 						refTsi, found := tsm.Get(metric, dp.Attributes())
 						if !found {
 							refTsi.Summary = datapointstorage.SummaryInfo{StartTime: startTimeTs}
@@ -119,10 +110,6 @@ func (a *Adjuster) AdjustMetrics(_ context.Context, metrics pmetric.Metrics) (pm
 					dataPoints := metric.Histogram().DataPoints()
 					for l := 0; l < dataPoints.Len(); l++ {
 						dp := dataPoints.At(l)
-						if st := dp.StartTimestamp(); st != 0 && st != dp.Timestamp() {
-							// Report point as is if the start timestamp is already set.
-							continue
-						}
 						refTsi, found := tsm.Get(metric, dp.Attributes())
 						if !found {
 							refTsi.Histogram = datapointstorage.HistogramInfo{StartTime: startTimeTs, ExplicitBounds: dp.ExplicitBounds().AsRaw()}
@@ -138,10 +125,6 @@ func (a *Adjuster) AdjustMetrics(_ context.Context, metrics pmetric.Metrics) (pm
 					dataPoints := metric.ExponentialHistogram().DataPoints()
 					for l := 0; l < dataPoints.Len(); l++ {
 						dp := dataPoints.At(l)
-						if st := dp.StartTimestamp(); st != 0 && st != dp.Timestamp() {
-							// Report point as is if the start timestamp is already set.
-							continue
-						}
 						refTsi, found := tsm.Get(metric, dp.Attributes())
 						if !found {
 							refTsi.ExponentialHistogram = datapointstorage.ExponentialHistogramInfo{StartTime: startTimeTs, Scale: dp.Scale()}

@@ -22,13 +22,14 @@ func benchXEmptyMessages(b *testing.B, msgCount int) {
 	require.NoError(b, err, "Must have a valid producer")
 
 	bt := batch.New()
-	for range msgCount {
+	for i := 0; i < msgCount; i++ {
 		assert.NoError(b, bt.AddRecord([]byte("foobar"), "fixed-key"))
 	}
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		assert.NoError(b, producer.Put(b.Context(), bt))
 	}
 }

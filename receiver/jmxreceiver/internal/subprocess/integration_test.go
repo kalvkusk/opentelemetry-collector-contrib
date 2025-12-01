@@ -18,6 +18,7 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 )
@@ -30,7 +31,17 @@ echo "Stdin:" $(cat -)
 sleep 60
 `
 
-func setupScriptPath(t *testing.T) string {
+type SubprocessIntegrationSuite struct {
+	suite.Suite
+	scriptPath string
+}
+
+func TestSubprocessIntegration(t *testing.T) {
+	suite.Run(t, new(SubprocessIntegrationSuite))
+}
+
+func (suite *SubprocessIntegrationSuite) SetupSuite() {
+	t := suite.T()
 	scriptFile, err := os.CreateTemp(t.TempDir(), "subproc")
 	require.NoError(t, err)
 
@@ -39,28 +50,33 @@ func setupScriptPath(t *testing.T) string {
 	require.NoError(t, scriptFile.Chmod(0o700))
 	scriptFile.Close()
 
-	return scriptFile.Name()
+	suite.scriptPath = scriptFile.Name()
 }
 
-func cleanupScriptPath(t *testing.T, scriptPath string) {
-	require.NoError(t, os.Remove(scriptPath))
+func (suite *SubprocessIntegrationSuite) TearDownSuite() {
+	suite.Require().NoError(os.Remove(suite.scriptPath))
 }
 
 // prepareSubprocess will create a Subprocess based on a temporary script.
 // It returns a pointer to the pointer to psutil process info and a closure to set its
 // value from the running process once started.
-func prepareSubprocess(conf *Config) (*Subprocess, func(t *assert.CollectT) *process.Process) {
+func (suite *SubprocessIntegrationSuite) prepareSubprocess(conf *Config) (*Subprocess, **process.Process, func() bool) {
+	t := suite.T()
 	logCore, _ := observer.New(zap.DebugLevel)
 	logger := zap.New(logCore)
 
+	conf.ExecutablePath = suite.scriptPath
 	subprocess := NewSubprocess(conf, logger)
 
 	selfPid := int32(os.Getpid())
-	expectedExecutable := fmt.Sprintf("/bin/sh %v", conf.ExecutablePath)
+	expectedExecutable := fmt.Sprintf("/bin/sh %v", suite.scriptPath)
 
-	findProcessInfo := func(t *assert.CollectT) *process.Process {
+	var procInfo *process.Process
+	findProcessInfo := func() bool {
 		pid := int32(subprocess.Pid())
-		assert.NotEqual(t, -1, pid)
+		if pid == -1 {
+			return false
+		}
 		proc, err := process.NewProcess(pid)
 		require.NoError(t, err)
 		ppid, err := proc.Ppid()
@@ -68,13 +84,16 @@ func prepareSubprocess(conf *Config) (*Subprocess, func(t *assert.CollectT) *pro
 		require.Equal(t, selfPid, ppid)
 
 		cmdline, err := proc.Cmdline()
-		assert.NotEmpty(t, cmdline)
+		if cmdline == "" {
+			return false
+		}
 		require.NoError(t, err)
 		require.Truef(t, strings.HasPrefix(cmdline, expectedExecutable), "%v doesn't have prefix %v", cmdline, expectedExecutable)
-		return proc
+		procInfo = proc
+		return true
 	}
 
-	return subprocess, findProcessInfo
+	return subprocess, &procInfo, findProcessInfo
 }
 
 func requireDesiredStdout(t *testing.T, subprocess *Subprocess, desired string) {
@@ -93,83 +112,63 @@ loop:
 	t.Fatal("Failed to receive desired stdout")
 }
 
-func TestHappyPath(t *testing.T) {
-	scriptPath := setupScriptPath(t)
-	t.Cleanup(func() {
-		cleanupScriptPath(t, scriptPath)
-	})
-
-	ctx, cancel := context.WithCancel(t.Context())
+func (suite *SubprocessIntegrationSuite) TestHappyPath() {
+	t := suite.T()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	subprocess, findProcessInfo := prepareSubprocess(&Config{
-		ExecutablePath: scriptPath,
-	})
+	subprocess, procInfo, findProcessInfo := suite.prepareSubprocess(&Config{})
 	assert.NoError(t, subprocess.Start(ctx))
 	defer func() {
 		assert.NoError(t, subprocess.Shutdown(ctx))
 	}()
 
-	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-		procInfo := findProcessInfo(collect)
-		require.NotNil(collect, procInfo)
-		cmdline, err := (procInfo).Cmdline()
-		assert.NoError(t, err)
-		assert.Equal(collect, "/bin/sh "+subprocess.config.ExecutablePath, cmdline)
-	}, 5*time.Second, 10*time.Millisecond)
+	assert.Eventually(t, findProcessInfo, 5*time.Second, 10*time.Millisecond)
+	require.NotNil(t, *procInfo)
+
+	cmdline, err := (*procInfo).Cmdline()
+	assert.NoError(t, err)
+	assert.Equal(t, "/bin/sh "+subprocess.config.ExecutablePath, cmdline)
 }
 
-func TestWithArgs(t *testing.T) {
-	scriptPath := setupScriptPath(t)
-	t.Cleanup(func() {
-		cleanupScriptPath(t, scriptPath)
-	})
-
-	ctx, cancel := context.WithCancel(t.Context())
+func (suite *SubprocessIntegrationSuite) TestWithArgs() {
+	t := suite.T()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	subprocess, findProcessInfo := prepareSubprocess(&Config{
-		ExecutablePath: scriptPath,
-		Args:           []string{"myArgs"},
-	})
+	subprocess, procInfo, findProcessInfo := suite.prepareSubprocess(&Config{Args: []string{"myArgs"}})
 	assert.NoError(t, subprocess.Start(ctx))
 	defer func() {
 		assert.NoError(t, subprocess.Shutdown(ctx))
 	}()
 
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		procInfo := findProcessInfo(collect)
-		require.NotNil(collect, procInfo)
-		cmdline, err := (procInfo).Cmdline()
-		require.NoError(collect, err)
-		require.Equal(collect, fmt.Sprintf("/bin/sh %v myArgs", subprocess.config.ExecutablePath), cmdline)
-	}, 5*time.Second, 10*time.Millisecond)
+	require.Eventually(t, findProcessInfo, 5*time.Second, 10*time.Millisecond)
+	require.NotNil(t, *procInfo)
+
+	cmdline, err := (*procInfo).Cmdline()
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("/bin/sh %v myArgs", subprocess.config.ExecutablePath), cmdline)
 }
 
-func TestWithEnvVars(t *testing.T) {
-	scriptPath := setupScriptPath(t)
-	t.Cleanup(func() {
-		cleanupScriptPath(t, scriptPath)
-	})
-	ctx, cancel := context.WithCancel(t.Context())
+func (suite *SubprocessIntegrationSuite) TestWithEnvVars() {
+	t := suite.T()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	config := &Config{
-		ExecutablePath: scriptPath,
 		EnvironmentVariables: map[string]string{
 			"MyEnv1": "MyVal1",
 			"MyEnv2": "MyVal2",
 		},
 	}
 
-	subprocess, findProcessInfo := prepareSubprocess(config)
+	subprocess, procInfo, findProcessInfo := suite.prepareSubprocess(config)
 	assert.NoError(t, subprocess.Start(ctx))
 	defer func() {
 		assert.NoError(t, subprocess.Shutdown(ctx))
 	}()
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		require.NotNil(collect, findProcessInfo(collect))
-	}, 5*time.Second, 10*time.Millisecond)
+	require.Eventually(t, findProcessInfo, 5*time.Second, 10*time.Millisecond)
+	require.NotNil(t, *procInfo)
 
 	stdout := <-subprocess.Stdout
 	require.NotEmpty(t, stdout)
@@ -177,77 +176,61 @@ func TestWithEnvVars(t *testing.T) {
 	require.Contains(t, stdout, "MyEnv2=MyVal2")
 }
 
-func TestWithAutoRestart(t *testing.T) {
-	scriptPath := setupScriptPath(t)
-	t.Cleanup(func() {
-		cleanupScriptPath(t, scriptPath)
-	})
-	ctx, cancel := context.WithCancel(t.Context())
+func (suite *SubprocessIntegrationSuite) TestWithAutoRestart() {
+	t := suite.T()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	restartDelay := 100 * time.Millisecond
-	subprocess, findProcessInfo := prepareSubprocess(&Config{
-		ExecutablePath: scriptPath,
-		RestartOnError: true, RestartDelay: &restartDelay,
-	})
+	subprocess, procInfo, findProcessInfo := suite.prepareSubprocess(&Config{RestartOnError: true, RestartDelay: &restartDelay})
 	assert.NoError(t, subprocess.Start(ctx))
 	defer func() {
 		assert.NoError(t, subprocess.Shutdown(ctx))
 	}()
 
-	var oldProcPid int32
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		procInfo := findProcessInfo(collect)
-		require.NotNil(collect, procInfo)
-		cmdline, err := (*procInfo).Cmdline()
-		require.NoError(collect, err)
-		require.Equal(collect, "/bin/sh "+subprocess.config.ExecutablePath, cmdline)
+	require.Eventually(t, findProcessInfo, 5*time.Second, 10*time.Millisecond)
+	require.NotNil(t, *procInfo)
 
-		oldProcPid = (procInfo).Pid
-		require.NoError(collect, (procInfo).Kill())
-	}, 5*time.Second, 10*time.Millisecond)
+	cmdline, err := (*procInfo).Cmdline()
+	require.NoError(t, err)
+	require.Equal(t, "/bin/sh "+subprocess.config.ExecutablePath, cmdline)
+
+	oldProcPid := (*procInfo).Pid
+	err = (*procInfo).Kill()
+	require.NoError(t, err)
 
 	// Should be restarted
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		procInfo := findProcessInfo(collect)
-		assert.True(collect, procInfo != nil && (procInfo).Pid != oldProcPid)
+	require.Eventually(t, func() bool {
+		return findProcessInfo() && *procInfo != nil && (*procInfo).Pid != oldProcPid
 	}, restartDelay+5*time.Second, 10*time.Millisecond)
 }
 
-func TestSendingStdin(t *testing.T) {
-	scriptPath := setupScriptPath(t)
-	t.Cleanup(func() {
-		cleanupScriptPath(t, scriptPath)
-	})
-	ctx, cancel := context.WithCancel(t.Context())
+func (suite *SubprocessIntegrationSuite) TestSendingStdin() {
+	t := suite.T()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	subprocess, findProcessInfo := prepareSubprocess(&Config{
-		ExecutablePath: scriptPath,
-		StdInContents:  "mystdincontents",
-	})
+	subprocess, procInfo, findProcessInfo := suite.prepareSubprocess(&Config{StdInContents: "mystdincontents"})
 	assert.NoError(t, subprocess.Start(ctx))
 	defer func() {
 		assert.NoError(t, subprocess.Shutdown(ctx))
 	}()
 
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		require.NotNil(collect, findProcessInfo(collect))
-	}, 5*time.Second, 10*time.Millisecond)
+	require.Eventually(t, findProcessInfo, 5*time.Second, 10*time.Millisecond)
+	require.NotNil(t, *procInfo)
 
 	requireDesiredStdout(t, subprocess, "Stdin: mystdincontents")
 }
 
-func TestSendingStdinFails(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
+func (suite *SubprocessIntegrationSuite) TestSendingStdinFails() {
+	t := suite.T()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	logCore, logObserver := observer.New(zap.DebugLevel)
 	logger := zap.New(logCore)
 
-	subprocess := NewSubprocess(&Config{
-		ExecutablePath: "echo", Args: []string{"finished"},
-	}, logger)
+	subprocess := NewSubprocess(&Config{ExecutablePath: "echo", Args: []string{"finished"}}, logger)
 
 	intentionalError := errors.New("intentional failure")
 	subprocess.sendToStdIn = func(string, io.Writer) error {
@@ -265,13 +248,12 @@ func TestSendingStdinFails(t *testing.T) {
 		return died && errored
 	}
 
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		assert.True(collect, matched())
-	}, 10*time.Second, 10*time.Millisecond)
+	require.Eventually(t, matched, 10*time.Second, 10*time.Millisecond)
 }
 
-func TestSubprocessBadExec(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
+func (suite *SubprocessIntegrationSuite) TestSubprocessBadExec() {
+	t := suite.T()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	logCore, logObserver := observer.New(zap.DebugLevel)
@@ -287,13 +269,12 @@ func TestSubprocessBadExec(t *testing.T) {
 		return len(logObserver.FilterMessage("subprocess died").All()) == 1
 	}
 
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		assert.True(collect, matched())
-	}, 10*time.Second, 10*time.Millisecond)
+	require.Eventually(t, matched, 10*time.Second, 10*time.Millisecond)
 }
 
-func TestSubprocessSuccessfullyReturns(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
+func (suite *SubprocessIntegrationSuite) TestSubprocessSuccessfullyReturns() {
+	t := suite.T()
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	// There is a race condition between writing from the stdout scanner and the closing of the stdout channel on
@@ -310,9 +291,7 @@ func TestSubprocessSuccessfullyReturns(t *testing.T) {
 		return !ok
 	}
 
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		assert.True(collect, matched())
-	}, 10*time.Second, 10*time.Millisecond)
+	require.Eventually(t, matched, 10*time.Second, 10*time.Millisecond)
 	requireDesiredStdout(t, subprocess, "finished")
 }
 

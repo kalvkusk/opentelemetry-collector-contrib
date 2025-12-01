@@ -129,7 +129,7 @@ func simpleTraces(count int) ptrace.Traces {
 	ss.Scope().Attributes().PutStr("lib", "clickhouse")
 	timestamp := telemetryTimestamp
 
-	for i := range count {
+	for i := 0; i < count; i++ {
 		s := ss.Spans().AppendEmpty()
 		s.SetTraceID([16]byte{1, 2, 3, byte(i)})
 		s.SetSpanID([8]byte{1, 2, 3, byte(i)})

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
@@ -137,10 +136,10 @@ func Test_MergeMaps(t *testing.T) {
 			}
 
 			exprFunc, err := mergeMaps[pcommon.Map](target, tt.source, tt.strategy)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			result, err := exprFunc(t.Context(), scenarioMap)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Nil(t, result)
 			assert.True(t, setterWasCalled)
 
@@ -168,7 +167,7 @@ func Test_MergeMaps_bad_target(t *testing.T) {
 	}
 
 	exprFunc, err := mergeMaps[any](target, input, "insert")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = exprFunc(nil, input)
 	assert.Error(t, err)
 }
@@ -189,7 +188,7 @@ func Test_MergeMaps_bad_input(t *testing.T) {
 	}
 
 	exprFunc, err := mergeMaps[any](target, input, "insert")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	_, err = exprFunc(nil, input)
 	assert.Error(t, err)
 }

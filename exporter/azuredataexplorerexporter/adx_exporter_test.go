@@ -280,7 +280,7 @@ func createMetricsData(numberOfDataPoints int) pmetric.Metrics {
 	metrics := pmetric.NewMetrics()
 	rm := metrics.ResourceMetrics().AppendEmpty()
 	rm.Resource().Attributes().PutStr("k0", "v0")
-	for range numberOfDataPoints {
+	for i := 0; i < numberOfDataPoints; i++ {
 		tsUnix := time.Unix(time.Now().Unix(), time.Now().UnixNano())
 		ilm := rm.ScopeMetrics().AppendEmpty()
 		metric := ilm.Metrics().AppendEmpty()

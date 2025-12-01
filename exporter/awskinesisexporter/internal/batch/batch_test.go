@@ -15,7 +15,7 @@ func TestBatchingMessages(t *testing.T) {
 	t.Parallel()
 
 	b := batch.New()
-	for range 948 {
+	for i := 0; i < 948; i++ {
 		assert.NoError(t, b.AddRecord([]byte("foobar"), "fixed-string"), "Must not error when adding elements into the batch")
 	}
 
@@ -41,7 +41,7 @@ func TestCustomBatchSizeConstraints(t *testing.T) {
 		batch.WithMaxRecordsPerBatch(1),
 	)
 	const records = 203
-	for range records {
+	for i := 0; i < records; i++ {
 		assert.NoError(t, b.AddRecord([]byte("foobar"), "fixed-string"), "Must not error when adding elements into the batch")
 	}
 	assert.Len(t, b.Chunk(), records, "Must have one batch per record added")
@@ -49,12 +49,13 @@ func TestCustomBatchSizeConstraints(t *testing.T) {
 
 func BenchmarkChunkingRecords(b *testing.B) {
 	bt := batch.New()
-	for range 948 {
+	for i := 0; i < 948; i++ {
 		assert.NoError(b, bt.AddRecord([]byte("foobar"), "fixed-string"), "Must not error when adding elements into the batch")
 	}
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		assert.Len(b, bt.Chunk(), 2, "Must have exactly two chunks")
 	}
 }

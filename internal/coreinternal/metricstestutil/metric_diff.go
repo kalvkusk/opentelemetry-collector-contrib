@@ -6,7 +6,6 @@ package metricstestutil // import "github.com/open-telemetry/opentelemetry-colle
 import (
 	"fmt"
 	"reflect"
-	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -38,7 +37,7 @@ func diffRMSlices(sent, recd []pmetric.ResourceMetrics) []*MetricDiff {
 			Msg:           "Sent vs received ResourceMetrics not equal length",
 		}}
 	}
-	for i := range sent {
+	for i := 0; i < len(sent); i++ {
 		sentRM := sent[i]
 		recdRM := recd[i]
 		diffs = diffRMs(diffs, sentRM, recdRM)
@@ -344,13 +343,9 @@ func diffValues(
 }
 
 func attrMapToString(m pcommon.Map) string {
-	var out strings.Builder
+	out := ""
 	for k, v := range m.All() {
-		out.WriteString("[")
-		out.WriteString(k)
-		out.WriteString("=")
-		out.WriteString(v.AsString())
-		out.WriteString("]")
+		out += "[" + k + "=" + v.AsString() + "]"
 	}
-	return out.String()
+	return out
 }

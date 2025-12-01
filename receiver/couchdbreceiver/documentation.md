@@ -16,89 +16,89 @@ metrics:
 
 The average duration of a served request.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| ms | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| ms | Gauge | Double |
 
 ### couchdb.database.open
 
 The number of open databases.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {databases} | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {databases} | Sum | Int | Cumulative | false |
 
 ### couchdb.database.operations
 
 The number of database operations.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {operations} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {operations} | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| operation | The operation type. | Str: ``writes``, ``reads`` | Recommended |
+| operation | The operation type. | Str: ``writes``, ``reads`` | false |
 
 ### couchdb.file_descriptor.open
 
 The number of open file descriptors.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {files} | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {files} | Sum | Int | Cumulative | false |
 
 ### couchdb.httpd.bulk_requests
 
 The number of bulk requests.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {requests} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {requests} | Sum | Int | Cumulative | true |
 
 ### couchdb.httpd.requests
 
 The number of HTTP requests by method.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {requests} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {requests} | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| http.method | An HTTP request method. | Str: ``COPY``, ``DELETE``, ``GET``, ``HEAD``, ``OPTIONS``, ``POST``, ``PUT`` | Recommended |
+| http.method | An HTTP request method. | Str: ``COPY``, ``DELETE``, ``GET``, ``HEAD``, ``OPTIONS``, ``POST``, ``PUT`` | false |
 
 ### couchdb.httpd.responses
 
 The number of each HTTP status code.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {responses} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {responses} | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| http.status_code | An HTTP status code. | Any Str | Recommended |
+| http.status_code | An HTTP status code. | Any Str | false |
 
 ### couchdb.httpd.views
 
 The number of views read.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {views} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {views} | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| view | The view type. | Str: ``temporary_view_reads``, ``view_reads`` | Recommended |
+| view | The view type. | Str: ``temporary_view_reads``, ``view_reads`` | false |
 
 ## Resource Attributes
 

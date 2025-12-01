@@ -32,7 +32,7 @@ func TestNewParser(t *testing.T) {
 		enumParser,
 	)
 
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.NotEqual(t, ottl.Parser[testContext]{}, parser)
 }
 
@@ -55,7 +55,7 @@ func TestNewParserWithOptions(t *testing.T) {
 		customOption,
 	)
 
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.NotEqual(t, ottl.Parser[testContext]{}, parser)
 }
 
@@ -189,7 +189,7 @@ func TestPathExpressionParser(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {
-					assert.ErrorContains(t, err, tt.errContains)
+					assert.Contains(t, err.Error(), tt.errContains)
 				}
 				return
 			}

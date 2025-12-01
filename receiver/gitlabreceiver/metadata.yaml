@@ -3,8 +3,8 @@ type: gitlab
 status: 
   class: receiver
   stability: 
-    alpha: [traces]
-  distributions: [contrib]
+    development: [traces]
+  distributions: []
   codeowners:
     active: [adrielp, atoulme]
 tests:

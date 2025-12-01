@@ -89,19 +89,19 @@ func NewTelemetryBuilder(settings component.TelemetrySettings, options ...Teleme
 	var err, errs error
 	builder.GrafanacloudDatapointCount, err = builder.meter.Int64Counter(
 		"otelcol_grafanacloud_datapoint_count",
-		metric.WithDescription("Number of datapoints sent to Grafana Cloud [Development]"),
+		metric.WithDescription("Number of datapoints sent to Grafana Cloud"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
 	builder.GrafanacloudFlushCount, err = builder.meter.Int64Counter(
 		"otelcol_grafanacloud_flush_count",
-		metric.WithDescription("Number of metrics flushes [Development]"),
+		metric.WithDescription("Number of metrics flushes"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)
 	builder.GrafanacloudHostCount, err = builder.meter.Int64ObservableGauge(
 		"otelcol_grafanacloud_host_count",
-		metric.WithDescription("Number of unique hosts [Development]"),
+		metric.WithDescription("Number of unique hosts"),
 		metric.WithUnit("1"),
 	)
 	errs = errors.Join(errs, err)

@@ -28,14 +28,14 @@ func SplitHeaderBody(buf []byte) (*Header, []byte, error) {
 	}
 
 	var headerBytes, bodyBytes []byte
-	before, after, ok := bytes.Cut(buf, []byte{byte(ProtocolSeparator)})
-	if !ok {
+	loc := bytes.IndexByte(buf, byte(ProtocolSeparator))
+	if loc == -1 {
 		return nil, nil, &recvErr.ErrRecoverable{
 			Err: fmt.Errorf("unable to split incoming data as header and segment, incoming bytes: %v", buf),
 		}
 	}
-	headerBytes = before
-	bodyBytes = after
+	headerBytes = buf[0:loc]
+	bodyBytes = buf[loc+1:]
 
 	header := Header{}
 	err := json.Unmarshal(headerBytes, &header)

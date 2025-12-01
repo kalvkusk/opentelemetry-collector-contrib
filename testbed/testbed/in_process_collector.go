@@ -7,19 +7,15 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/shirou/gopsutil/v4/process"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/confmap/provider/fileprovider"
 	"go.opentelemetry.io/collector/otelcol"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/common/testutil"
 )
 
 // inProcessCollector implements the OtelcolRunner interfaces running a single otelcol as a go routine within the
@@ -52,7 +48,8 @@ func (ipp *inProcessCollector) PrepareConfig(t *testing.T, configStr string) (co
 
 func (ipp *inProcessCollector) Start(StartParams) error {
 	var err error
-	confFile, err := os.CreateTemp(testutil.TempDir(ipp.t), "conf-")
+
+	confFile, err := os.CreateTemp(ipp.t.TempDir(), "conf-")
 	if err != nil {
 		return err
 	}
@@ -105,11 +102,7 @@ func (ipp *inProcessCollector) Stop() (stopped bool, err error) {
 	if !ipp.stopped {
 		ipp.stopped = true
 		ipp.svc.Shutdown()
-		// Do not delete temporary files on Windows because it fails too much on scoped tests.
-		// See https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/42639
-		if runtime.GOOS != "windows" {
-			require.NoError(ipp.t, os.Remove(ipp.configFile))
-		}
+		os.Remove(ipp.configFile)
 	}
 	ipp.wg.Wait()
 	stopped = ipp.stopped

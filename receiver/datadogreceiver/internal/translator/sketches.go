@@ -70,8 +70,7 @@ func (mt *MetricsTranslator) TranslateSketches(sketches []gogen.SketchPayload_Sk
 	bt := newBatcher()
 	bt.Metrics = pmetric.NewMetrics()
 
-	for i := range sketches {
-		sketch := &sketches[i]
+	for _, sketch := range sketches {
 		dimensions := parseSeriesProperties(sketch.Metric, "sketch", sketch.Tags, sketch.Host, mt.buildInfo.Version, mt.stringPool)
 		metric, metricID := bt.Lookup(dimensions)
 		metric.ExponentialHistogram().SetAggregationTemporality(pmetric.AggregationTemporalityDelta)

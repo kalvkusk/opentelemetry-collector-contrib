@@ -16,17 +16,17 @@ metrics:
 
 Elapsed time since the last modification of the file or folder, in seconds since Epoch.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| s | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| s | Sum | Int | Cumulative | false |
 
 ### file.size
 
 The size of the file or folder, in bytes.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| b | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| b | Gauge | Int |
 
 ## Optional Metrics
 
@@ -42,31 +42,31 @@ metrics:
 
 Elapsed time since last access of the file or folder, in seconds since Epoch.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| s | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| s | Sum | Int | Cumulative | false |
 
 ### file.count
 
 The number of files matched
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| {file} | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| {file} | Gauge | Int |
 
 ### file.ctime
 
 Elapsed time since the last change of the file or folder, in seconds since Epoch. In addition to `file.mtime`, this metric tracks metadata changes such as permissions or renaming the file.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| s | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| s | Sum | Int | Cumulative | false |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| file.permissions | the permissions associated with the file, using an octal format. | Any Str | Recommended |
+| file.permissions | the permissions associated with the file, using an octal format. | Any Str | false |
 
 ## Resource Attributes
 

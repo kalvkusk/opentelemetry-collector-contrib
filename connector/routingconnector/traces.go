@@ -61,56 +61,47 @@ func (*tracesConnector) Capabilities() consumer.Capabilities {
 
 func (c *tracesConnector) ConsumeTraces(ctx context.Context, td ptrace.Traces) error {
 	groups := make(map[consumer.Traces]ptrace.Traces)
-	matched := ptrace.NewTraces()
+	var errs error
 	for i := 0; i < len(c.router.routeSlice) && td.ResourceSpans().Len() > 0; i++ {
-		var errs error
 		route := c.router.routeSlice[i]
+		matchedSpans := ptrace.NewTraces()
 		switch route.statementContext {
 		case "request":
 			if route.requestCondition.matchRequest(ctx) {
-				// all traces are routed
-				td.MoveTo(matched)
+				groupAllTraces(groups, route.consumer, td)
+				td = ptrace.NewTraces() // all traces have been routed
 			}
 		case "", "resource":
-			ptraceutil.MoveResourcesIf(td, matched,
+			ptraceutil.MoveResourcesIf(td, matchedSpans,
 				func(rs ptrace.ResourceSpans) bool {
 					rtx := ottlresource.NewTransformContext(rs.Resource(), rs)
 					_, isMatch, err := route.resourceStatement.Execute(ctx, rtx)
-					// If error during statement evaluation consider it as not a match.
-					if err != nil {
-						errs = errors.Join(errs, err)
-						return false
-					}
+					errs = errors.Join(errs, err)
 					return isMatch
 				},
 			)
 		case "span":
-			ptraceutil.MoveSpansWithContextIf(td, matched,
+			ptraceutil.MoveSpansWithContextIf(td, matchedSpans,
 				func(rs ptrace.ResourceSpans, ss ptrace.ScopeSpans, s ptrace.Span) bool {
 					mtx := ottlspan.NewTransformContext(s, ss.Scope(), rs.Resource(), ss, rs)
 					_, isMatch, err := route.spanStatement.Execute(ctx, mtx)
-					// If error during statement evaluation consider it as not a match.
-					if err != nil {
-						errs = errors.Join(errs, err)
-						return false
-					}
+					errs = errors.Join(errs, err)
 					return isMatch
 				},
 			)
 		}
-		if errs != nil && c.config.ErrorMode == ottl.PropagateError {
-			return errs
+		if errs != nil {
+			if c.config.ErrorMode == ottl.PropagateError {
+				return errs
+			}
+			groupAllTraces(groups, c.router.defaultConsumer, matchedSpans)
 		}
-		groupAllTraces(groups, route.consumer, matched)
+		groupAllTraces(groups, route.consumer, matchedSpans)
 	}
 	// anything left wasn't matched by any route. Send to default consumer
 	groupAllTraces(groups, c.router.defaultConsumer, td)
-	var errs error
 	for consumer, group := range groups {
-		err := consumer.ConsumeTraces(ctx, group)
-		if err != nil {
-			errs = errors.Join(errs, err)
-		}
+		errs = errors.Join(errs, consumer.ConsumeTraces(ctx, group))
 	}
 	return errs
 }
@@ -120,16 +111,23 @@ func groupAllTraces(
 	cons consumer.Traces,
 	traces ptrace.Traces,
 ) {
-	if cons == nil {
-		return
+	for i := 0; i < traces.ResourceSpans().Len(); i++ {
+		groupTraces(groups, cons, traces.ResourceSpans().At(i))
 	}
-	if traces.ResourceSpans().Len() == 0 {
+}
+
+func groupTraces(
+	groups map[consumer.Traces]ptrace.Traces,
+	cons consumer.Traces,
+	spans ptrace.ResourceSpans,
+) {
+	if cons == nil {
 		return
 	}
 	group, ok := groups[cons]
 	if !ok {
 		group = ptrace.NewTraces()
-		groups[cons] = group
 	}
-	traces.ResourceSpans().MoveAndAppendTo(group.ResourceSpans())
+	spans.CopyTo(group.ResourceSpans().AppendEmpty())
+	groups[cons] = group
 }

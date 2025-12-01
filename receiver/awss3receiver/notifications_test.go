@@ -268,7 +268,7 @@ func Test_opampNotifier_SendStatus_MaxRetries(t *testing.T) {
 	}()
 	require.Empty(t, doneChan)
 
-	for range maxNotificationAttempts {
+	for attempt := 0; attempt < maxNotificationAttempts; attempt++ {
 		registry.pendingChannel <- struct{}{}
 	}
 	<-doneChan

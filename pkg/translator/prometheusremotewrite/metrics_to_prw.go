@@ -15,8 +15,6 @@ import (
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.uber.org/multierr"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus"
 )
 
 type Settings struct {
@@ -55,7 +53,7 @@ func newPrometheusConverter(settings Settings) *prometheusConverter {
 		unique:      map[uint64]*prompb.TimeSeries{},
 		conflicts:   map[uint64][]*prompb.TimeSeries{},
 		metricNamer: otlptranslator.MetricNamer{WithMetricSuffixes: settings.AddMetricSuffixes, Namespace: settings.Namespace},
-		labelNamer:  otlptranslator.LabelNamer{UnderscoreLabelSanitization: !prometheus.DropSanitizationGate.IsEnabled()},
+		labelNamer:  otlptranslator.LabelNamer{},
 		unitNamer:   otlptranslator.UnitNamer{},
 	}
 }
@@ -83,11 +81,7 @@ func (c *prometheusConverter) fromMetrics(md pmetric.Metrics, settings Settings)
 					continue
 				}
 
-				promName, err := c.metricNamer.Build(prom.TranslatorMetricFromOtelMetric(metric))
-				if err != nil {
-					errs = multierr.Append(errs, err)
-					continue
-				}
+				promName := c.metricNamer.Build(prom.TranslatorMetricFromOtelMetric(metric))
 
 				// handle individual metrics based on type
 				//exhaustive:enforce
@@ -98,21 +92,21 @@ func (c *prometheusConverter) fromMetrics(md pmetric.Metrics, settings Settings)
 						errs = multierr.Append(errs, fmt.Errorf("empty data points. %s is dropped", metric.Name()))
 						break
 					}
-					errs = multierr.Append(errs, c.addGaugeNumberDataPoints(dataPoints, resource, settings, promName))
+					c.addGaugeNumberDataPoints(dataPoints, resource, settings, promName)
 				case pmetric.MetricTypeSum:
 					dataPoints := metric.Sum().DataPoints()
 					if dataPoints.Len() == 0 {
 						errs = multierr.Append(errs, fmt.Errorf("empty data points. %s is dropped", metric.Name()))
 						break
 					}
-					errs = multierr.Append(errs, c.addSumNumberDataPoints(dataPoints, resource, metric, settings, promName))
+					c.addSumNumberDataPoints(dataPoints, resource, metric, settings, promName)
 				case pmetric.MetricTypeHistogram:
 					dataPoints := metric.Histogram().DataPoints()
 					if dataPoints.Len() == 0 {
 						errs = multierr.Append(errs, fmt.Errorf("empty data points. %s is dropped", metric.Name()))
 						break
 					}
-					errs = multierr.Append(errs, c.addHistogramDataPoints(dataPoints, resource, settings, promName))
+					c.addHistogramDataPoints(dataPoints, resource, settings, promName)
 				case pmetric.MetricTypeExponentialHistogram:
 					dataPoints := metric.ExponentialHistogram().DataPoints()
 					if dataPoints.Len() == 0 {
@@ -131,16 +125,16 @@ func (c *prometheusConverter) fromMetrics(md pmetric.Metrics, settings Settings)
 						errs = multierr.Append(errs, fmt.Errorf("empty data points. %s is dropped", metric.Name()))
 						break
 					}
-					errs = multierr.Append(errs, c.addSummaryDataPoints(dataPoints, resource, settings, promName))
+					c.addSummaryDataPoints(dataPoints, resource, settings, promName)
 				default:
 					errs = multierr.Append(errs, errors.New("unsupported metric type"))
 				}
 			}
 		}
-		errs = multierr.Append(errs, addResourceTargetInfo(resource, settings, mostRecentTimestamp, c))
+		addResourceTargetInfo(resource, settings, mostRecentTimestamp, c)
 	}
 
-	return errs
+	return
 }
 
 // timeSeries returns a slice of the prompb.TimeSeries that were converted from OTel format.

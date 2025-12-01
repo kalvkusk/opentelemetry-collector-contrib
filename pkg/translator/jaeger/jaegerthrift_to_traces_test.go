@@ -339,7 +339,8 @@ func BenchmarkThriftBatchToInternalTraces(b *testing.B) {
 		},
 	}
 
-	for b.Loop() {
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
 		_, err := ThriftToTraces(jb)
 		assert.NoError(b, err)
 	}

@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -126,9 +126,9 @@ func Test_copyMetric(t *testing.T) {
 			tt.want(expected)
 
 			exprFunc, err := copyMetric(tt.name, tt.desc, tt.unit)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			_, err = exprFunc(nil, ottlmetric.NewTransformContext(input, ms, pcommon.NewInstrumentationScope(), pcommon.NewResource(), pmetric.NewScopeMetrics(), pmetric.NewResourceMetrics()))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			x := pmetric.NewScopeMetrics()
 			y := pmetric.NewScopeMetrics()
@@ -136,7 +136,7 @@ func Test_copyMetric(t *testing.T) {
 			expected.CopyTo(x.Metrics())
 			ms.CopyTo(y.Metrics())
 
-			require.NoError(t, pmetrictest.CompareScopeMetrics(x, y))
+			assert.NoError(t, pmetrictest.CompareScopeMetrics(x, y))
 		})
 	}
 }

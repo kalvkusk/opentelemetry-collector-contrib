@@ -79,7 +79,6 @@ func NewSubprocess(conf *Config, logger *zap.Logger) *Subprocess {
 	if conf.RestartDelay == nil {
 		restartDelay := defaultRestartDelay
 		conf.RestartDelay = &restartDelay
-		conf.RestartOnError = true
 	}
 	if conf.ShutdownTimeout == nil {
 		shutdownTimeout := defaultShutdownTimeout

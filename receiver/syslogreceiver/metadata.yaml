@@ -3,7 +3,7 @@ type: syslog
 status:
   class: receiver
   stability:
-    beta: [logs]
+    alpha: [logs]
   distributions: [contrib]
   codeowners:
     active: [andrzej-stencel]

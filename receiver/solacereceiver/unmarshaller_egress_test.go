@@ -4,7 +4,6 @@ package solacereceiver
 
 import (
 	"context"
-	"maps"
 	"strconv"
 	"testing"
 
@@ -338,7 +337,9 @@ func TestEgressUnmarshallerSendSpanAttributes(t *testing.T) {
 			"messaging.solace.send.outcome":     "accepted",
 			"messaging.solace.partition_number": 123,
 		}
-		maps.Copy(base, attributes)
+		for key, val := range attributes {
+			base[key] = val
+		}
 		span := ptrace.NewSpan()
 		err := span.Attributes().FromRaw(base)
 		assert.NoError(t, err)
@@ -476,7 +477,9 @@ func TestEgressUnmarshallerDeleteSpanAttributes(t *testing.T) {
 			"messaging.operation.type":          "delete",
 			"messaging.solace.partition_number": 123,
 		}
-		maps.Copy(base, attributes)
+		for key, val := range attributes {
+			base[key] = val
+		}
 		span := ptrace.NewSpan()
 		err := span.Attributes().FromRaw(base)
 		assert.NoError(t, err)

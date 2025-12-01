@@ -77,7 +77,7 @@ func (s *Scraper) ScrapeMetrics(ctx context.Context) (pmetric.Metrics, error) {
 	rows, err := s.Client.QueryRows(ctx)
 	if err != nil {
 		if !errors.Is(err, ErrNullValueWarning) {
-			return out, fmt.Errorf("scraper: %w", err)
+			return out, fmt.Errorf("Scraper: %w", err)
 		}
 		s.Logger.Warn("problems encountered getting metric rows", zap.Error(err))
 	}
@@ -89,11 +89,10 @@ func (s *Scraper) ScrapeMetrics(ctx context.Context) (pmetric.Metrics, error) {
 	s.InstrumentationScope.CopyTo(sm.Scope())
 	ms := sm.Metrics()
 	var errs []error
-	for i := range s.Query.Metrics {
-		metricCfg := &s.Query.Metrics[i]
-		for j, row := range rows {
+	for _, metricCfg := range s.Query.Metrics {
+		for i, row := range rows {
 			if err = rowToMetric(row, metricCfg, ms.AppendEmpty(), s.StartTime, ts, s.ScrapeCfg); err != nil {
-				err = fmt.Errorf("row %d: %w", j, err)
+				err = fmt.Errorf("row %d: %w", i, err)
 				errs = append(errs, err)
 			}
 		}

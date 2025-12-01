@@ -91,12 +91,10 @@ func TestCreateTraces(t *testing.T) {
 		{
 			name: "UseSecure",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint: endpoint,
-						TLS: configtls.ClientConfig{
-							Insecure: false,
-						},
+				Traces: configgrpc.ClientConfig{
+					Endpoint: endpoint,
+					TLS: configtls.ClientConfig{
+						Insecure: false,
 					},
 				},
 			},
@@ -104,72 +102,60 @@ func TestCreateTraces(t *testing.T) {
 		{
 			name: "Keepalive",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint: endpoint,
-						Keepalive: configoptional.Some(configgrpc.KeepaliveClientConfig{
-							Time:                30 * time.Second,
-							Timeout:             25 * time.Second,
-							PermitWithoutStream: true,
-						}),
-					},
+				Traces: configgrpc.ClientConfig{
+					Endpoint: endpoint,
+					Keepalive: configoptional.Some(configgrpc.KeepaliveClientConfig{
+						Time:                30 * time.Second,
+						Timeout:             25 * time.Second,
+						PermitWithoutStream: true,
+					}),
 				},
 			},
 		},
 		{
 			name: "NoneCompression",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint:    endpoint,
-						Compression: "none",
-					},
+				Traces: configgrpc.ClientConfig{
+					Endpoint:    endpoint,
+					Compression: "none",
 				},
 			},
 		},
 		{
 			name: "GzipCompression",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint:    endpoint,
-						Compression: configcompression.TypeGzip,
-					},
+				Traces: configgrpc.ClientConfig{
+					Endpoint:    endpoint,
+					Compression: configcompression.TypeGzip,
 				},
 			},
 		},
 		{
 			name: "SnappyCompression",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint:    endpoint,
-						Compression: configcompression.TypeSnappy,
-					},
+				Traces: configgrpc.ClientConfig{
+					Endpoint:    endpoint,
+					Compression: configcompression.TypeSnappy,
 				},
 			},
 		},
 		{
 			name: "ZstdCompression",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint:    endpoint,
-						Compression: configcompression.TypeZstd,
-					},
+				Traces: configgrpc.ClientConfig{
+					Endpoint:    endpoint,
+					Compression: configcompression.TypeZstd,
 				},
 			},
 		},
 		{
 			name: "Headers",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint: endpoint,
-						Headers: configopaque.MapList{
-							{Name: "hdr1", Value: "val1"},
-							{Name: "hdr2", Value: "val2"},
-						},
+				Traces: configgrpc.ClientConfig{
+					Endpoint: endpoint,
+					Headers: map[string]configopaque.String{
+						"hdr1": "val1",
+						"hdr2": "val2",
 					},
 				},
 			},
@@ -177,23 +163,19 @@ func TestCreateTraces(t *testing.T) {
 		{
 			name: "NumConsumers",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint: endpoint,
-					},
+				Traces: configgrpc.ClientConfig{
+					Endpoint: endpoint,
 				},
 			},
 		},
 		{
 			name: "CertPemFileError",
 			config: &Config{
-				Traces: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint: endpoint,
-						TLS: configtls.ClientConfig{
-							Config: configtls.Config{
-								CAFile: "nosuchfile",
-							},
+				Traces: configgrpc.ClientConfig{
+					Endpoint: endpoint,
+					TLS: configtls.ClientConfig{
+						Config: configtls.Config{
+							CAFile: "nosuchfile",
 						},
 					},
 				},
@@ -204,11 +186,9 @@ func TestCreateTraces(t *testing.T) {
 			name: "UseDomain",
 			config: &Config{
 				Domain: "localhost",
-				DomainSettings: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						TLS: configtls.ClientConfig{
-							Insecure: false,
-						},
+				DomainSettings: configgrpc.ClientConfig{
+					TLS: configtls.ClientConfig{
+						Insecure: false,
 					},
 				},
 			},
@@ -263,121 +243,4 @@ func TestCreateLogsWithDomainAndEndpoint(t *testing.T) {
 		// exporter may already stop because it cannot connect.
 		assert.Equal(t, "rpc error: code = Canceled desc = grpc: the client connection is closing", err.Error())
 	}
-}
-
-func TestCreateTracesWithPrivateLink(t *testing.T) {
-	factory := NewFactory()
-	cfg := factory.CreateDefaultConfig().(*Config)
-	cfg.Domain = "coralogix.com"
-	cfg.PrivateLink = true
-	cfg.PrivateKey = "test-key"
-	cfg.AppName = "test-app"
-
-	set := exportertest.NewNopSettings(metadata.Type)
-	consumer, err := factory.CreateTraces(t.Context(), set, cfg)
-	require.NoError(t, err)
-	require.NotNil(t, consumer)
-
-	// Verify the endpoint is correctly set to private link
-	settings := cfg.getDomainGrpcSettings()
-	assert.Equal(t, "ingress.private.coralogix.com:443", settings.Endpoint)
-
-	err = consumer.Start(t.Context(), componenttest.NewNopHost())
-	assert.NoError(t, err)
-
-	err = consumer.Shutdown(t.Context())
-	if err != nil {
-		// Since the endpoint doesn't actually exist, connection may already be closed
-		assert.Contains(t, err.Error(), "grpc: the client connection is closing")
-	}
-}
-
-func TestCreateMetricsWithPrivateLink(t *testing.T) {
-	factory := NewFactory()
-	cfg := factory.CreateDefaultConfig().(*Config)
-	cfg.Domain = "eu2.coralogix.com"
-	cfg.PrivateLink = true
-	cfg.PrivateKey = "test-key"
-	cfg.AppName = "test-app"
-
-	set := exportertest.NewNopSettings(metadata.Type)
-	consumer, err := factory.CreateMetrics(t.Context(), set, cfg)
-	require.NoError(t, err)
-	require.NotNil(t, consumer)
-
-	// Verify the endpoint is correctly set to private link
-	settings := cfg.getDomainGrpcSettings()
-	assert.Equal(t, "ingress.private.eu2.coralogix.com:443", settings.Endpoint)
-
-	err = consumer.Shutdown(t.Context())
-	assert.NoError(t, err)
-}
-
-func TestCreateLogsWithPrivateLink(t *testing.T) {
-	factory := NewFactory()
-	cfg := factory.CreateDefaultConfig().(*Config)
-	cfg.Domain = "coralogix.us"
-	cfg.PrivateLink = true
-	cfg.PrivateKey = "test-key"
-	cfg.AppName = "test-app"
-
-	set := exportertest.NewNopSettings(metadata.Type)
-	consumer, err := factory.CreateLogs(t.Context(), set, cfg)
-	require.NoError(t, err)
-	require.NotNil(t, consumer)
-
-	// Verify the endpoint is correctly set to private link
-	settings := cfg.getDomainGrpcSettings()
-	assert.Equal(t, "ingress.private.coralogix.us:443", settings.Endpoint)
-
-	err = consumer.Shutdown(t.Context())
-	assert.NoError(t, err)
-}
-
-func TestCreateTracesWithDomainAlreadyContainingPrivate(t *testing.T) {
-	factory := NewFactory()
-	cfg := factory.CreateDefaultConfig().(*Config)
-	cfg.Domain = "private.coralogix.com"
-	cfg.PrivateLink = true
-	cfg.PrivateKey = "test-key"
-	cfg.AppName = "test-app"
-
-	set := exportertest.NewNopSettings(metadata.Type)
-	consumer, err := factory.CreateTraces(t.Context(), set, cfg)
-	require.NoError(t, err)
-	require.NotNil(t, consumer)
-
-	// Verify the endpoint does not duplicate "private"
-	settings := cfg.getDomainGrpcSettings()
-	assert.Equal(t, "ingress.private.coralogix.com:443", settings.Endpoint)
-
-	err = consumer.Start(t.Context(), componenttest.NewNopHost())
-	assert.NoError(t, err)
-
-	err = consumer.Shutdown(t.Context())
-	if err != nil {
-		// Since the endpoint doesn't actually exist, connection may already be closed
-		assert.Contains(t, err.Error(), "grpc: the client connection is closing")
-	}
-}
-
-func TestCreateMetricsWithDomainAlreadyContainingPrivate(t *testing.T) {
-	factory := NewFactory()
-	cfg := factory.CreateDefaultConfig().(*Config)
-	cfg.Domain = "private.eu2.coralogix.com"
-	cfg.PrivateLink = true
-	cfg.PrivateKey = "test-key"
-	cfg.AppName = "test-app"
-
-	set := exportertest.NewNopSettings(metadata.Type)
-	consumer, err := factory.CreateMetrics(t.Context(), set, cfg)
-	require.NoError(t, err)
-	require.NotNil(t, consumer)
-
-	// Verify the endpoint does not duplicate "private"
-	settings := cfg.getDomainGrpcSettings()
-	assert.Equal(t, "ingress.private.eu2.coralogix.com:443", settings.Endpoint)
-
-	err = consumer.Shutdown(t.Context())
-	assert.NoError(t, err)
 }

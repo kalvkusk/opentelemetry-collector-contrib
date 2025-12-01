@@ -12,7 +12,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -55,32 +54,32 @@ func createConfigYaml(
 
 	// Prepare extra processor config section and comma-separated list of extra processor
 	// names to use in corresponding "processors" settings.
-	var processorsSections strings.Builder
-	var processorsList strings.Builder
+	processorsSections := ""
+	processorsList := ""
 	if len(processors) > 0 {
 		first := true
 		for i := range processors {
-			processorsSections.WriteString(processors[i].Body + "\n")
+			processorsSections += processors[i].Body + "\n"
 			if !first {
-				processorsList.WriteString(",")
+				processorsList += ","
 			}
-			processorsList.WriteString(processors[i].Name)
+			processorsList += processors[i].Name
 			first = false
 		}
 	}
 
 	// Prepare extra extension config section and comma-separated list of extra extension
 	// names to use in corresponding "extensions" settings.
-	var extensionsSections strings.Builder
-	var extensionsList strings.Builder
+	extensionsSections := ""
+	extensionsList := ""
 	if len(extensions) > 0 {
 		first := true
 		for name, cfg := range extensions {
-			extensionsSections.WriteString(cfg + "\n")
+			extensionsSections += cfg + "\n"
 			if !first {
-				extensionsList.WriteString(",")
+				extensionsList += ","
 			}
-			extensionsList.WriteString(name)
+			extensionsList += name
 			first = false
 		}
 	}
@@ -123,13 +122,13 @@ service:
 		format,
 		sender.GenConfigYAMLStr(),
 		receiver.GenConfigYAMLStr(),
-		processorsSections.String(),
+		processorsSections,
 		resultDir,
-		extensionsSections.String(),
-		extensionsList.String(),
+		extensionsSections,
+		extensionsList,
 		pipeline,
 		sender.ProtocolName(),
-		processorsList.String(),
+		processorsList,
 		receiver.ProtocolName(),
 	)
 }

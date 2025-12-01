@@ -75,8 +75,8 @@ func TestExtension(t *testing.T) {
 						Endpoint: listenAt,
 					},
 					Egress: confighttp.ClientConfig{
-						Headers: configopaque.MapList{
-							{Name: "key", Value: "value"},
+						Headers: map[string]configopaque.String{
+							"key": "value",
 						},
 					},
 				}
@@ -101,8 +101,8 @@ func TestExtension(t *testing.T) {
 						Endpoint: listenAt,
 					},
 					Egress: confighttp.ClientConfig{
-						Headers: configopaque.MapList{
-							{Name: "key", Value: "value"},
+						Headers: map[string]configopaque.String{
+							"key": "value",
 						},
 					},
 				}
@@ -125,8 +125,8 @@ func TestExtension(t *testing.T) {
 						Endpoint: listenAt,
 					},
 					Egress: confighttp.ClientConfig{
-						Headers: configopaque.MapList{
-							{Name: "key", Value: "value"},
+						Headers: map[string]configopaque.String{
+							"key": "value",
 						},
 					},
 				}
@@ -196,7 +196,7 @@ func TestExtension(t *testing.T) {
 				}
 
 				// Assert additional headers added by forwarder.
-				for k, v := range cfg.Egress.Headers.Iter {
+				for k, v := range cfg.Egress.Headers {
 					got := r.Header.Get(k)
 					assert.Equal(t, string(v), got)
 				}

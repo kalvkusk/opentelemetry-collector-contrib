@@ -24,12 +24,11 @@ import (
 // This file implements a factory for the github receiver
 
 const (
-	defaultReadTimeout       = 500 * time.Millisecond
-	defaultWriteTimeout      = 500 * time.Millisecond
-	defaultPath              = "/events"
-	defaultHealthPath        = "/health"
-	defaultEndpoint          = "localhost:8080"
-	defaultIncludeSpanEvents = false
+	defaultReadTimeout  = 500 * time.Millisecond
+	defaultWriteTimeout = 500 * time.Millisecond
+	defaultPath         = "/events"
+	defaultHealthPath   = "/health"
+	defaultEndpoint     = "localhost:8080"
 )
 
 var (
@@ -80,9 +79,8 @@ func createDefaultConfig() component.Config {
 					defaultGitHubSignature256Header: "",
 				},
 			},
-			Path:              defaultPath,
-			HealthPath:        defaultHealthPath,
-			IncludeSpanEvents: defaultIncludeSpanEvents,
+			Path:       defaultPath,
+			HealthPath: defaultHealthPath,
 		},
 	}
 }
@@ -166,5 +164,5 @@ func createGitHubScraper(
 		return nil, err
 	}
 
-	return s, err
+	return
 }

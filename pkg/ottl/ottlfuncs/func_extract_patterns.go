@@ -6,6 +6,8 @@ package ottlfuncs // import "github.com/open-telemetry/opentelemetry-collector-c
 import (
 	"context"
 	"errors"
+	"fmt"
+	"regexp"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -14,7 +16,7 @@ import (
 
 type ExtractPatternsArguments[K any] struct {
 	Target  ottl.StringGetter[K]
-	Pattern ottl.StringGetter[K]
+	Pattern string
 }
 
 func NewExtractPatternsFactory[K any]() ottl.Factory[K] {
@@ -31,41 +33,36 @@ func createExtractPatternsFunction[K any](_ ottl.FunctionContext, oArgs ottl.Arg
 	return extractPatterns(args.Target, args.Pattern)
 }
 
-func extractPatterns[K any](target, pattern ottl.StringGetter[K]) (ottl.ExprFunc[K], error) {
-	compiledPattern, err := newDynamicRegex("ExtractPatterns", pattern)
+func extractPatterns[K any](target ottl.StringGetter[K], pattern string) (ottl.ExprFunc[K], error) {
+	r, err := regexp.Compile(pattern)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("the pattern supplied to ExtractPatterns is not a valid pattern: %w", err)
+	}
+
+	namedCaptureGroups := 0
+	for _, groupName := range r.SubexpNames() {
+		if groupName != "" {
+			namedCaptureGroups++
+		}
+	}
+
+	if namedCaptureGroups == 0 {
+		return nil, errors.New("at least 1 named capture group must be supplied in the given regex")
 	}
 
 	return func(ctx context.Context, tCtx K) (any, error) {
-		cp, err := compiledPattern.compile(ctx, tCtx)
-		if err != nil {
-			return nil, err
-		}
-
-		namedCaptureGroups := 0
-		for _, groupName := range cp.SubexpNames() {
-			if groupName != "" {
-				namedCaptureGroups++
-			}
-		}
-
-		if namedCaptureGroups == 0 {
-			return nil, errors.New("at least 1 named capture group must be supplied in the given regex")
-		}
-
 		val, err := target.Get(ctx, tCtx)
 		if err != nil {
 			return nil, err
 		}
 
-		matches := cp.FindStringSubmatch(val)
+		matches := r.FindStringSubmatch(val)
 		if matches == nil {
 			return pcommon.NewMap(), nil
 		}
 
 		result := pcommon.NewMap()
-		for i, subexp := range cp.SubexpNames() {
+		for i, subexp := range r.SubexpNames() {
 			if i == 0 {
 				// Skip whole match
 				continue

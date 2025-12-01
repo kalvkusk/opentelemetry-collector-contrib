@@ -16,17 +16,17 @@ metrics:
 
 Time in seconds until certificate expiry, as specified by `NotAfter` field in the x.509 certificate. Negative values represent time in seconds since expiration.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| s | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| s | Gauge | Int |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| tlscheck.x509.issuer | The entity that issued the certificate. | Any Str | Recommended |
-| tlscheck.x509.cn | The commonName in the subject of the certificate. | Any Str | Recommended |
-| tlscheck.x509.san | The Subject Alternative Name of the certificate. | Any Slice | Recommended |
+| tlscheck.x509.issuer | The entity that issued the certificate. | Any Str | false |
+| tlscheck.x509.cn | The commonName in the subject of the certificate. | Any Str | false |
+| tlscheck.x509.san | The Subject Alternative Name of the certificate. | Any Slice | false |
 
 ## Resource Attributes
 

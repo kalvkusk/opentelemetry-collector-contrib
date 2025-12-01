@@ -6,6 +6,8 @@ package ottlfuncs // import "github.com/open-telemetry/opentelemetry-collector-c
 import (
 	"context"
 	"errors"
+	"fmt"
+	"regexp"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
@@ -14,7 +16,7 @@ import (
 
 type DeleteMatchingKeysArguments[K any] struct {
 	Target  ottl.PMapGetSetter[K]
-	Pattern ottl.StringGetter[K]
+	Pattern string
 }
 
 func NewDeleteMatchingKeysFactory[K any]() ottl.Factory[K] {
@@ -31,22 +33,18 @@ func createDeleteMatchingKeysFunction[K any](_ ottl.FunctionContext, oArgs ottl.
 	return deleteMatchingKeys(args.Target, args.Pattern)
 }
 
-func deleteMatchingKeys[K any](target ottl.PMapGetSetter[K], pattern ottl.StringGetter[K]) (ottl.ExprFunc[K], error) {
-	compiledPattern, err := newDynamicRegex("delete_matching_keys", pattern)
+func deleteMatchingKeys[K any](target ottl.PMapGetSetter[K], pattern string) (ottl.ExprFunc[K], error) {
+	compiledPattern, err := regexp.Compile(pattern)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("the regex pattern supplied to delete_matching_keys is not a valid pattern: %w", err)
 	}
 	return func(ctx context.Context, tCtx K) (any, error) {
-		cp, err := compiledPattern.compile(ctx, tCtx)
-		if err != nil {
-			return nil, err
-		}
 		val, err := target.Get(ctx, tCtx)
 		if err != nil {
 			return nil, err
 		}
 		val.RemoveIf(func(key string, _ pcommon.Value) bool {
-			return cp.MatchString(key)
+			return compiledPattern.MatchString(key)
 		})
 		return nil, target.Set(ctx, tCtx, val)
 	}, nil

@@ -113,7 +113,7 @@ func dedupDimensions(dimensions [][]string) (deduped [][]string) {
 			seen[key] = true
 		}
 	}
-	return deduped
+	return
 }
 
 // dimensionRollup creates rolled-up dimensions from the metric's label set.

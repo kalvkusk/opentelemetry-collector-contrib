@@ -46,10 +46,8 @@ func TestNewMetricsExporter(t *testing.T) {
 		{
 			name: "Valid metrics endpoint config",
 			cfg: &Config{
-				Metrics: TransportConfig{
-					ClientConfig: configgrpc.ClientConfig{
-						Endpoint: "localhost:4317",
-					},
+				Metrics: configgrpc.ClientConfig{
+					Endpoint: "localhost:4317",
 				},
 				PrivateKey: "test-key",
 			},
@@ -82,6 +80,9 @@ func TestMetricsExporter_Start(t *testing.T) {
 	cfg := &Config{
 		Domain:     "test.domain.com",
 		PrivateKey: "test-key",
+		Metrics: configgrpc.ClientConfig{
+			Headers: map[string]configopaque.String{},
+		},
 	}
 
 	exp, err := newMetricsExporter(cfg, exportertest.NewNopSettings(exportertest.NopType))
@@ -90,9 +91,8 @@ func TestMetricsExporter_Start(t *testing.T) {
 	err = exp.start(t.Context(), componenttest.NewNopHost())
 	require.NoError(t, err)
 	assert.NotNil(t, exp.clientConn)
-	assert.NotNil(t, exp.grpcMetricsExporter)
-	_, ok := exp.config.Metrics.Headers.Get("Authorization")
-	assert.True(t, ok)
+	assert.NotNil(t, exp.metricExporter)
+	assert.Contains(t, exp.config.Metrics.Headers, "Authorization")
 
 	// Test shutdown
 	err = exp.shutdown(t.Context())
@@ -103,11 +103,9 @@ func TestMetricsExporter_EnhanceContext(t *testing.T) {
 	cfg := &Config{
 		Domain:     "test.domain.com",
 		PrivateKey: "test-key",
-		Metrics: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Headers: configopaque.MapList{
-					{Name: "test-header", Value: "test-value"},
-				},
+		Metrics: configgrpc.ClientConfig{
+			Headers: map[string]configopaque.String{
+				"test-header": "test-value",
 			},
 		},
 	}
@@ -124,6 +122,9 @@ func TestMetricsExporter_PushMetrics(t *testing.T) {
 	cfg := &Config{
 		Domain:     "test.domain.com",
 		PrivateKey: "test-key",
+		Metrics: configgrpc.ClientConfig{
+			Headers: map[string]configopaque.String{},
+		},
 	}
 
 	exp, err := newMetricsExporter(cfg, exportertest.NewNopSettings(exportertest.NopType))
@@ -179,6 +180,9 @@ func TestMetricsExporter_PushMetrics_WhenCannotSend(t *testing.T) {
 			cfg := &Config{
 				Domain:     "test.domain.com",
 				PrivateKey: "test-key",
+				Metrics: configgrpc.ClientConfig{
+					Headers: map[string]configopaque.String{},
+				},
 				RateLimiter: RateLimiterConfig{
 					Enabled:   tt.enabled,
 					Threshold: 1,
@@ -273,13 +277,12 @@ func BenchmarkMetricsExporter_PushMetrics(b *testing.B) {
 	defer stopFn()
 
 	cfg := &Config{
-		Metrics: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Endpoint: endpoint,
-				TLS: configtls.ClientConfig{
-					Insecure: true,
-				},
+		Metrics: configgrpc.ClientConfig{
+			Endpoint: endpoint,
+			TLS: configtls.ClientConfig{
+				Insecure: true,
 			},
+			Headers: map[string]configopaque.String{},
 		},
 		PrivateKey: "test-key",
 	}
@@ -305,12 +308,12 @@ func BenchmarkMetricsExporter_PushMetrics(b *testing.B) {
 	}
 	for _, numMetrics := range testCases {
 		b.Run("numMetrics="+fmt.Sprint(numMetrics), func(b *testing.B) {
-			for b.Loop() {
+			for i := 0; i < b.N; i++ {
 				metrics := pmetric.NewMetrics()
 				rm := metrics.ResourceMetrics().AppendEmpty()
 				rm.Resource().Attributes().PutStr("service.name", "benchmark-service")
 				sm := rm.ScopeMetrics().AppendEmpty()
-				for j := range numMetrics {
+				for j := 0; j < numMetrics; j++ {
 					metric := sm.Metrics().AppendEmpty()
 					metric.SetName("benchmark_metric")
 					metric.SetUnit("1")
@@ -331,13 +334,12 @@ func TestMetricsExporter_PushMetrics_PartialSuccess(t *testing.T) {
 	defer stopFn()
 
 	cfg := &Config{
-		Metrics: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Endpoint: endpoint,
-				TLS: configtls.ClientConfig{
-					Insecure: true,
-				},
+		Metrics: configgrpc.ClientConfig{
+			Endpoint: endpoint,
+			TLS: configtls.ClientConfig{
+				Insecure: true,
 			},
+			Headers: map[string]configopaque.String{},
 		},
 		PrivateKey: "test-key",
 	}
@@ -420,13 +422,12 @@ func TestMetricsExporter_PushMetrics_Performance(t *testing.T) {
 	defer stopFn()
 
 	cfg := &Config{
-		Metrics: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Endpoint: endpoint,
-				TLS: configtls.ClientConfig{
-					Insecure: true,
-				},
+		Metrics: configgrpc.ClientConfig{
+			Endpoint: endpoint,
+			TLS: configtls.ClientConfig{
+				Insecure: true,
 			},
+			Headers: map[string]configopaque.String{},
 		},
 		PrivateKey: "test-key",
 		RateLimiter: RateLimiterConfig{
@@ -454,7 +455,7 @@ func TestMetricsExporter_PushMetrics_Performance(t *testing.T) {
 		sm := rm.ScopeMetrics().AppendEmpty()
 
 		metricCount := 3000
-		for i := range metricCount {
+		for i := 0; i < metricCount; i++ {
 			metric := sm.Metrics().AppendEmpty()
 			metric.SetName(fmt.Sprintf("test_metric_%d", i))
 			metric.SetUnit("1")
@@ -476,7 +477,7 @@ func TestMetricsExporter_PushMetrics_Performance(t *testing.T) {
 	t.Run("Over rate limit", func(t *testing.T) {
 		mockSrv.recvCount = 0
 
-		for range 5 {
+		for i := 0; i < 5; i++ {
 			exp.EnableRateLimit()
 		}
 
@@ -486,7 +487,7 @@ func TestMetricsExporter_PushMetrics_Performance(t *testing.T) {
 		sm := rm.ScopeMetrics().AppendEmpty()
 
 		metricCount := 7000
-		for i := range metricCount {
+		for i := 0; i < metricCount; i++ {
 			metric := sm.Metrics().AppendEmpty()
 			metric.SetName(fmt.Sprintf("test_metric_%d", i))
 			metric.SetUnit("1")
@@ -536,7 +537,7 @@ func TestMetricsExporter_PushMetrics_Performance(t *testing.T) {
 		sm := rm.ScopeMetrics().AppendEmpty()
 
 		metricCount := 3000
-		for i := range metricCount {
+		for i := 0; i < metricCount; i++ {
 			metric := sm.Metrics().AppendEmpty()
 			metric.SetName(fmt.Sprintf("test_metric_%d", i))
 			metric.SetUnit("1")
@@ -561,12 +562,10 @@ func TestMetricsExporter_RateLimitErrorCountReset(t *testing.T) {
 	defer stop()
 
 	cfg := &Config{
-		Metrics: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Endpoint: endpoint,
-				TLS: configtls.ClientConfig{
-					Insecure: true,
-				},
+		Metrics: configgrpc.ClientConfig{
+			Endpoint: endpoint,
+			TLS: configtls.ClientConfig{
+				Insecure: true,
 			},
 		},
 		PrivateKey: "test-key",
@@ -587,7 +586,7 @@ func TestMetricsExporter_RateLimitErrorCountReset(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	for range 5 {
+	for i := 0; i < 5; i++ {
 		exp.EnableRateLimit()
 	}
 	assert.Equal(t, int32(5), exp.rateError.errorCount.Load())
@@ -625,12 +624,10 @@ func TestMetricsExporter_RateLimitCounterResetOnSuccess(t *testing.T) {
 	defer stopFn()
 
 	cfg := &Config{
-		Metrics: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Endpoint: endpoint,
-				TLS: configtls.ClientConfig{
-					Insecure: true,
-				},
+		Metrics: configgrpc.ClientConfig{
+			Endpoint: endpoint,
+			TLS: configtls.ClientConfig{
+				Insecure: true,
 			},
 		},
 		PrivateKey: "test-key",
@@ -676,7 +673,7 @@ func TestMetricsExporter_RateLimitCounterResetOnSuccess(t *testing.T) {
 	})
 
 	t.Run("Trigger errors below threshold", func(t *testing.T) {
-		for range 4 {
+		for i := 0; i < 4; i++ {
 			exp.EnableRateLimit()
 		}
 		assert.Equal(t, int32(4), exp.rateError.errorCount.Load())

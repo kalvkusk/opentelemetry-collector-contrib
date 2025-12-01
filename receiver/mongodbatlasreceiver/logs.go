@@ -101,7 +101,7 @@ func parseHostNames(s string, logger *zap.Logger) []string {
 		return []string{}
 	}
 
-	for t := range strings.SplitSeq(s, ",") {
+	for _, t := range strings.Split(s, ",") {
 		// separate hostname from scheme and port
 		host, _, err := net.SplitHostPort(strings.TrimPrefix(t, "mongodb://"))
 		if err != nil {
@@ -160,8 +160,7 @@ type clusterInfo struct {
 }
 
 func (s *logsReceiver) collectClusterLogs(clusters []mongodbatlas.Cluster, projectCfg LogsProjectConfig, pc projectContext) {
-	for i := range clusters {
-		cluster := &clusters[i]
+	for _, cluster := range clusters {
 		c := clusterInfo{
 			ClusterName:         cluster.Name,
 			RegionName:          cluster.ProviderSettings.RegionName,
@@ -211,8 +210,7 @@ func filterClusters(clusters []mongodbatlas.Cluster, projectCfg ProjectConfig) (
 	}
 
 	var filtered []mongodbatlas.Cluster
-	for i := range clusters {
-		cluster := clusters[i]
+	for _, cluster := range clusters {
 		if _, ok := clusterNameSet[cluster.Name]; (!ok && !allowed) || (ok && allowed) {
 			filtered = append(filtered, cluster)
 		}

@@ -77,11 +77,11 @@ func createMetricsData(resourcesNum, dataPointsNum int) pmetric.Metrics {
 	doubleVal := 1234.5678
 	metrics := pmetric.NewMetrics()
 
-	for i := range resourcesNum {
+	for i := 0; i < resourcesNum; i++ {
 		rm := metrics.ResourceMetrics().AppendEmpty()
 		rm.Resource().Attributes().PutStr("k0", fmt.Sprintf("v%d", i))
 		rm.Resource().Attributes().PutStr("k1", "v1")
-		for j := range dataPointsNum {
+		for j := 0; j < dataPointsNum; j++ {
 			count := i*dataPointsNum + j
 			tsUnix := time.Unix(int64(count), int64(count)*time.Millisecond.Nanoseconds())
 			ilm := rm.ScopeMetrics().AppendEmpty()
@@ -104,11 +104,11 @@ func createTraceData(resourcesNum, spansNum int) ptrace.Traces {
 	traces := ptrace.NewTraces()
 	rs := traces.ResourceSpans().AppendEmpty()
 
-	for i := range resourcesNum {
+	for i := 0; i < resourcesNum; i++ {
 		rs.Resource().Attributes().PutStr("resource", fmt.Sprintf("R%d", i))
 		ils := rs.ScopeSpans().AppendEmpty()
 		ils.Spans().EnsureCapacity(spansNum)
-		for j := range spansNum {
+		for j := 0; j < spansNum; j++ {
 			span := ils.Spans().AppendEmpty()
 			span.SetName("root")
 			count := i*spansNum + j
@@ -155,10 +155,10 @@ func repeatableString(length int) string {
 func createLogDataWithCustomLibraries(numResources int, libraries []string, numRecords []int) plog.Logs {
 	logs := plog.NewLogs()
 	logs.ResourceLogs().EnsureCapacity(numResources)
-	for i := range numResources {
+	for i := 0; i < numResources; i++ {
 		rl := logs.ResourceLogs().AppendEmpty()
 		rl.ScopeLogs().EnsureCapacity(len(libraries))
-		for j := range libraries {
+		for j := 0; j < len(libraries); j++ {
 			sl := rl.ScopeLogs().AppendEmpty()
 			sl.Scope().SetName(libraries[j])
 			sl.LogRecords().EnsureCapacity(numRecords[j])
@@ -1696,6 +1696,7 @@ func Test_pushLogData_ShouldReturnUnsentLogsOnly(t *testing.T) {
 
 	err := c.pushLogData(t.Context(), logs)
 	require.Error(t, err)
+	assert.IsType(t, consumererror.Logs{}, err)
 
 	// Only the record that was not successfully sent should be returned
 	var logsErr consumererror.Logs
@@ -1820,8 +1821,9 @@ func benchPushLogData(b *testing.B, numResources, numRecords int, bufSize uint, 
 	logs := createLogData(numResources, 1, numRecords)
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		err := exp.ConsumeLogs(b.Context(), logs)
 		require.NoError(b, err)
 	}
@@ -1961,8 +1963,9 @@ func benchPushMetricData(b *testing.B, numResources, numRecords int, bufSize uin
 	metrics := createMetricsData(numResources, numRecords)
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		err := exp.ConsumeMetrics(b.Context(), metrics)
 		require.NoError(b, err)
 	}
@@ -1981,8 +1984,9 @@ func BenchmarkConsumeLogsRejected(b *testing.B) {
 	logs := createLogData(10, 1, 100)
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		err := exp.ConsumeLogs(b.Context(), logs)
 		require.Error(b, err)
 	}

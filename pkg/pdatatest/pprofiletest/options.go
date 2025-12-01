@@ -129,7 +129,7 @@ func (ignoreProfileTimestampValues) maskProfileTimestampValues(profiles pprofile
 			for k := 0; k < lrs.Len(); k++ {
 				lr := lrs.At(k)
 				lr.SetTime(pcommon.NewTimestampFromTime(time.Time{}))
-				lr.SetDurationNano(1)
+				lr.SetDuration(pcommon.NewTimestampFromTime(time.Time{}))
 			}
 		}
 	}
@@ -191,8 +191,8 @@ func sortProfileSlices(ls pprofile.Profiles) {
 				if a.Time() != b.Time() {
 					return a.Time() < b.Time()
 				}
-				if a.DurationNano() != b.DurationNano() {
-					return a.DurationNano() < b.DurationNano()
+				if a.Duration() != b.Duration() {
+					return a.Duration() < b.Duration()
 				}
 				as := a.ProfileID()
 				bs := b.ProfileID()

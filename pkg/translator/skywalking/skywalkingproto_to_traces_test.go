@@ -215,7 +215,7 @@ func Test_stringToTraceID_Unique(t *testing.T) {
 	}
 
 	var results [2][16]byte
-	for i := range tests {
+	for i := 0; i < len(tests); i++ {
 		tt := tests[i]
 		t.Run(tt.name, func(_ *testing.T) {
 			got := swTraceIDToTraceID(tt.segmentObject.traceID)
@@ -289,7 +289,7 @@ func Test_segmentIdToSpanId_Unique(t *testing.T) {
 		},
 	}
 	var results [2][8]byte
-	for i := range 2 {
+	for i := 0; i < 2; i++ {
 		tt := tests[i]
 		t.Run(tt.name, func(_ *testing.T) {
 			got := segmentIDToSpanID(tt.args.segmentID, tt.args.spanID)

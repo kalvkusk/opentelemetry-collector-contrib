@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
@@ -252,7 +251,7 @@ func Test_ParseSimplifiedXML(t *testing.T) {
 			}
 			exprFunc := parseSimplifiedXML(target)
 			result, err := exprFunc(t.Context(), nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want, result)
 		})
 	}
@@ -272,7 +271,7 @@ func TestCreateParseSimplifiedXMLFunc(t *testing.T) {
 		fCtx, &ParseSimplifiedXMLArguments[any]{
 			Target: invalidXMLGetter(),
 		})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, exprFunc)
 	_, err = exprFunc(t.Context(), nil)
 	assert.Error(t, err)

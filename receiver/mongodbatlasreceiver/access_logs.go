@@ -152,8 +152,7 @@ func (alr *accessLogsReceiver) pollAccessLogs(ctx context.Context, pc *LogsProje
 		alr.logger.Error("error filtering clusters", zap.Error(err), zap.String("project", pc.Name))
 		return err
 	}
-	for i := range filteredClusters {
-		cluster := &filteredClusters[i]
+	for _, cluster := range filteredClusters {
 		clusterCheckpoint := alr.getClusterCheckpoint(project.ID, cluster.Name)
 
 		if clusterCheckpoint == nil {
@@ -172,7 +171,7 @@ func (alr *accessLogsReceiver) pollAccessLogs(ctx context.Context, pc *LogsProje
 	return nil
 }
 
-func (alr *accessLogsReceiver) pollCluster(ctx context.Context, pc *LogsProjectConfig, project *mongodbatlas.Project, cluster *mongodbatlas.Cluster, startTime, now time.Time) time.Time {
+func (alr *accessLogsReceiver) pollCluster(ctx context.Context, pc *LogsProjectConfig, project *mongodbatlas.Project, cluster mongodbatlas.Cluster, startTime, now time.Time) time.Time {
 	nowTimestamp := pcommon.NewTimestampFromTime(now)
 
 	opts := &internal.GetAccessLogsOptions{
@@ -304,7 +303,7 @@ func parseLogMessage(log *mongodbatlas.AccessLogs) (map[string]any, error) {
 	return body, nil
 }
 
-func transformAccessLogs(now pcommon.Timestamp, accessLogs []*mongodbatlas.AccessLogs, p *mongodbatlas.Project, c *mongodbatlas.Cluster, logger *zap.Logger) plog.Logs {
+func transformAccessLogs(now pcommon.Timestamp, accessLogs []*mongodbatlas.AccessLogs, p *mongodbatlas.Project, c mongodbatlas.Cluster, logger *zap.Logger) plog.Logs {
 	logs := plog.NewLogs()
 	resourceLogs := logs.ResourceLogs().AppendEmpty()
 	ra := resourceLogs.Resource().Attributes()

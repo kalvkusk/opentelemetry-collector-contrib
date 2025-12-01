@@ -8,18 +8,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
-	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
 
 	"go.uber.org/zap"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/cmd/opampsupervisor/supervisor/common"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/cmd/opampsupervisor/supervisor/config"
 )
 
@@ -78,7 +77,7 @@ func (c *Commander) Start(ctx context.Context) error {
 	args := slices.Concat(c.args, c.cfg.Arguments)
 
 	c.cmd = exec.CommandContext(ctx, c.cfg.Executable, args...) // #nosec G204
-	c.cmd.Env = envVarMapToEnvMapSlice(c.cfg.Env)
+	c.cmd.Env = common.EnvVarMapToEnvMapSlice(c.cfg.Env)
 	c.cmd.SysProcAttr = sysProcAttrs()
 
 	// PassthroughLogging changes how collector start up happens
@@ -159,41 +158,23 @@ func (c *Commander) startWithPassthroughLogging() error {
 
 	// capture agent output
 	go func() {
-		reader := bufio.NewReader(stdoutPipe)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err != io.EOF {
-					c.logger.Error("Error reading agent stdout", zap.Error(err))
-				}
-				// Trim and log the last line if it exists
-				if line != "" {
-					line = strings.TrimRight(line, "\r\n")
-					colLogger.Info(line)
-				}
-				break
-			}
-			line = strings.TrimRight(line, "\r\n")
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
 			colLogger.Info(line)
+		}
+		if err := scanner.Err(); err != nil {
+			c.logger.Error("Error reading agent stdout: %w", zap.Error(err))
 		}
 	}()
 	go func() {
-		reader := bufio.NewReader(stderrPipe)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err != io.EOF {
-					c.logger.Error("Error reading agent stderr", zap.Error(err))
-				}
-				// Trim and log the last line if it exists
-				if line != "" {
-					line = strings.TrimRight(line, "\r\n")
-					colLogger.Error(line)
-				}
-				break
-			}
-			line = strings.TrimRight(line, "\r\n")
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			line := scanner.Text()
 			colLogger.Error(line)
+		}
+		if err := scanner.Err(); err != nil {
+			c.logger.Error("Error reading agent stderr: %w", zap.Error(err))
 		}
 	}()
 
@@ -228,7 +209,7 @@ func (c *Commander) StartOneShot() ([]byte, []byte, error) {
 	ctx := context.Background()
 
 	cmd := exec.CommandContext(ctx, c.cfg.Executable, c.args...) // #nosec G204
-	cmd.Env = envVarMapToEnvMapSlice(c.cfg.Env)
+	cmd.Env = common.EnvVarMapToEnvMapSlice(c.cfg.Env)
 	cmd.SysProcAttr = sysProcAttrs()
 	// grab cmd pipes
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -246,49 +227,23 @@ func (c *Commander) StartOneShot() ([]byte, []byte, error) {
 	}
 	// capture agent output
 	go func() {
-		reader := bufio.NewReader(stdoutPipe)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err != io.EOF {
-					c.logger.Error("Error reading agent stdout", zap.Error(err))
-				}
-				// Trim and append the last line if it exists
-				// Normalize line endings to \n
-				if line != "" {
-					line = strings.TrimRight(line, "\r\n")
-					stdout = append(stdout, []byte(line)...)
-					stdout = append(stdout, byte('\n'))
-				}
-				break
-			}
-			// Normalize line endings to \n
-			line = strings.TrimRight(line, "\r\n")
-			stdout = append(stdout, []byte(line)...)
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			stdout = append(stdout, scanner.Bytes()...)
 			stdout = append(stdout, byte('\n'))
+		}
+		if err := scanner.Err(); err != nil {
+			c.logger.Error("Error reading agent stdout: %w", zap.Error(err))
 		}
 	}()
 	go func() {
-		reader := bufio.NewReader(stderrPipe)
-		for {
-			line, err := reader.ReadString('\n')
-			if err != nil {
-				if err != io.EOF {
-					c.logger.Error("Error reading agent stderr", zap.Error(err))
-				}
-				// Trim and append the last line if it exists
-				// Normalize line endings to \n
-				if line != "" {
-					line = strings.TrimRight(line, "\r\n")
-					stderr = append(stderr, []byte(line)...)
-					stderr = append(stderr, byte('\n'))
-				}
-				break
-			}
-			// Normalize line endings to \n
-			line = strings.TrimRight(line, "\r\n")
-			stderr = append(stderr, []byte(line)...)
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			stderr = append(stderr, scanner.Bytes()...)
 			stderr = append(stderr, byte('\n'))
+		}
+		if err := scanner.Err(); err != nil {
+			c.logger.Error("Error reading agent stderr: %w", zap.Error(err))
 		}
 	}()
 
@@ -420,16 +375,4 @@ func (c *Commander) Stop(ctx context.Context) error {
 	cancel()
 
 	return innerErr
-}
-
-func envVarMapToEnvMapSlice(m map[string]string) []string {
-	// let the command initialize the env itself
-	if m == nil {
-		return nil
-	}
-	result := os.Environ()
-	for key, value := range m {
-		result = append(result, key+"="+value)
-	}
-	return result
 }

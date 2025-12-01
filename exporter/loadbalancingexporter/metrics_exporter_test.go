@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	json "github.com/goccy/go-json"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
@@ -174,7 +174,7 @@ func loadMetricsMap(t *testing.T, path string) map[string]pmetric.Metrics {
 
 	expectedOutput := map[string]pmetric.Metrics{}
 	for key, data := range expectedOutputRaw {
-		b, err = json.Marshal(data)
+		b, err = jsoniter.Marshal(data)
 		require.NoError(t, err)
 
 		unmarshaller := &pmetric.JSONUnmarshaler{}
@@ -910,14 +910,14 @@ func randomMetrics(t require.TestingT, rmCount, smCount, mCount, dpCount int) pm
 	timeStamp := pcommon.Timestamp(rand.IntN(256))
 	value := rand.Int64N(256)
 
-	for range rmCount {
+	for i := 0; i < rmCount; i++ {
 		rm := md.ResourceMetrics().AppendEmpty()
 		err := rm.Resource().Attributes().FromRaw(map[string]any{
 			string(conventions.ServiceNameKey): fmt.Sprintf("service-%d", rand.IntN(512)),
 		})
 		require.NoError(t, err)
 
-		for range smCount {
+		for j := 0; j < smCount; j++ {
 			sm := rm.ScopeMetrics().AppendEmpty()
 			scope := sm.Scope()
 			scope.SetName("MyTestInstrument")
@@ -927,7 +927,7 @@ func randomMetrics(t require.TestingT, rmCount, smCount, mCount, dpCount int) pm
 			})
 			require.NoError(t, err)
 
-			for range mCount {
+			for k := 0; k < mCount; k++ {
 				m := sm.Metrics().AppendEmpty()
 				m.SetName(fmt.Sprintf("metric.%d.test", rand.IntN(512)))
 
@@ -935,7 +935,7 @@ func randomMetrics(t require.TestingT, rmCount, smCount, mCount, dpCount int) pm
 				sum.SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 				sum.SetIsMonotonic(true)
 
-				for range dpCount {
+				for l := 0; l < dpCount; l++ {
 					dp := sum.DataPoints().AppendEmpty()
 
 					dp.SetTimestamp(timeStamp)
@@ -965,7 +965,7 @@ func benchConsumeMetrics(b *testing.B, routingKey string, endpointsCount, rmCoun
 	}
 
 	endpoints := []string{}
-	for i := range endpointsCount {
+	for i := 0; i < endpointsCount; i++ {
 		endpoints = append(endpoints, fmt.Sprintf("endpoint-%d", i))
 	}
 
@@ -991,7 +991,9 @@ func benchConsumeMetrics(b *testing.B, routingKey string, endpointsCount, rmCoun
 
 	md := randomMetrics(b, rmCount, smCount, mCount, dpCount)
 
-	for b.Loop() {
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
 		err = p.ConsumeMetrics(b.Context(), md)
 		require.NoError(b, err)
 	}

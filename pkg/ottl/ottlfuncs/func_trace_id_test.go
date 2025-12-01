@@ -26,9 +26,9 @@ func Test_traceID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exprFunc, err := traceID[any](tt.bytes)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			result, err := exprFunc(nil, nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want, result)
 		})
 	}

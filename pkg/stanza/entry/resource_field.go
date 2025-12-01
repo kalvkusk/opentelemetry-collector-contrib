@@ -7,14 +7,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 )
 
 // ResourceField is the path to an entry resource
 type ResourceField struct {
 	Keys []string
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 // NewResourceField will creat a new resource field from a key
@@ -22,7 +19,7 @@ func NewResourceField(keys ...string) Field {
 	if keys == nil {
 		keys = []string{}
 	}
-	return Field{FieldInterface: ResourceField{
+	return Field{ResourceField{
 		Keys: keys,
 	}}
 }
@@ -35,9 +32,7 @@ func (f ResourceField) Parent() ResourceField {
 	}
 
 	keys := f.Keys[:len(f.Keys)-1]
-	return ResourceField{
-		Keys: keys,
-	}
+	return ResourceField{keys}
 }
 
 // Child returns a child of the current field using the given key.
@@ -45,9 +40,7 @@ func (f ResourceField) Child(key string) ResourceField {
 	child := make([]string, len(f.Keys), len(f.Keys)+1)
 	copy(child, f.Keys)
 	child = append(child, key)
-	return ResourceField{
-		Keys: child,
-	}
+	return ResourceField{child}
 }
 
 // IsRoot returns a boolean indicating if this is a root level field.
@@ -127,7 +120,9 @@ func (f ResourceField) Merge(entry *Entry, mapValues map[string]any) {
 		currentMap = getNestedMap(currentMap, key)
 	}
 
-	maps.Copy(currentMap, mapValues)
+	for key, value := range mapValues {
+		currentMap[key] = value
+	}
 }
 
 // Delete removes a value from an entry's resource using the field.
@@ -184,7 +179,7 @@ func (f *ResourceField) UnmarshalJSON(raw []byte) error {
 		return fmt.Errorf("must start with 'resource': %s", value)
 	}
 
-	*f = ResourceField{Keys: keys[1:]}
+	*f = ResourceField{keys[1:]}
 	return nil
 }
 
@@ -204,7 +199,7 @@ func (f *ResourceField) UnmarshalYAML(unmarshal func(any) error) error {
 		return fmt.Errorf("must start with 'resource': %s", value)
 	}
 
-	*f = ResourceField{Keys: keys[1:]}
+	*f = ResourceField{keys[1:]}
 	return nil
 }
 
@@ -219,8 +214,6 @@ func (f *ResourceField) UnmarshalText(text []byte) error {
 		return fmt.Errorf("must start with 'resource': %s", text)
 	}
 
-	*f = ResourceField{
-		Keys: keys[1:],
-	}
+	*f = ResourceField{keys[1:]}
 	return nil
 }

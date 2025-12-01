@@ -1,68 +1,39 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+//revive:disable:unused-parameter
 //go:build windows
 
 package windowsservicereceiver // import "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/windowsservicereceiver"
 
-import (
-	"golang.org/x/sys/windows/svc"
-	"golang.org/x/sys/windows/svc/mgr"
-)
+import "golang.org/x/sys/windows/svc/mgr"
 
+/**
+* Windows Service representation and associated functions. These handle
+* interacting with the SCM and martialing service information returned by the
+* windows api calls.
+**/
+
+// receiver representation of a service
+//
+//nolint:unused
 type winService struct {
-	mgr    *serviceManager
-	name   string
-	handle *mgr.Service
-
-	status svc.Status
-	config configEx
+	service       *mgr.Service
+	serviceStatus uint32
+	startType     uint32
 }
 
-func updateService(m *serviceManager, sname string) (*winService, error) {
-	s, err := m.openService(sname)
-	if err != nil {
-		return nil, err
-	}
-	return &winService{
-		mgr:    m,
-		name:   sname,
-		handle: s,
-	}, nil
+//nolint:unused
+func getService(mgr *serviceManager, sname string) (*winService, error) {
+	return &winService{}, nil
 }
 
-func (ws *winService) updateStatus() error {
-	if ws.handle == nil {
-		return nil
-	}
-	st, err := ws.handle.Query()
-	if err != nil {
-		return err
-	}
-	ws.status = st
+//nolint:unused
+func (*winService) getStatus() error {
 	return nil
 }
 
-func (ws *winService) updateConfig() error {
-	if ws.handle == nil {
-		return nil
-	}
-	cfg, err := ws.handle.Config()
-	if err != nil {
-		return err
-	}
-	ws.config = configEx{
-		StartType:        StartType(cfg.StartType),
-		DelayedAutoStart: cfg.DelayedAutoStart,
-	}
+//nolint:unused
+func (*winService) getConfig() error {
 	return nil
-}
-
-func (ws *winService) close() error {
-	if ws.handle == nil {
-		return nil
-	}
-	err := ws.handle.Close()
-	ws.handle = nil
-	return err
 }

@@ -95,7 +95,7 @@ func Test_batchTimeSeriesV2UpdatesStateForLargeBatches(t *testing.T) {
 	tsArray := make([]*writev2.TimeSeries, 0, 100000)
 	var smb writev2.SymbolsTable
 	var ts *writev2.TimeSeries
-	for range 100000 {
+	for i := 0; i < 100000; i++ {
 		ts, smb = getTimeSeriesV2(labels, sample1, sample2, sample3)
 		tsArray = append(tsArray, ts)
 	}
@@ -211,7 +211,7 @@ func TestEnsureTimeseriesPointsAreSortedByTimestampV2(t *testing.T) {
 	for ti, ts := range got {
 		for i := range ts.Samples {
 			si := ts.Samples[i]
-			for j := range i {
+			for j := 0; j < i; j++ {
 				sj := ts.Samples[j]
 				assert.LessOrEqual(t, sj.Timestamp, si.Timestamp, "Timeseries[%d]: Sample[%d].Timestamp(%d) > Sample[%d].Timestamp(%d)",
 					ti, j, sj.Timestamp, i, si.Timestamp)

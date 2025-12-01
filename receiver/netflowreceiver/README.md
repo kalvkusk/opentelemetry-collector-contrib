@@ -30,21 +30,26 @@ Example configuration:
 ```yaml
 receivers:
   netflow:
-    scheme: netflow
-    port: 2055
-    sockets: 16
-    workers: 32
+    - scheme: netflow
+      port: 2055
+      sockets: 16
+      workers: 32
   netflow/sflow:
-    scheme: sflow
-    port: 6343
-    sockets: 16
-    workers: 32
+    - scheme: sflow
+      port: 6343
+      sockets: 16
+      workers: 32
   netflow/raw:
-    scheme: netflow
-    port: 2055
-    sockets: 16
-    workers: 32
-    send_raw: true
+    - scheme: netflow
+      port: 2055
+      sockets: 16
+      workers: 32
+      send_raw: true
+
+processors:
+  batch:
+    send_batch_size: 2000
+    timeout: 30s
 
 exporters:
   debug:
@@ -54,13 +59,14 @@ service:
   pipelines:
     logs:
       receivers: [netflow, netflow/sflow]
+      processors: [batch]
       exporters: [debug]
   telemetry:
     logs:
       level: debug
 ```
 
-We recommend using `sending_queue::batch` option to reduce the number of log requests being sent by the exporter. The batch option will batch log records together and send them in a single request to the exporter.
+We recommend using the batch processor to reduce the number of log requests being sent to the exporter. The batch processor will batch log records together and send them in a single request to the exporter.
 
 You would then configure your network devices to send netflow, sflow, or ipfix data to the Collector on the specified ports.
 

@@ -37,10 +37,10 @@ func TestLoadConfig(t *testing.T) {
 	httpClientConfig := confighttp.NewDefaultClientConfig()
 	httpClientConfig.Timeout = 5 * time.Second
 	httpClientConfig.Endpoint = "http://localhost:8030"
-	httpClientConfig.Headers = configopaque.MapList{
-		{Name: "group_commit", Value: "async_mode"},
-		{Name: "max_filter_ratio", Value: "0.1"},
-		{Name: "strict_mode", Value: "true"},
+	httpClientConfig.Headers = map[string]configopaque.String{
+		"max_filter_ratio": "0.1",
+		"strict_mode":      "true",
+		"group_commit":     "async_mode",
 	}
 
 	fullCfg := &Config{
@@ -53,13 +53,12 @@ func TestLoadConfig(t *testing.T) {
 			RandomizationFactor: backoff.DefaultRandomizationFactor,
 			Multiplier:          backoff.DefaultMultiplier,
 		},
-		QueueSettings: func() exporterhelper.QueueBatchConfig {
-			queue := exporterhelper.NewDefaultQueueConfig()
-			queue.Enabled = true
-			queue.NumConsumers = 10
-			queue.QueueSize = 1000
-			return queue
-		}(),
+		QueueSettings: exporterhelper.QueueBatchConfig{
+			Enabled:      true,
+			NumConsumers: 10,
+			QueueSize:    1000,
+			Sizer:        exporterhelper.RequestSizerTypeRequests,
+		},
 		Table: Table{
 			Logs:    "otel_logs",
 			Traces:  "otel_traces",

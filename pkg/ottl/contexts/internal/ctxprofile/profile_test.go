@@ -32,14 +32,6 @@ func TestPathGetSetter(t *testing.T) {
 			val:  createValueType(),
 		},
 		{
-			path: "sample_type type",
-			val:  "cpu",
-		},
-		{
-			path: "sample_type unit",
-			val:  "cycles",
-		},
-		{
 			path: "sample",
 			val:  createSampleSlice(),
 		},
@@ -57,23 +49,19 @@ func TestPathGetSetter(t *testing.T) {
 		},
 		{
 			path: "duration",
-			val:  int64(0),
+			val:  time.Now().UTC(),
 		},
 		{
 			path: "period_type",
 			val:  createValueType(),
 		},
 		{
-			path: "period_type type",
-			val:  "heap",
-		},
-		{
-			path: "period_type unit",
-			val:  "bytes",
-		},
-		{
 			path: "period",
 			val:  int64(234),
+		},
+		{
+			path: "comment_string_indices",
+			val:  []int64{345},
 		},
 		{
 			path: "profile_id",
@@ -204,19 +192,13 @@ func (p *profileContext) GetProfile() pprofile.Profile {
 	return p.profile
 }
 
-func (p *profileContext) AttributeIndices() pcommon.Int32Slice {
-	return p.profile.AttributeIndices()
-}
-
 func newProfileContext(profile pprofile.Profile, dictionary pprofile.ProfilesDictionary) *profileContext {
-	return &profileContext{
-		profile:    profile,
-		dictionary: dictionary,
-	}
+	return &profileContext{profile: profile, dictionary: dictionary}
 }
 
 func createValueType() pprofile.ValueType {
 	vt := pprofile.NewValueType()
+	vt.SetAggregationTemporality(pprofile.AggregationTemporalityDelta)
 	vt.SetTypeStrindex(2)
 	vt.SetUnitStrindex(3)
 	return vt

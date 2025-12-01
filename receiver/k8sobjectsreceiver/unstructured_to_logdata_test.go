@@ -63,7 +63,7 @@ func TestUnstructuredListToLogData(t *testing.T) {
 		objects := unstructured.UnstructuredList{
 			Items: []unstructured.Unstructured{},
 		}
-		for i := range 3 {
+		for i := 0; i < 3; i++ {
 			object := unstructured.Unstructured{}
 			object.SetKind("Node")
 			object.SetName(fmt.Sprintf("node-%d", i))

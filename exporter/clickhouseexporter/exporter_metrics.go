@@ -37,12 +37,12 @@ func newMetricsExporter(logger *zap.Logger, cfg *Config) *metricsExporter {
 func (e *metricsExporter) start(ctx context.Context, _ component.Host) error {
 	metrics.SetLogger(e.logger)
 
-	opt, err := e.cfg.buildClickHouseOptions()
+	dsn, err := e.cfg.buildDSN()
 	if err != nil {
 		return err
 	}
 
-	e.db, err = internal.NewClickhouseClientFromOptions(opt)
+	e.db, err = internal.NewClickhouseClient(dsn)
 	if err != nil {
 		return err
 	}
@@ -94,14 +94,27 @@ func (e *metricsExporter) pushMetricsData(ctx context.Context, md pmetric.Metric
 			scopeURL := metrics.ScopeMetrics().At(j).SchemaUrl()
 			for k := 0; k < rs.Len(); k++ {
 				r := rs.At(k)
-				if r.Type() == pmetric.MetricTypeEmpty {
+				var errs error
+				//exhaustive:enforce
+				switch r.Type() {
+				case pmetric.MetricTypeGauge:
+					errs = errors.Join(errs, metricsMap[pmetric.MetricTypeGauge].Add(resAttr, metrics.SchemaUrl(), scopeInstr, scopeURL, r.Gauge(), r.Name(), r.Description(), r.Unit()))
+				case pmetric.MetricTypeSum:
+					errs = errors.Join(errs, metricsMap[pmetric.MetricTypeSum].Add(resAttr, metrics.SchemaUrl(), scopeInstr, scopeURL, r.Sum(), r.Name(), r.Description(), r.Unit()))
+				case pmetric.MetricTypeHistogram:
+					errs = errors.Join(errs, metricsMap[pmetric.MetricTypeHistogram].Add(resAttr, metrics.SchemaUrl(), scopeInstr, scopeURL, r.Histogram(), r.Name(), r.Description(), r.Unit()))
+				case pmetric.MetricTypeExponentialHistogram:
+					errs = errors.Join(errs, metricsMap[pmetric.MetricTypeExponentialHistogram].Add(resAttr, metrics.SchemaUrl(), scopeInstr, scopeURL, r.ExponentialHistogram(), r.Name(), r.Description(), r.Unit()))
+				case pmetric.MetricTypeSummary:
+					errs = errors.Join(errs, metricsMap[pmetric.MetricTypeSummary].Add(resAttr, metrics.SchemaUrl(), scopeInstr, scopeURL, r.Summary(), r.Name(), r.Description(), r.Unit()))
+				case pmetric.MetricTypeEmpty:
 					return errors.New("metrics type is unset")
-				}
-				m, ok := metricsMap[r.Type()]
-				if !ok {
+				default:
 					return errors.New("unsupported metrics type")
 				}
-				m.Add(resAttr, metrics.SchemaUrl(), scopeInstr, scopeURL, r)
+				if errs != nil {
+					return errs
+				}
 			}
 		}
 	}

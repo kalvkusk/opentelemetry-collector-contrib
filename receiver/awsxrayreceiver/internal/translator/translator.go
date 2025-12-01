@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"strings"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -27,8 +26,8 @@ const (
 
 // ToTraces converts X-Ray segment (and its subsegments) to an OT ResourceSpans.
 func ToTraces(rawSeg []byte, recorder telemetry.Recorder) (ptrace.Traces, int, error) {
-	seg := &awsxray.Segment{}
-	err := json.Unmarshal(rawSeg, seg)
+	var seg awsxray.Segment
+	err := json.Unmarshal(rawSeg, &seg)
 	if err != nil {
 		// return 1 as total segment (&subsegments) count
 		// because we can't parse the body the UDP packet.
@@ -59,17 +58,14 @@ func ToTraces(rawSeg []byte, recorder telemetry.Recorder) (ptrace.Traces, int, e
 	spans := ils.Spans()
 
 	// populating global attributes shared among segment and embedded subsegment(s)
-	populateResource(seg, resource)
+	populateResource(&seg, resource)
 
 	// recursively traverse segment and embedded subsegments
 	// to populate the spans. We also need to pass in the
 	// TraceID of the root segment in because embedded subsegments
 	// do not have that information, but it's needed after we flatten
 	// the embedded subsegment to generate independent child spans.
-	// Sometimes, subsegments are sent separately in an async workflow,
-	// check segment type to determine the proper span kind.
-	isSubsegment := seg.ParentID != nil && seg.Type != nil && strings.EqualFold(*seg.Type, "subsegment")
-	_, err = segToSpans(seg, seg.TraceID, nil, isSubsegment, spans)
+	_, err = segToSpans(seg, seg.TraceID, nil, spans)
 	if err != nil {
 		recorder.RecordSegmentsRejected(count)
 		return ptrace.Traces{}, count, err
@@ -78,19 +74,18 @@ func ToTraces(rawSeg []byte, recorder telemetry.Recorder) (ptrace.Traces, int, e
 	return traceData, count, nil
 }
 
-func segToSpans(seg *awsxray.Segment, traceID, parentID *string, isSubsegment bool, spans ptrace.SpanSlice) (ptrace.Span, error) {
+func segToSpans(seg awsxray.Segment, traceID, parentID *string, spans ptrace.SpanSlice) (ptrace.Span, error) {
 	span := spans.AppendEmpty()
 
-	err := populateSpan(seg, traceID, parentID, isSubsegment, span)
+	err := populateSpan(&seg, traceID, parentID, span)
 	if err != nil {
 		return ptrace.Span{}, err
 	}
 
 	var populatedChildSpan ptrace.Span
-	for i := range seg.Subsegments {
-		s := &seg.Subsegments[i]
+	for _, s := range seg.Subsegments {
 		populatedChildSpan, err = segToSpans(s,
-			traceID, seg.ID, true,
+			traceID, seg.ID,
 			spans)
 		if err != nil {
 			return ptrace.Span{}, err
@@ -114,7 +109,7 @@ func segToSpans(seg *awsxray.Segment, traceID, parentID *string, isSubsegment bo
 	return span, nil
 }
 
-func populateSpan(seg *awsxray.Segment, traceID, parentID *string, isSubsegment bool, span ptrace.Span) error {
+func populateSpan(seg *awsxray.Segment, traceID, parentID *string, span ptrace.Span) error {
 	attrs := span.Attributes()
 	attrs.Clear()
 	attrs.EnsureCapacity(initAttrCapacity)
@@ -161,11 +156,11 @@ func populateSpan(seg *awsxray.Segment, traceID, parentID *string, isSubsegment 
 
 	span.SetTraceID(traceIDBytes)
 	span.SetSpanID(spanIDBytes)
-	if !isSubsegment {
-		span.SetKind(ptrace.SpanKindServer)
-	}
+
 	if parentIDBytes != [8]byte{} {
 		span.SetParentSpanID(parentIDBytes)
+	} else {
+		span.SetKind(ptrace.SpanKindServer)
 	}
 
 	addStartTime(seg.StartTime, span)
@@ -204,10 +199,9 @@ func populateResource(seg *awsxray.Segment, rs pcommon.Resource) {
 	addString(seg.ResourceARN, awsxray.AWSXRayResourceARNAttribute, attrs)
 }
 
-func totalSegmentsCount(seg *awsxray.Segment) int {
+func totalSegmentsCount(seg awsxray.Segment) int {
 	subsegmentCount := 0
-	for i := range seg.Subsegments {
-		s := &seg.Subsegments[i]
+	for _, s := range seg.Subsegments {
 		subsegmentCount += totalSegmentsCount(s)
 	}
 

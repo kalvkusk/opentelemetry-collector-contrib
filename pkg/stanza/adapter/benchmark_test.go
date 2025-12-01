@@ -51,7 +51,7 @@ type benchCase struct {
 }
 
 func (bc benchCase) run(b *testing.B) {
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		f := NewFactory(BenchReceiverType{}, component.StabilityLevelUndefined)
 		cfg := f.CreateDefaultConfig().(*BenchConfig)
 		cfg.maxBatchSize = bc.maxBatchSize

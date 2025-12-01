@@ -14,7 +14,6 @@ import (
 	"github.com/DataDog/datadog-agent/comp/otelcol/otlp/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/confignet"
 	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -434,7 +433,7 @@ func TestLogsExporterHostMetadata(t *testing.T) {
 	assert.NotNil(t, exp)
 
 	// Test 2: Verify exporter can start successfully (this initializes metadata infrastructure)
-	err = exp.Start(t.Context(), componenttest.NewNopHost())
+	err = exp.Start(t.Context(), nil)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exp.Shutdown(t.Context()))
@@ -496,7 +495,7 @@ func TestLogsExporterHostMetadataOnlyMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, exp)
 
-	err = exp.Start(t.Context(), componenttest.NewNopHost())
+	err = exp.Start(t.Context(), nil)
 	require.NoError(t, err)
 	defer func() {
 		assert.NoError(t, exp.Shutdown(t.Context()))

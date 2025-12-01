@@ -47,8 +47,7 @@ func (*cpuScraper) getCPUInfo() ([]cpuInfo, error) {
 	if err != nil {
 		return nil, scrapererror.NewPartialScrapeError(err, metricsLen)
 	}
-	for i := range cInf {
-		cInfo := &cInf[i]
+	for _, cInfo := range cInf {
 		c := cpuInfo{
 			frequency: cInfo.CPUMHz,
 			processor: cInfo.Processor,

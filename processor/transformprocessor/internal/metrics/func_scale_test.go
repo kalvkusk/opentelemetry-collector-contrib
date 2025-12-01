@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -176,7 +175,7 @@ func TestScale(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 			assert.Equal(t, tt.wantFunc(), target.GetMetric())
 		})
@@ -194,7 +193,7 @@ func getTestScalingHistogramMetric(count uint64, sum, minVal, maxVal float64, bo
 	histogramDatapoint.SetMax(maxVal)
 	histogramDatapoint.ExplicitBounds().FromRaw(bounds)
 	histogramDatapoint.BucketCounts().FromRaw(bucketCounts)
-	for i := range exemplars {
+	for i := 0; i < len(exemplars); i++ {
 		exemplar := histogramDatapoint.Exemplars().AppendEmpty()
 		exemplar.SetTimestamp(1)
 		exemplar.SetDoubleValue(exemplars[i])

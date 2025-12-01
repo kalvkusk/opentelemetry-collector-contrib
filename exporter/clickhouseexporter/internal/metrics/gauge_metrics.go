@@ -5,6 +5,7 @@ package metrics // import "github.com/open-telemetry/opentelemetry-collector-con
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -99,13 +100,16 @@ func (g *gaugeMetrics) insert(ctx context.Context, db driver.Conn) error {
 	return nil
 }
 
-func (g *gaugeMetrics) Add(resAttr pcommon.Map, resURL string, scopeInstr pcommon.InstrumentationScope, scopeURL string, metrics pmetric.Metric) {
-	gauge := metrics.Gauge()
+func (g *gaugeMetrics) Add(resAttr pcommon.Map, resURL string, scopeInstr pcommon.InstrumentationScope, scopeURL string, metrics any, name, description, unit string) error {
+	gauge, ok := metrics.(pmetric.Gauge)
+	if !ok {
+		return errors.New("metrics param is not type of Gauge")
+	}
 	g.count += gauge.DataPoints().Len()
 	g.gaugeModels = append(g.gaugeModels, &gaugeModel{
-		metricName:        metrics.Name(),
-		metricDescription: metrics.Description(),
-		metricUnit:        metrics.Unit(),
+		metricName:        name,
+		metricDescription: description,
+		metricUnit:        unit,
 		metadata: &MetricsMetaData{
 			ResAttr:    resAttr,
 			ResURL:     resURL,
@@ -114,4 +118,5 @@ func (g *gaugeMetrics) Add(resAttr pcommon.Map, resURL string, scopeInstr pcommo
 		},
 		gauge: gauge,
 	})
+	return nil
 }

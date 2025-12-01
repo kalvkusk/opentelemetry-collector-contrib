@@ -4,24 +4,11 @@
 package testutil
 
 import (
-	"fmt"
 	"net"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestGetAvailablePort(t *testing.T) {
-	port := GetAvailablePort(t)
-
-	// Endpoint should be free.
-	ln0, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	require.NoError(t, err)
-	require.NotNil(t, ln0)
-	t.Cleanup(func() {
-		require.NoError(t, ln0.Close())
-	})
-}
 
 func TestGetAvailableLocalAddress(t *testing.T) {
 	addr := GetAvailableLocalAddress(t)
@@ -85,9 +72,4 @@ Start Port    End Port
 
 	emptyExclusions := createExclusionsList(t, emptyExclusionsText)
 	require.Empty(t, emptyExclusions)
-}
-
-func TestTempDir(t *testing.T) {
-	folder := TempDir(t)
-	require.NotEmpty(t, folder)
 }

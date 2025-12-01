@@ -11,7 +11,6 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
-	"go.opentelemetry.io/collector/pipeline"
 	"go.opentelemetry.io/collector/receiver"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/adapter"
@@ -34,5 +33,5 @@ func createLogsReceiver(
 	_ component.Config,
 	_ consumer.Logs,
 ) (receiver.Logs, error) {
-	return nil, errors.Join(errors.New("journald is only supported on linux"), pipeline.ErrSignalNotSupported)
+	return nil, errors.New("journald is only supported on linux")
 }

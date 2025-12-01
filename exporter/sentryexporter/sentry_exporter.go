@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"maps"
 	"net/http"
 	"strconv"
 	"strings"
@@ -254,7 +253,9 @@ func convertToSentrySpan(span ptrace.Span, library pcommon.InstrumentationScope,
 	op, description := generateSpanDescriptors(name, attributes, spanKind)
 	tags := generateTagsFromAttributes(attributes)
 
-	maps.Copy(tags, resourceTags)
+	for k, v := range resourceTags {
+		tags[k] = v
+	}
 
 	status, message := statusFromSpanStatus(span.Status(), tags)
 

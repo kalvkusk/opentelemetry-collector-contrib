@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	json "github.com/goccy/go-json"
+	jsoniter "github.com/json-iterator/go"
 	"go.opentelemetry.io/collector/extension/xextension/storage"
 )
 
@@ -21,7 +21,7 @@ type storageCheckpointPersister[T any] struct {
 }
 
 func (s *storageCheckpointPersister[T]) Write(namespace, name, consumerGroup, partitionID string, checkpoint T) error {
-	b, err := json.Marshal(checkpoint)
+	b, err := jsoniter.Marshal(checkpoint)
 	if err != nil {
 		return err
 	}
@@ -37,6 +37,6 @@ func (s *storageCheckpointPersister[T]) Read(namespace, name, consumerGroup, par
 	if len(bytes) == 0 {
 		return s.defaultValue, err
 	}
-	err = json.Unmarshal(bytes, &checkpoint)
+	err = jsoniter.Unmarshal(bytes, &checkpoint)
 	return checkpoint, err
 }

@@ -568,37 +568,37 @@ func (p *Parser[K]) buildArg(argVal value, argType reflect.Type) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return newStandardStringGetter[K](arg)
+		return StandardStringGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "StringLikeGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardStringLikeGetter[K](arg)
+		return StandardStringLikeGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "FloatGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardFloatGetter[K](arg)
+		return StandardFloatGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "FloatLikeGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardFloatLikeGetter[K](arg)
+		return StandardFloatLikeGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "IntGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardIntGetter[K](arg)
+		return StandardIntGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "IntLikeGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardIntLikeGetter[K](arg)
+		return StandardIntLikeGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "PMapGetSetter"):
 		if argVal.Literal == nil || argVal.Literal.Path == nil {
 			return nil, errors.New("must be a path")
@@ -614,43 +614,43 @@ func (p *Parser[K]) buildArg(argVal value, argType reflect.Type) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		return newStandardPMapGetter[K](arg)
+		return StandardPMapGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "PSliceGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardPSliceGetter[K](arg)
+		return StandardPSliceGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "DurationGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardDurationGetter[K](arg)
+		return StandardDurationGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "TimeGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardTimeGetter[K](arg)
+		return StandardTimeGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "BoolGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardBoolGetter[K](arg)
+		return StandardBoolGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "BoolLikeGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardBoolLikeGetter[K](arg)
+		return StandardBoolLikeGetter[K]{Getter: arg.Get}, nil
 	case strings.HasPrefix(name, "ByteSliceLikeGetter"):
 		arg, err := p.newGetter(argVal)
 		if err != nil {
 			return nil, err
 		}
-		return newStandardByteSliceLikeGetter[K](arg)
+		return StandardByteSliceLikeGetter[K]{Getter: arg.Get}, nil
 	case name == "Enum":
 		arg, err := p.enumParser((*EnumSymbol)(argVal.Enum))
 		if err != nil {
@@ -691,7 +691,7 @@ func buildSlice[T any](argVal value, argType reflect.Type, buildArg buildArgFunc
 
 	vals := []T{}
 	values := argVal.List.Values
-	for j := range values {
+	for j := 0; j < len(values); j++ {
 		untypedVal, err := buildArg(values[j], argType.Elem())
 		if err != nil {
 			return nil, fmt.Errorf("error while parsing list argument at index %v: %w", j, err)
@@ -771,34 +771,4 @@ func NewTestingOptional[T any](val T) Optional[T] {
 		val:      val,
 		hasValue: true,
 	}
-}
-
-// typedGetter is like Getter, but with typed return values.
-type typedGetter[K, V any] interface {
-	Get(ctx context.Context, tCtx K) (V, error)
-}
-
-// mockLiteralGetter is a mock implementation of LiteralGetter that can be used for testing.
-type mockLiteralGetter[K, V any] struct {
-	valueGetter func(context.Context, K) (V, error)
-}
-
-func (m mockLiteralGetter[K, V]) Get(_ context.Context, _ K) (V, error) {
-	return m.valueGetter(context.Background(), *new(K))
-}
-
-// NewTestingLiteralGetter creates a mock literal getter for testing OTTL functions.
-// Pass `literal` as true if the getter should be treated as a literal.
-func NewTestingLiteralGetter[K, V any](literal bool, getter typedGetter[K, V]) (interface {
-	typedGetter[K, V]
-}, error,
-) {
-	if literal {
-		val, err := getter.Get(context.Background(), *new(K))
-		if err != nil {
-			return nil, err
-		}
-		return newLiteral[K, V](val), nil
-	}
-	return mockLiteralGetter[K, V]{valueGetter: getter.Get}, nil
 }

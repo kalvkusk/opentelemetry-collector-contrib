@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config/confighttp"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 	"go.opentelemetry.io/collector/confmap/xconfmap"
 	"go.opentelemetry.io/collector/exporter/exporterhelper"
@@ -38,21 +37,19 @@ func TestLoadConfig(t *testing.T) {
 		{
 			id: component.NewIDWithName(metadata.Type, "2"),
 			expected: &Config{
+				Endpoint:           "https://dc.services.visualstudio.com/v2/track",
 				ConnectionString:   "InstrumentationKey=00000000-0000-0000-0000-000000000000;IngestionEndpoint=https://ingestion.azuremonitor.com/",
 				InstrumentationKey: "00000000-0000-0000-0000-000000000000",
 				MaxBatchSize:       100,
 				MaxBatchInterval:   10 * time.Second,
 				SpanEventsEnabled:  false,
-				ClientConfig: confighttp.ClientConfig{
-					Endpoint: "https://dc.services.visualstudio.com/v2/track",
+				QueueSettings: exporterhelper.QueueBatchConfig{
+					QueueSize:    1000,
+					Enabled:      true,
+					NumConsumers: 10,
+					StorageID:    &disk,
+					Sizer:        exporterhelper.RequestSizerTypeRequests,
 				},
-				QueueSettings: func() exporterhelper.QueueBatchConfig {
-					queue := exporterhelper.NewDefaultQueueConfig()
-					queue.QueueSize = 1000
-					queue.NumConsumers = 10
-					queue.StorageID = &disk
-					return queue
-				}(),
 				ShutdownTimeout: 2 * time.Second,
 			},
 		},

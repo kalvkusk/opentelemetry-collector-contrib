@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 //go:build integration && linux
+// +build integration,linux
 
 // Privileged access is required to set cgroup's memory and cpu max values
 

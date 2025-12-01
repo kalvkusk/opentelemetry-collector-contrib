@@ -216,13 +216,7 @@ func adjustMetricSum(referenceValueTsm *datapointstorage.TimeseriesMap, metric p
 		refTsi, found := referenceValueTsm.Get(metric, currentSum.Attributes())
 		if !found {
 			// First time we see this point. Skip it and use as a reference point for the next points.
-			refTsi.Number = datapointstorage.NumberInfo{
-				PreviousDoubleValue: currentSum.DoubleValue(),
-				PreviousIntValue:    currentSum.IntValue(),
-				RefDoubleValue:      currentSum.DoubleValue(),
-				RefIntValue:         currentSum.IntValue(),
-				StartTime:           currentSum.Timestamp(),
-			}
+			refTsi.Number = datapointstorage.NumberInfo{PreviousValue: currentSum.DoubleValue(), RefValue: currentSum.DoubleValue(), StartTime: currentSum.Timestamp()}
 			return true
 		}
 
@@ -238,20 +232,11 @@ func adjustMetricSum(referenceValueTsm *datapointstorage.TimeseriesMap, metric p
 			currentSum.SetStartTimestamp(resetStartTimeStamp)
 
 			refTsi.Number.StartTime = resetStartTimeStamp
-			refTsi.Number.RefDoubleValue = 0
-			refTsi.Number.RefIntValue = 0
-			refTsi.Number.PreviousDoubleValue = currentSum.DoubleValue()
-			refTsi.Number.PreviousIntValue = currentSum.IntValue()
+			refTsi.Number.RefValue = 0
+			refTsi.Number.PreviousValue = currentSum.DoubleValue()
 		} else {
-			refTsi.Number.PreviousDoubleValue = currentSum.DoubleValue()
-			refTsi.Number.PreviousIntValue = currentSum.IntValue()
-
-			// Update the currentSum appropriately based on the original value type.
-			if currentSum.ValueType() == pmetric.NumberDataPointValueTypeDouble {
-				currentSum.SetDoubleValue(currentSum.DoubleValue() - refTsi.Number.RefDoubleValue)
-			} else {
-				currentSum.SetIntValue(currentSum.IntValue() - refTsi.Number.RefIntValue)
-			}
+			refTsi.Number.PreviousValue = currentSum.DoubleValue()
+			currentSum.SetDoubleValue(currentSum.DoubleValue() - refTsi.Number.RefValue)
 		}
 		return false
 	})

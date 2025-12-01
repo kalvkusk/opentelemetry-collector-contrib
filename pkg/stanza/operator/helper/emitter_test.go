@@ -206,7 +206,7 @@ func complexEntry() *entry.Entry {
 
 func complexEntriesForNDifferentHosts(count, n int) []*entry.Entry {
 	ret := make([]*entry.Entry, count)
-	for i := range count {
+	for i := 0; i < count; i++ {
 		e := entry.New()
 		e.Severity = entry.Error
 		e.Resource = map[string]any{

@@ -139,6 +139,10 @@ data:
     receivers:
       awscontainerinsightreceiver:
 
+    processors:
+      batch/metrics:
+        timeout: 60s
+
     exporters:
       awsemf:
         namespace: ContainerInsights
@@ -148,9 +152,6 @@ data:
           enabled: true
         dimension_rollup_option: NoDimensionRollup
         parse_json_encoded_attr_values: [Sources, kubernetes]
-        sending_queue:
-          batch:
-            flush_timeout: 60s
         metric_declarations:
           # node metrics
           - dimensions: [[NodeName, InstanceId, ClusterName]]
@@ -222,6 +223,7 @@ data:
       pipelines:
         metrics:
           receivers: [awscontainerinsightreceiver]
+          processors: [batch/metrics]
           exporters: [awsemf]
 
       extensions: [health_check]
@@ -679,6 +681,10 @@ receivers:
     collection_interval: 10s
     container_orchestrator: ecs
 
+processors:
+  batch/metrics:
+    timeout: 60s
+
 exporters:
   awsemf:
     namespace: ContainerInsightsEC2Instance
@@ -688,9 +694,6 @@ exporters:
       enabled: true
     dimension_rollup_option: NoDimensionRollup
     parse_json_encoded_attr_values: [Sources]
-    sending_queue:
-      batch:
-        flush_timeout: 60s
     metric_declarations:
       # instance metrics
       - dimensions: [ [ ContainerInstanceId, InstanceId, ClusterName] ]
@@ -720,6 +723,7 @@ service:
   pipelines:
     metrics:
       receivers: [awscontainerinsightreceiver]
+      processors: [batch/metrics]
       exporters: [awsemf,debug]
 ```
 To deploy to an ECS cluster check this [doc](https://aws-otel.github.io/docs/setup/ecs#3-setup-the-aws-otel-collector-for-ecs-ec2-instance-metrics) for details

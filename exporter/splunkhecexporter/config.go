@@ -128,6 +128,9 @@ type Config struct {
 	// OtelAttrsToHec creates a mapping from attributes to HEC specific metadata: source, sourcetype, index and host.
 	OtelAttrsToHec splunk.HecToOtelAttrs `mapstructure:"otel_attrs_to_hec_metadata"`
 
+	// HecToOtelAttrs creates a mapping from attributes to HEC specific metadata: source, sourcetype, index and host.
+	// Deprecated: [v0.113.0] Use OtelAttrsToHec instead.
+	HecToOtelAttrs splunk.HecToOtelAttrs `mapstructure:"hec_metadata_to_otel_attrs"`
 	// HecFields creates a mapping from attributes to HEC fields.
 	HecFields OtelToHecFields `mapstructure:"otel_to_hec_fields"`
 
@@ -188,7 +191,7 @@ func (cfg *Config) getURL() (out *url.URL, err error) {
 		out.Path = path.Join(out.Path, hecPath)
 	}
 
-	return out, err
+	return
 }
 
 // Validate checks if the exporter configuration is valid.

@@ -6,7 +6,6 @@ package azuredataexplorerexporter // import "github.com/open-telemetry/opentelem
 import (
 	"context"
 	"fmt"
-	"maps"
 	"math"
 	"os"
 	"strconv"
@@ -63,8 +62,7 @@ func mapToAdxMetric(res pcommon.Resource, md pmetric.Metric, scopeattrs map[stri
 		host = h.(string)
 	}
 	createMetric := func(times time.Time, attr pcommon.Map, value func() float64, name, desc string, mt pmetric.MetricType) *adxMetric {
-		clonedScopedAttributes := maps.Clone(scopeattrs)
-		maps.Copy(clonedScopedAttributes, attr.AsRaw())
+		clonedScopedAttributes := copyMap(cloneMap(scopeattrs), attr.AsRaw())
 		if isEmpty(name) {
 			name = md.Name()
 		}
@@ -130,8 +128,7 @@ func mapToAdxMetric(res pcommon.Resource, md pmetric.Metric, scopeattrs map[stri
 			value := uint64(0)
 			// now create buckets for each bound.
 			for bi := 0; bi < bounds.Len(); bi++ {
-				customMap := map[string]any{"le": float64ToDimValue(bounds.At(bi))}
-				maps.Copy(customMap, dataPoint.Attributes().AsRaw())
+				customMap := copyMap(map[string]any{"le": float64ToDimValue(bounds.At(bi))}, dataPoint.Attributes().AsRaw())
 
 				value += counts.At(bi)
 				vMap := pcommon.NewMap()
@@ -148,9 +145,9 @@ func mapToAdxMetric(res pcommon.Resource, md pmetric.Metric, scopeattrs map[stri
 			// add an upper bound for +Inf
 			{
 				// Add the LE field for the bucket's bound
-				customMap := map[string]any{"le": float64ToDimValue(math.Inf(1))}
-				maps.Copy(customMap, dataPoint.Attributes().AsRaw())
-
+				customMap := copyMap(map[string]any{
+					"le": float64ToDimValue(math.Inf(1)),
+				}, dataPoint.Attributes().AsRaw())
 				vMap := pcommon.NewMap()
 				//nolint:errcheck
 				vMap.FromRaw(customMap)
@@ -209,8 +206,7 @@ func mapToAdxMetric(res pcommon.Resource, md pmetric.Metric, scopeattrs map[stri
 					"qt":         float64ToDimValue(dp.Quantile()),
 					quantileName: sanitizeFloat(dp.Value()).(float64),
 				}
-				customMap := metricQuantile
-				maps.Copy(customMap, dataPoint.Attributes().AsRaw())
+				customMap := copyMap(metricQuantile, dataPoint.Attributes().AsRaw())
 				vMap := pcommon.NewMap()
 				//nolint:errcheck
 				vMap.FromRaw(customMap)
@@ -249,6 +245,18 @@ func rawMetricsToAdxMetrics(_ context.Context, metrics pmetric.Metrics, logger *
 		}
 	}
 	return transformedAdxMetrics
+}
+
+func copyMap(toAttrib, fromAttrib map[string]any) map[string]any {
+	for k, v := range fromAttrib {
+		toAttrib[k] = v
+	}
+	return toAttrib
+}
+
+func cloneMap(fields map[string]any) map[string]any {
+	newFields := make(map[string]any, len(fields))
+	return copyMap(newFields, fields)
 }
 
 func float64ToDimValue(f float64) string {

@@ -29,19 +29,16 @@ func MetricsData(
 		mbs:                   mbs,
 	}
 	acc.nodeStats(summary.Node)
-	for i := range summary.Pods {
-		pod := &summary.Pods[i]
-		acc.podStats(pod)
-		for j := range pod.Containers {
-			containerStats := &pod.Containers[j]
+	for _, podStats := range summary.Pods {
+		acc.podStats(podStats)
+		for _, containerStats := range podStats.Containers {
 			// propagate the pod resource down to the container
-			acc.containerStats(pod, containerStats)
+			acc.containerStats(podStats, containerStats)
 		}
 
-		for j := range pod.VolumeStats {
-			volumeStats := &pod.VolumeStats[j]
+		for _, volumeStats := range podStats.VolumeStats {
 			// propagate the pod resource down to the container
-			acc.volumeStats(pod, volumeStats)
+			acc.volumeStats(podStats, volumeStats)
 		}
 	}
 	return acc.m

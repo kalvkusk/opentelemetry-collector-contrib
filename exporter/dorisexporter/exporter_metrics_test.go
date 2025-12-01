@@ -25,13 +25,15 @@ func TestPushMetricData(t *testing.T) {
 	config := createDefaultConfig().(*Config)
 	config.Endpoint = fmt.Sprintf("http://127.0.0.1:%d", port)
 	config.CreateSchema = false
-	require.NoError(t, config.Validate())
+
+	err = config.Validate()
+	require.NoError(t, err)
 
 	exporter := newMetricsExporter(zap.NewNop(), config, componenttest.NewNopTelemetrySettings())
 
 	ctx := t.Context()
 
-	client, err := createDorisHTTPClient(ctx, config, componenttest.NewNopHost(), componenttest.NewNopTelemetrySettings())
+	client, err := createDorisHTTPClient(ctx, config, nil, componenttest.NewNopTelemetrySettings())
 	require.NoError(t, err)
 	require.NotNil(t, client)
 
@@ -41,18 +43,16 @@ func TestPushMetricData(t *testing.T) {
 		_ = exporter.shutdown(ctx)
 	}()
 
-	srvMux := http.NewServeMux()
 	server := &http.Server{
 		ReadTimeout: 3 * time.Second,
 		Addr:        fmt.Sprintf(":%d", port),
-		Handler:     srvMux,
 	}
 
 	go func() {
 		metrics := []string{"gauge", "sum", "histogram", "exponential_histogram", "summary"}
 		for _, metric := range metrics {
 			url := fmt.Sprintf("/api/otel/otel_metrics_%s/_stream_load", metric)
-			srvMux.HandleFunc(url, func(w http.ResponseWriter, _ *http.Request) {
+			http.HandleFunc(url, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 				_, _ = w.Write([]byte(`{"Status":"Success"}`))
 			})
@@ -88,7 +88,7 @@ func simpleMetrics(count int, typeSet map[pmetric.MetricType]struct{}) pmetric.M
 	sm.Scope().SetName("Scope name 1")
 	sm.Scope().SetVersion("Scope version 1")
 	timestamp := time.Now()
-	for i := range count {
+	for i := 0; i < count; i++ {
 		// gauge
 		if _, ok := typeSet[pmetric.MetricTypeGauge]; ok {
 			m := sm.Metrics().AppendEmpty()
@@ -217,7 +217,7 @@ func simpleMetrics(count int, typeSet map[pmetric.MetricType]struct{}) pmetric.M
 	sm.Scope().SetDroppedAttributesCount(20)
 	sm.Scope().SetName("Scope name 2")
 	sm.Scope().SetVersion("Scope version 2")
-	for i := range count {
+	for i := 0; i < count; i++ {
 		// gauge
 		if _, ok := typeSet[pmetric.MetricTypeGauge]; ok {
 			m := sm.Metrics().AppendEmpty()
@@ -334,7 +334,7 @@ func simpleMetrics(count int, typeSet map[pmetric.MetricType]struct{}) pmetric.M
 	sm.Scope().SetDroppedAttributesCount(20)
 	sm.Scope().SetName("Scope name 3")
 	sm.Scope().SetVersion("Scope version 3")
-	for i := range count {
+	for i := 0; i < count; i++ {
 		// gauge
 		if _, ok := typeSet[pmetric.MetricTypeGauge]; ok {
 			m := sm.Metrics().AppendEmpty()

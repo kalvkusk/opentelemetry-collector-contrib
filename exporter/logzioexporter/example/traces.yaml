@@ -15,6 +15,10 @@ receivers:
         endpoint: "0.0.0.0:14250"
       thrift_http:
         endpoint: "0.0.0.0:14268"
+processors:
+  batch:
+    send_batch_size: 10000
+    timeout: 1s
 exporters:
   logzio/traces:
     account_token: "LOGZIOtraceTOKEN"
@@ -23,6 +27,7 @@ service:
   pipelines:
     traces:
       receivers: [ otlp,jaeger ]
+      processors: [ batch ]
       exporters: [ logzio/traces ]
   telemetry:
     logs:

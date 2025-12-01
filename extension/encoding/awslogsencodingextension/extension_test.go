@@ -15,49 +15,30 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/extension/extensiontest"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension/internal/constants"
 	subscriptionfilter "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension/internal/unmarshaler/subscription-filter"
 )
 
 func TestNew_CloudWatchLogsSubscriptionFilter(t *testing.T) {
-	e, err := newExtension(&Config{Format: constants.FormatCloudWatchLogsSubscriptionFilter}, extensiontest.NewNopSettings(extensiontest.NopType))
+	e, err := newExtension(&Config{Format: formatCloudWatchLogsSubscriptionFilter}, extensiontest.NewNopSettings(extensiontest.NopType))
 	require.NoError(t, err)
 	require.NotNil(t, e)
 
 	_, err = e.UnmarshalLogs([]byte("invalid"))
-	require.ErrorContains(t, err, `failed to unmarshal logs as "cloudwatch" format`)
-}
-
-func TestNew_CloudWatchLogsSubscriptionFilterV1(t *testing.T) {
-	e, err := newExtension(&Config{Format: constants.FormatCloudWatchLogsSubscriptionFilterV1}, extensiontest.NewNopSettings(extensiontest.NopType))
-	require.NoError(t, err)
-	require.NotNil(t, e)
-
-	_, err = e.UnmarshalLogs([]byte("invalid"))
-	require.ErrorContains(t, err, `failed to unmarshal logs as "cloudwatch" format`)
+	require.ErrorContains(t, err, `failed to unmarshal logs as "cloudwatch_logs_subscription_filter" format`)
 }
 
 func TestNew_CloudTrailLog(t *testing.T) {
-	e, err := newExtension(&Config{Format: constants.FormatCloudTrailLog}, extensiontest.NewNopSettings(extensiontest.NopType))
+	e, err := newExtension(&Config{Format: formatCloudTrailLog}, extensiontest.NewNopSettings(extensiontest.NopType))
 	require.NoError(t, err)
 	require.NotNil(t, e)
 
 	_, err = e.UnmarshalLogs([]byte("invalid"))
-	require.ErrorContains(t, err, `failed to unmarshal logs as "cloudtrail" format`)
-}
-
-func TestNew_CloudTrailLogV1(t *testing.T) {
-	e, err := newExtension(&Config{Format: constants.FormatCloudTrailLogV1}, extensiontest.NewNopSettings(extensiontest.NopType))
-	require.NoError(t, err)
-	require.NotNil(t, e)
-
-	_, err = e.UnmarshalLogs([]byte("invalid"))
-	require.ErrorContains(t, err, `failed to unmarshal logs as "cloudtrail" format`)
+	require.ErrorContains(t, err, `failed to unmarshal logs as "cloudtrail_log" format`)
 }
 
 func TestNew_VPCFlowLog(t *testing.T) {
 	cfg := createDefaultConfig().(*Config)
-	cfg.Format = constants.FormatVPCFlowLog
+	cfg.Format = formatVPCFlowLog
 	e, err := newExtension(cfg, extensiontest.NewNopSettings(extensiontest.NopType))
 	require.NoError(t, err)
 	require.NotNil(t, e)
@@ -68,63 +49,31 @@ func TestNew_VPCFlowLog(t *testing.T) {
 	require.NotNil(t, logs)
 }
 
-func TestNew_VPCFlowLogV1(t *testing.T) {
-	cfg := createDefaultConfig().(*Config)
-	cfg.Format = constants.FormatVPCFlowLogV1
-	e, err := newExtension(cfg, extensiontest.NewNopSettings(extensiontest.NopType))
-	require.NoError(t, err)
-	require.NotNil(t, e)
-}
-
 func TestNew_S3AccessLog(t *testing.T) {
-	e, err := newExtension(&Config{Format: constants.FormatS3AccessLog}, extensiontest.NewNopSettings(extensiontest.NopType))
+	e, err := newExtension(&Config{Format: formatS3AccessLog}, extensiontest.NewNopSettings(extensiontest.NopType))
 	require.NoError(t, err)
 	require.NotNil(t, e)
 
 	_, err = e.UnmarshalLogs([]byte("invalid"))
-	require.ErrorContains(t, err, `failed to unmarshal logs as "s3access" format`)
-}
-
-func TestNew_S3AccessLogV1(t *testing.T) {
-	cfg := createDefaultConfig().(*Config)
-	cfg.Format = constants.FormatS3AccessLogV1
-	e, err := newExtension(cfg, extensiontest.NewNopSettings(extensiontest.NopType))
-	require.NoError(t, err)
-	require.NotNil(t, e)
+	require.ErrorContains(t, err, `failed to unmarshal logs as "s3_access_log" format`)
 }
 
 func TestNew_WAFLog(t *testing.T) {
-	e, err := newExtension(&Config{Format: constants.FormatWAFLog}, extensiontest.NewNopSettings(extensiontest.NopType))
+	e, err := newExtension(&Config{Format: formatWAFLog}, extensiontest.NewNopSettings(extensiontest.NopType))
 	require.NoError(t, err)
 	require.NotNil(t, e)
 
 	_, err = e.UnmarshalLogs([]byte("invalid"))
-	require.ErrorContains(t, err, `failed to unmarshal logs as "waf" format`)
-}
-
-func TestNew_WAFLogV1(t *testing.T) {
-	cfg := createDefaultConfig().(*Config)
-	cfg.Format = constants.FormatWAFLogV1
-	e, err := newExtension(cfg, extensiontest.NewNopSettings(extensiontest.NopType))
-	require.NoError(t, err)
-	require.NotNil(t, e)
+	require.ErrorContains(t, err, `failed to unmarshal logs as "waf_log" format`)
 }
 
 func TestNew_ELBAcessLog(t *testing.T) {
-	e, err := newExtension(&Config{Format: constants.FormatELBAccessLog}, extensiontest.NewNopSettings(extensiontest.NopType))
+	e, err := newExtension(&Config{Format: formatELBAccessLog}, extensiontest.NewNopSettings(extensiontest.NopType))
 	require.NoError(t, err)
 	require.NotNil(t, e)
 
 	_, err = e.UnmarshalLogs([]byte("invalid"))
-	require.ErrorContains(t, err, `failed to unmarshal logs as "elbaccess" format`)
-}
-
-func TestNew_ELBAcessLogV1(t *testing.T) {
-	cfg := createDefaultConfig().(*Config)
-	cfg.Format = constants.FormatELBAccessLogV1
-	e, err := newExtension(cfg, extensiontest.NewNopSettings(extensiontest.NopType))
-	require.NoError(t, err)
-	require.NotNil(t, e)
+	require.ErrorContains(t, err, `failed to unmarshal logs as "elb_access_log" format`)
 }
 
 func TestNew_Unimplemented(t *testing.T) {
@@ -142,11 +91,11 @@ func TestGetReaderFromFormat(t *testing.T) {
 		buf    []byte
 	}{
 		"non_gzip_data_waf_log": {
-			format: constants.FormatWAFLog,
+			format: formatWAFLog,
 			buf:    []byte("invalid"),
 		},
 		"valid_gzip_reader": {
-			format: constants.FormatWAFLog,
+			format: formatWAFLog,
 			buf: func() []byte {
 				var buf bytes.Buffer
 				gz := gzip.NewWriter(&buf)
@@ -157,7 +106,7 @@ func TestGetReaderFromFormat(t *testing.T) {
 			}(),
 		},
 		"valid_bytes_reader": {
-			format: constants.FormatS3AccessLog,
+			format: formatS3AccessLog,
 			buf:    []byte("valid"),
 		},
 	}
@@ -192,7 +141,7 @@ func TestConcurrentGzipReaderUsage(t *testing.T) {
 	// and concurrent usage
 	ext := &encodingExtension{
 		unmarshaler: subscriptionfilter.NewSubscriptionFilterUnmarshaler(component.BuildInfo{}),
-		format:      constants.FormatCloudWatchLogsSubscriptionFilter,
+		format:      formatCloudWatchLogsSubscriptionFilter,
 		gzipPool:    sync.Pool{},
 	}
 
@@ -207,7 +156,7 @@ func TestConcurrentGzipReaderUsage(t *testing.T) {
 	// concurrent usage
 	concurrent := 20
 	wg := sync.WaitGroup{}
-	for range concurrent {
+	for i := 0; i < concurrent; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/gorilla/mux"
@@ -20,37 +19,19 @@ import (
 	"go.opentelemetry.io/collector/consumer"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/receiverhelper"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/gitlabreceiver/internal/metadata"
 )
 
-const (
-	// Completed pipeline statuses
-	pipelineStatusSuccess  = "success"
-	pipelineStatusFailed   = "failed"
-	pipelineStatusCanceled = "canceled"
-	pipelineStatusSkipped  = "skipped"
-
-	// In-progress pipeline statuses
-	pipelineStatusRunning            = "running"
-	pipelineStatusPending            = "pending"
-	pipelineStatusCreated            = "created"
-	pipelineStatusWaitingForResource = "waiting_for_resource"
-	pipelineStatusPreparing          = "preparing"
-	pipelineStatusScheduled          = "scheduled"
-)
-
 var (
-	// Error messages
-	errMissingEndpoint      = errors.New("missing a receiver endpoint")
-	errGitlabClient         = errors.New("failed to create gitlab client")
-	errUnexpectedEvent      = errors.New("unexpected event type")
-	errInvalidHTTPMethod    = errors.New("invalid HTTP method")
-	errInvalidHeader        = errors.New("invalid header")
-	errMissingHeader        = errors.New("missing header")
-	errMissingRequiredField = errors.New("missing required field")
+	errMissingEndpoint   = errors.New("missing a receiver endpoint")
+	errGitlabClient      = errors.New("failed to create gitlab client")
+	errUnexpectedEvent   = errors.New("unexpected event type")
+	errInvalidHTTPMethod = errors.New("invalid HTTP method")
+	errInvalidHeader     = errors.New("invalid header")
+	errMissingHeader     = errors.New("missing header")
 )
 
 const healthyResponse = `{"text": "GitLab receiver webhook is healthy"}`
@@ -127,7 +108,7 @@ func (gtr *gitlabTracesReceiver) Start(ctx context.Context, host component.Host)
 	router.HandleFunc(gtr.cfg.WebHook.Path, gtr.handleWebhook)
 
 	// webhook server standup and configuration
-	gtr.server, err = gtr.cfg.WebHook.ToServer(ctx, host.GetExtensions(), gtr.settings.TelemetrySettings, router)
+	gtr.server, err = gtr.cfg.WebHook.ToServer(ctx, host, gtr.settings.TelemetrySettings, router)
 	if err != nil {
 		return err
 	}
@@ -169,7 +150,7 @@ func (gtr *gitlabTracesReceiver) handleHealthCheck(w http.ResponseWriter, r *htt
 	_, _ = w.Write([]byte(healthyResponse))
 }
 
-// handleReq handles incoming request sent to the webhook endpoint
+// handleReq handles incoming request sent to the webhook endoint
 func (gtr *gitlabTracesReceiver) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	ctx := gtr.obsrecv.StartTracesOp(r.Context())
 
@@ -206,25 +187,19 @@ func (gtr *gitlabTracesReceiver) handleWebhook(w http.ResponseWriter, r *http.Re
 	}
 
 	// Process the pipeline based on its status
-	switch strings.ToLower(e.ObjectAttributes.Status) {
-	case pipelineStatusRunning, pipelineStatusPending, pipelineStatusCreated, pipelineStatusWaitingForResource, pipelineStatusPreparing, pipelineStatusScheduled:
+	switch e.ObjectAttributes.Status {
+	case "running", "pending", "created", "waiting_for_resource", "preparing", "scheduled":
 		gtr.logger.Debug("pipeline not complete, skipping...",
 			zap.String("status", e.ObjectAttributes.Status))
 		w.WriteHeader(http.StatusNoContent)
 		return
-	case pipelineStatusSuccess, pipelineStatusFailed, pipelineStatusCanceled, pipelineStatusSkipped:
+	case "success", "failed", "canceled", "skipped":
 		// above statuses are indicators of a completed pipeline, so we process them
 		break
 	default:
 		gtr.logger.Warn("unknown pipeline status, skipping...",
 			zap.String("status", e.ObjectAttributes.Status))
 		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	err = gtr.validatePipelineEvent(e)
-	if err != nil {
-		gtr.failBadReq(ctx, w, http.StatusBadRequest, err, 0)
 		return
 	}
 
@@ -271,41 +246,6 @@ func (gtr *gitlabTracesReceiver) validateReq(r *http.Request) (gitlab.EventType,
 		return "", fmt.Errorf("%w: %s", errMissingHeader, defaultGitLabEventHeader)
 	}
 	return eventType, nil
-}
-
-// validatePipelineEvent validates critical webhook event fields for trace generation
-// The following values should ALWAYS be present in a valid pipeline event
-// They are required to set foundational attributes
-func (*gitlabTracesReceiver) validatePipelineEvent(e *gitlab.PipelineEvent) error {
-	if e.ObjectAttributes.ID == 0 {
-		return fmt.Errorf("%w: pipeline ID", errMissingRequiredField)
-	}
-
-	if e.ObjectAttributes.CreatedAt == "" {
-		return fmt.Errorf("%w: pipeline created_at", errMissingRequiredField)
-	}
-
-	if e.ObjectAttributes.Ref == "" {
-		return fmt.Errorf("%w: pipeline ref", errMissingRequiredField)
-	}
-
-	if e.ObjectAttributes.SHA == "" {
-		return fmt.Errorf("%w: pipeline SHA", errMissingRequiredField)
-	}
-
-	if e.Project.ID == 0 {
-		return fmt.Errorf("%w: project ID", errMissingRequiredField)
-	}
-
-	if e.Project.PathWithNamespace == "" {
-		return fmt.Errorf("%w: project path_with_namespace", errMissingRequiredField)
-	}
-
-	if e.Commit.ID == "" {
-		return fmt.Errorf("%w: commit ID", errMissingRequiredField)
-	}
-
-	return nil
 }
 
 func (gtr *gitlabTracesReceiver) failBadReq(ctx context.Context,

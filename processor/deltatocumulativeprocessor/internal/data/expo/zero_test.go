@@ -85,7 +85,7 @@ func TestSlice(t *testing.T) {
 
 	for _, cs := range cases {
 		from, to := 0, len(cs.want)
-		for i := range len(cs.want) {
+		for i := 0; i < len(cs.want); i++ {
 			if cs.want[i] != ø {
 				from += i
 				break

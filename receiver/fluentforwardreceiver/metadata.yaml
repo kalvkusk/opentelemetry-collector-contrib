@@ -13,11 +13,16 @@ tests:
 
 telemetry:
   metrics:
+    fluent_opened_connections:
+      enabled: true
+      description: Number of connections opened to the fluentforward receiver
+      unit: "1"
+      sum:
+        value_type: int
+        monotonic:
     fluent_closed_connections:
       enabled: true
       description: Number of connections closed to the fluentforward receiver
-      stability:
-        level: development
       unit: "1"
       sum:
         value_type: int
@@ -25,17 +30,6 @@ telemetry:
     fluent_events_parsed:
       enabled: true
       description: Number of Fluent events parsed successfully
-      stability:
-        level: development
-      unit: "1"
-      sum:
-        value_type: int
-        monotonic:
-    fluent_opened_connections:
-      enabled: true
-      description: Number of connections opened to the fluentforward receiver
-      stability:
-        level: development
       unit: "1"
       sum:
         value_type: int
@@ -43,8 +37,6 @@ telemetry:
     fluent_parse_failures:
       enabled: true
       description: Number of times Fluent messages failed to be decoded
-      stability:
-        level: development
       unit: "1"
       sum:
         value_type: int
@@ -52,8 +44,6 @@ telemetry:
     fluent_records_generated:
       enabled: true
       description: Number of log records generated from Fluent forward input
-      stability:
-        level: development
       unit: "1"
       sum:
         value_type: int

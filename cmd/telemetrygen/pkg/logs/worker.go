@@ -6,7 +6,6 @@ package logs
 import (
 	"context"
 	"encoding/hex"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen/internal/config"
 	types "github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen/pkg"
 )
 
@@ -37,8 +35,6 @@ type worker struct {
 	index          int                   // worker index
 	traceID        string                // traceID string
 	spanID         string                // spanID string
-	loadSize       int                   // desired minimum size in MB of string data for each generated log
-	allowFailures  bool                  // whether to continue on export failures
 }
 
 func (w worker) simulateLogs(res *resource.Resource, exporter sdklog.Exporter, telemetryAttributes []attribute.KeyValue) {
@@ -61,15 +57,8 @@ func (w worker) simulateLogs(res *resource.Resource, exporter sdklog.Exporter, t
 		}
 
 		attrs := []log.KeyValue{log.String("app", "server")}
-		for _, attr := range telemetryAttributes {
-			attrs = append(attrs, log.KeyValueFromAttribute(attr))
-		}
-
-		// Add load size attributes if specified
-		if w.loadSize > 0 {
-			for j := 0; j < w.loadSize; j++ {
-				attrs = append(attrs, log.String(fmt.Sprintf("load-%v", j), string(make([]byte, config.CharactersPerMB))))
-			}
+		for i, attr := range telemetryAttributes {
+			attrs = append(attrs, log.String(string(attr.Key), telemetryAttributes[i].Value.AsString()))
 		}
 
 		rf := logtest.RecordFactory{
@@ -91,11 +80,7 @@ func (w worker) simulateLogs(res *resource.Resource, exporter sdklog.Exporter, t
 		}
 
 		if err := exporter.Export(context.Background(), logs); err != nil {
-			if w.allowFailures {
-				w.logger.Error("exporter failed, continuing due to --allow-export-failures", zap.Error(err))
-			} else {
-				w.logger.Fatal("exporter failed", zap.Error(err))
-			}
+			w.logger.Fatal("exporter failed", zap.Error(err))
 		}
 
 		i++

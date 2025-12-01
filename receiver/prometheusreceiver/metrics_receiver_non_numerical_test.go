@@ -10,6 +10,7 @@ import (
 
 	"github.com/prometheus/prometheus/model/value"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
@@ -46,7 +47,7 @@ var totalScrapes = 10
 // TestStaleNaNs validates that staleness marker gets generated when the timeseries is no longer present
 func TestStaleNaNs(t *testing.T) {
 	var mockResponses []mockPrometheusResponse
-	for i := range totalScrapes {
+	for i := 0; i < totalScrapes; i++ {
 		if i%2 == 0 {
 			mockResponses = append(mockResponses, mockPrometheusResponse{
 				code: 200,
@@ -72,16 +73,18 @@ func TestStaleNaNs(t *testing.T) {
 
 func verifyStaleNaNs(t *testing.T, td *testData, resourceMetrics []pmetric.ResourceMetrics) {
 	verifyNumTotalScrapeResults(t, td, resourceMetrics)
-	for i := range totalScrapes {
+	metrics1 := resourceMetrics[0].ScopeMetrics().At(0).Metrics()
+	ts := getTS(metrics1)
+	for i := 0; i < totalScrapes; i++ {
 		if i%2 == 0 {
-			verifyStaleNaNsSuccessfulScrape(t, td, resourceMetrics[i], i+1)
+			verifyStaleNaNsSuccessfulScrape(t, td, resourceMetrics[i], ts, i+1)
 		} else {
-			verifyStaleNaNsFailedScrape(t, td, resourceMetrics[i], i+1)
+			verifyStaleNaNsFailedScrape(t, td, resourceMetrics[i], ts, i+1)
 		}
 	}
 }
 
-func verifyStaleNaNsSuccessfulScrape(t *testing.T, td *testData, resourceMetric pmetric.ResourceMetrics, iteration int) {
+func verifyStaleNaNsSuccessfulScrape(t *testing.T, td *testData, resourceMetric pmetric.ResourceMetrics, startTimestamp pcommon.Timestamp, iteration int) {
 	// m1 has 4 metrics + 5 internal scraper metrics
 	assert.Equal(t, 9, metricsCount(resourceMetric))
 	wantAttributes := td.attributes // should want attribute be part of complete target or each scrape?
@@ -109,7 +112,7 @@ func verifyStaleNaNsSuccessfulScrape(t *testing.T, td *testData, resourceMetric 
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(startTimestamp),
 						compareTimestamp(ts1),
 						compareDoubleValue(100),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -117,7 +120,7 @@ func verifyStaleNaNsSuccessfulScrape(t *testing.T, td *testData, resourceMetric 
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(startTimestamp),
 						compareTimestamp(ts1),
 						compareDoubleValue(5),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -133,7 +136,7 @@ func verifyStaleNaNsSuccessfulScrape(t *testing.T, td *testData, resourceMetric 
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(startTimestamp),
 						compareHistogramTimestamp(ts1),
 						compareHistogram(2500, 5000, []float64{0.05, 0.5, 1}, []uint64{1000, 500, 500, 500}),
 					},
@@ -148,7 +151,7 @@ func verifyStaleNaNsSuccessfulScrape(t *testing.T, td *testData, resourceMetric 
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(startTimestamp),
 						compareSummaryTimestamp(ts1),
 						compareSummary(1000, 5000, [][]float64{{0.01, 1}, {0.9, 5}, {0.99, 8}}),
 					},
@@ -160,7 +163,7 @@ func verifyStaleNaNsSuccessfulScrape(t *testing.T, td *testData, resourceMetric 
 	doCompare(t, fmt.Sprintf("validScrape-scrape-%d", iteration), wantAttributes, resourceMetric, e1)
 }
 
-func verifyStaleNaNsFailedScrape(t *testing.T, td *testData, resourceMetric pmetric.ResourceMetrics, iteration int) {
+func verifyStaleNaNsFailedScrape(t *testing.T, td *testData, resourceMetric pmetric.ResourceMetrics, startTimestamp pcommon.Timestamp, iteration int) {
 	// m1 has 4 metrics + 5 internal scraper metrics
 	assert.Equal(t, 9, metricsCount(resourceMetric))
 	wantAttributes := td.attributes
@@ -191,14 +194,14 @@ func verifyStaleNaNsFailedScrape(t *testing.T, td *testData, resourceMetric pmet
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(startTimestamp),
 						compareTimestamp(ts1),
 						assertNumberPointFlagNoRecordedValue(),
 					},
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(startTimestamp),
 						compareTimestamp(ts1),
 						assertNumberPointFlagNoRecordedValue(),
 					},
@@ -213,7 +216,7 @@ func verifyStaleNaNsFailedScrape(t *testing.T, td *testData, resourceMetric pmet
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(startTimestamp),
 						compareHistogramTimestamp(ts1),
 						assertHistogramPointFlagNoRecordedValue(),
 					},
@@ -228,7 +231,7 @@ func verifyStaleNaNsFailedScrape(t *testing.T, td *testData, resourceMetric pmet
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(startTimestamp),
 						compareSummaryTimestamp(ts1),
 						assertSummaryPointFlagNoRecordedValue(),
 					},
@@ -322,7 +325,7 @@ func verifyNormalNaNs(t *testing.T, td *testData, resourceMetrics []pmetric.Reso
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts1),
 						compareSummary(1000, 5000, [][]float64{
 							{0.01, math.Float64frombits(value.NormalNaN)},
@@ -421,7 +424,7 @@ func verifyInfValues(t *testing.T, td *testData, resourceMetrics []pmetric.Resou
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts1),
 						compareDoubleValue(math.Inf(1)),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -437,7 +440,7 @@ func verifyInfValues(t *testing.T, td *testData, resourceMetrics []pmetric.Resou
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts1),
 						compareSummary(1000, 5000, [][]float64{{0.01, math.Inf(1)}, {0.9, math.Inf(1)}, {0.99, math.Inf(1)}}),
 					},

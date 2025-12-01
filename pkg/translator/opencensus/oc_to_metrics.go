@@ -13,8 +13,6 @@ import (
 
 // OCToMetrics converts OC data format to pmetric.Metrics,
 // may be used only by OpenCensus receiver and exporter implementations.
-//
-// Deprecated: this functionality is no longer maintained and will be removed.
 func OCToMetrics(node *occommon.Node, resource *ocresource.Resource, metrics []*ocmetrics.Metric) pmetric.Metrics {
 	dest := pmetric.NewMetrics()
 	if node == nil && resource == nil && len(metrics) == 0 {
@@ -195,12 +193,15 @@ func fillAttributesMap(ocLabelsKeys []*ocmetrics.LabelKey, ocLabelValues []*ocme
 		return
 	}
 
-	lablesCount := min(
-		// Handle invalid length of OC label values list
-		len(ocLabelValues), len(ocLabelsKeys))
+	lablesCount := len(ocLabelsKeys)
+
+	// Handle invalid length of OC label values list
+	if len(ocLabelValues) < lablesCount {
+		lablesCount = len(ocLabelValues)
+	}
 
 	attributesMap.EnsureCapacity(lablesCount)
-	for i := range lablesCount {
+	for i := 0; i < lablesCount; i++ {
 		if !ocLabelValues[i].GetHasValue() {
 			continue
 		}

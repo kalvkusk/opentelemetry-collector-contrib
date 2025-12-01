@@ -150,8 +150,7 @@ func (c *metadataClient) GetInstanceMetadata(ctx context.Context) (InstanceMetad
 
 func getClusterNameTagFromReservations(reservations []types.Reservation) string {
 	for _, reservation := range reservations {
-		for i := range reservation.Instances {
-			instance := reservation.Instances[i]
+		for _, instance := range reservation.Instances {
 			for _, tag := range instance.Tags {
 				key := aws.ToString(tag.Key)
 				if key == "" {
@@ -159,8 +158,8 @@ func getClusterNameTagFromReservations(reservations []types.Reservation) string 
 				}
 				if key == clusterNameAwsEksTag || key == clusterNameEksTag {
 					return aws.ToString(tag.Value)
-				} else if after, ok := strings.CutPrefix(key, kubernetesClusterNameTag); ok {
-					return after
+				} else if strings.HasPrefix(key, kubernetesClusterNameTag) {
+					return strings.TrimPrefix(key, kubernetesClusterNameTag)
 				}
 			}
 		}

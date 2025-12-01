@@ -9,9 +9,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
-	"path"
-	"path/filepath"
-	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -20,8 +17,6 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/goleak"
-
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/clickhouseexporter/internal"
 )
 
 func randPort() int {
@@ -51,78 +46,36 @@ func getContainer(req testcontainers.ContainerRequest) (testcontainers.Container
 	return container, nil
 }
 
-type clickhouseEnv struct {
-	NativeEndpoint       string
-	HTTPEndpoint         string
-	SecureNativeEndpoint string
-	HTTPSEndpoint        string
-}
-
-type stdoutLogConsumer struct{}
-
-func (*stdoutLogConsumer) Accept(l testcontainers.Log) {
-	fmt.Print(string(l.Content))
-}
-
-func createClickhouseContainer(image string) (testcontainers.Container, *clickhouseEnv, error) {
+func createClickhouseContainer(image string) (testcontainers.Container, string, string, error) {
 	port := randPort()
 	httpPort := port + 1
-	tlsPort := port + 2
-	httpsPort := port + 3
-
-	_, b, _, _ := runtime.Caller(0)
-	basePath := filepath.Dir(b)
-
-	fileMount := func(testDataPath, containerPath string) testcontainers.ContainerFile {
-		return testcontainers.ContainerFile{
-			HostFilePath:      path.Join(basePath, "testdata", testDataPath),
-			ContainerFilePath: containerPath,
-			FileMode:          0o644,
-		}
-	}
-
-	var lc stdoutLogConsumer
 	req := testcontainers.ContainerRequest{
 		Image: image,
 		ExposedPorts: []string{
 			fmt.Sprintf("%d:9000", port),
 			fmt.Sprintf("%d:8123", httpPort),
-			fmt.Sprintf("%d:9440", tlsPort),
-			fmt.Sprintf("%d:8443", httpsPort),
-		},
-		Files: []testcontainers.ContainerFile{
-			fileMount("clickhouse-config.xml", "/etc/clickhouse-server/config.d/otel.xml"),
-			fileMount("clickhouse-users.xml", "/etc/clickhouse-server/users.d/otel-users.xml"),
-			fileMount("certs/CAroot.crt", "/etc/clickhouse-server/certs/CAroot.crt"),
-			fileMount("certs/server.crt", "/etc/clickhouse-server/certs/server.crt"),
-			fileMount("certs/server.key", "/etc/clickhouse-server/certs/server.key"),
-		},
-		LogConsumerCfg: &testcontainers.LogConsumerConfig{
-			Opts:      []testcontainers.LogProductionOption{testcontainers.WithLogProductionTimeout(10 * time.Second)},
-			Consumers: []testcontainers.LogConsumer{&lc},
 		},
 		WaitingFor: wait.ForListeningPort("9000").
 			WithStartupTimeout(2 * time.Minute),
+		Env: map[string]string{
+			"CLICKHOUSE_PASSWORD": "otel",
+		},
 	}
 
 	c, err := getContainer(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("getContainer: %w", err)
+		return nil, "", "", fmt.Errorf("getContainer: %w", err)
 	}
 
 	host, err := c.Host(context.Background())
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read container host address: %w", err)
+		return nil, "", "", fmt.Errorf("failed to read container host address: %w", err)
 	}
 
-	env := clickhouseEnv{
-		NativeEndpoint:       fmt.Sprintf("tcp://%s:%d?username=default&password=otel&enable_json_type=1&database=otel_int_test", host, port),
-		HTTPEndpoint:         fmt.Sprintf("http://%s:%d?username=default&password=otel&enable_json_type=1&database=otel_int_test", host, httpPort),
-		SecureNativeEndpoint: fmt.Sprintf("tcp://%s:%d?username=secure_default&enable_json_type=1&database=otel_int_test", host, tlsPort),
-		HTTPSEndpoint:        fmt.Sprintf("https://%s:%d?username=secure_default&enable_json_type=1&database=otel_int_test", host, httpsPort),
-	}
+	nativeEndpoint := fmt.Sprintf("tcp://%s:%d?username=default&password=otel&enable_json_type=1&database=otel_int_test", host, port)
+	httpEndpoint := fmt.Sprintf("http://%s:%d?username=default&password=otel&enable_json_type=1&database=otel_int_test", host, httpPort)
 
-	return c, &env, nil
+	return c, nativeEndpoint, httpEndpoint, nil
 }
 
 func withTestExporterConfig(fns ...func(*Config)) func(string) *Config {
@@ -144,7 +97,7 @@ func pushConcurrentlyNoError(t *testing.T, fn func() error) {
 	)
 
 	wg.Add(count)
-	for range count {
+	for i := 0; i < count; i++ {
 		go func() {
 			defer wg.Done()
 			err := fn()
@@ -163,26 +116,19 @@ func pushConcurrentlyNoError(t *testing.T, fn func() error) {
 var telemetryTimestamp = time.Unix(1703498029, 0).UTC()
 
 func testIntegrationWithImage(t *testing.T, clickhouseImage string) {
-	c, chEnv, err := createClickhouseContainer(clickhouseImage)
+	c, nativeEndpoint, httpEndpoint, err := createClickhouseContainer(clickhouseImage)
 	if err != nil {
-		t.Fatalf("failed to create ClickHouse container %q: %v", clickhouseImage, err)
+		t.Fatal(fmt.Errorf("failed to create ClickHouse container \"%s\": %w", clickhouseImage, err))
 	}
 	defer func(c testcontainers.Container) {
 		err := c.Terminate(t.Context())
 		if err != nil {
-			t.Logf("failed to terminate ClickHouse container %q: %v", clickhouseImage, err)
+			fmt.Println(fmt.Errorf("failed to terminate ClickHouse container \"%s\": %w", clickhouseImage, err))
 		}
 	}(c)
 
 	// For regular integration tests that need to be tested with both protocols
-	testProtocols := func(exporterTest func(*testing.T, string), secure bool) func(t *testing.T) {
-		nativeEndpoint := chEnv.NativeEndpoint
-		httpEndpoint := chEnv.HTTPEndpoint
-		if secure {
-			nativeEndpoint = chEnv.SecureNativeEndpoint
-			httpEndpoint = chEnv.HTTPSEndpoint
-		}
-
+	testProtocols := func(exporterTest func(*testing.T, string)) func(t *testing.T) {
 		return func(t *testing.T) {
 			t.Run("Native", func(t *testing.T) {
 				exporterTest(t, nativeEndpoint)
@@ -198,69 +144,38 @@ func testIntegrationWithImage(t *testing.T, clickhouseImage string) {
 		return func(t *testing.T) {
 			t.Run("String Body", func(t *testing.T) {
 				t.Run("Native", func(t *testing.T) {
-					exporterTest(t, chEnv.NativeEndpoint, false)
+					exporterTest(t, nativeEndpoint, false)
 				})
 				t.Run("HTTP", func(t *testing.T) {
-					exporterTest(t, chEnv.HTTPEndpoint, false)
+					exporterTest(t, httpEndpoint, false)
 				})
 			})
 
 			t.Run("Map Body", func(t *testing.T) {
 				t.Run("Native", func(t *testing.T) {
-					exporterTest(t, chEnv.NativeEndpoint, true)
+					exporterTest(t, nativeEndpoint, true)
 				})
 				t.Run("HTTP", func(t *testing.T) {
-					exporterTest(t, chEnv.HTTPEndpoint, true)
+					exporterTest(t, httpEndpoint, true)
 				})
 			})
 		}
 	}
 
 	t.Run("TestLogsExporter", testProtocolsMapBody(testLogsExporter))
-	t.Run("TestLogsExporterSchemaFeatures", testProtocolsMapBody(testLogsExporterSchemaFeatures))
-	t.Run("TestTracesExporter", testProtocols(testTracesExporter, false))
-	t.Run("TestMetricsExporter", testProtocols(testMetricsExporter, false))
+	t.Run("TestTracesExporter", testProtocols(testTracesExporter))
+	t.Run("TestMetricsExporter", testProtocols(testMetricsExporter))
 	t.Run("TestLogsJSONExporter", testProtocolsMapBody(testLogsJSONExporter))
-	t.Run("TestLogsJSONExporterSchemaFeatures", testProtocolsMapBody(testLogsJSONExporterSchemaFeatures))
-	t.Run("TestTracesJSONExporter", testProtocols(testTracesJSONExporter, false))
-	t.Run("TestTracesJSONExporterSchemaFeatures", testProtocols(testTracesJSONExporterSchemaFeatures, false))
-
-	t.Run("TestCertAuth", testProtocols(func(t *testing.T, dsn string) {
-		applyTLS := func(config *Config) {
-			config.TLS.CAFile = "./testdata/certs/CAroot.crt"
-			config.TLS.CertFile = "./testdata/certs/client.crt"
-			config.TLS.KeyFile = "./testdata/certs/client.key"
-		}
-		cfg := withTestExporterConfig(applyTLS)(dsn)
-		opt, err := cfg.buildClickHouseOptions()
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		db, err := internal.NewClickhouseClientFromOptions(opt)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = db.Ping(t.Context())
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		err = db.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
-	}, true))
+	t.Run("TestTracesJSONExporter", testProtocols(testTracesJSONExporter))
 }
 
 func TestIntegration(t *testing.T) {
 	// Update versions according to oldest and newest supported here: https://github.com/clickhouse/clickhouse/security
-	t.Run("25.8", func(t *testing.T) {
-		testIntegrationWithImage(t, "clickhouse/clickhouse-server:25.8-alpine")
+	t.Run("25.6", func(t *testing.T) {
+		testIntegrationWithImage(t, "clickhouse/clickhouse-server:25.6-alpine")
 	})
-	t.Run("25.3", func(t *testing.T) {
-		testIntegrationWithImage(t, "clickhouse/clickhouse-server:25.3-alpine")
+	t.Run("24.11", func(t *testing.T) {
+		testIntegrationWithImage(t, "clickhouse/clickhouse-server:24.11-alpine")
 	})
 
 	// Verify all integration tests, ignoring test container reaper

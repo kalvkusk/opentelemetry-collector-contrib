@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -129,10 +128,10 @@ func Test_ConvertSummarySumValToSum(t *testing.T) {
 			tt.input.CopyTo(actualMetrics.AppendEmpty())
 
 			evaluate, err := convertSummarySumValToSum(tt.temporality, tt.monotonicity, tt.suffix)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			_, err = evaluate(nil, ottldatapoint.NewTransformContext(pmetric.NewNumberDataPoint(), tt.input, actualMetrics, pcommon.NewInstrumentationScope(), pcommon.NewResource(), pmetric.NewScopeMetrics(), pmetric.NewResourceMetrics()))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			expected := pmetric.NewMetricSlice()
 			tt.want(expected)

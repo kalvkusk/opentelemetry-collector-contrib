@@ -291,10 +291,7 @@ func (queryReceiver *logsQueryReceiver) collect(ctx context.Context) (plog.Logs,
 		rows, err = queryReceiver.client.QueryRows(ctx)
 	}
 	if err != nil {
-		if !errors.Is(err, sqlquery.ErrNullValueWarning) {
-			return logs, fmt.Errorf("scraper: %w", err)
-		}
-		queryReceiver.logger.Warn("problems encountered getting log rows", zap.Error(err))
+		return logs, fmt.Errorf("error getting rows: %w", err)
 	}
 
 	var errs []error

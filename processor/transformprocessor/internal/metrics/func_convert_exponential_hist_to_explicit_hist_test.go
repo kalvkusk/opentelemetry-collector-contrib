@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 
@@ -255,9 +254,9 @@ func TestUpper_convert_exponential_hist_to_explicit_hist(t *testing.T) {
 			ctx := ottlmetric.NewTransformContext(metric, pmetric.NewMetricSlice(), pcommon.NewInstrumentationScope(), pcommon.NewResource(), pmetric.NewScopeMetrics(), pmetric.NewResourceMetrics())
 
 			exprFunc, err := convertExponentialHistToExplicitHist(tt.distribution, tt.arg)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			_, err = exprFunc(nil, ctx)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			expected := pmetric.NewMetric()
 			tt.want(expected)
@@ -437,9 +436,9 @@ func TestMidpoint_convert_exponential_hist_to_explicit_hist(t *testing.T) {
 			ctx := ottlmetric.NewTransformContext(metric, pmetric.NewMetricSlice(), pcommon.NewInstrumentationScope(), pcommon.NewResource(), pmetric.NewScopeMetrics(), pmetric.NewResourceMetrics())
 
 			exprFunc, err := convertExponentialHistToExplicitHist(tt.distribution, tt.arg)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			_, err = exprFunc(nil, ctx)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			expected := pmetric.NewMetric()
 			tt.want(expected)
@@ -566,9 +565,9 @@ func TestUniform_convert_exponential_hist_to_explicit_hist(t *testing.T) {
 			ctx := ottlmetric.NewTransformContext(metric, pmetric.NewMetricSlice(), pcommon.NewInstrumentationScope(), pcommon.NewResource(), pmetric.NewScopeMetrics(), pmetric.NewResourceMetrics())
 
 			exprFunc, err := convertExponentialHistToExplicitHist(tt.distribution, tt.arg)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			_, err = exprFunc(nil, ctx)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			expected := pmetric.NewMetric()
 			tt.want(expected)
@@ -695,9 +694,9 @@ func TestRandom_convert_exponential_hist_to_explicit_hist(t *testing.T) {
 			ctx := ottlmetric.NewTransformContext(metric, pmetric.NewMetricSlice(), pcommon.NewInstrumentationScope(), pcommon.NewResource(), pmetric.NewScopeMetrics(), pmetric.NewResourceMetrics())
 
 			exprFunc, err := convertExponentialHistToExplicitHist(tt.distribution, tt.arg)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			_, err = exprFunc(nil, ctx)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			expected := pmetric.NewMetric()
 			tt.want(expected)
@@ -722,7 +721,7 @@ func TestRandom_convert_exponential_hist_to_explicit_hist(t *testing.T) {
 				// even though the distribution is random, we know that for this
 				// particular test case, the min value is 40, therefore the 1st 3 bucket
 				// counts should be 0, as they represent values 10 - 30
-				for i := range 3 {
+				for i := 0; i < 3; i++ {
 					assert.Equal(t, uint64(0), dp.BucketCounts().At(i), "bucket %d", i)
 				}
 

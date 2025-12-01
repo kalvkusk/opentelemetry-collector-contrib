@@ -61,13 +61,12 @@ func TestLoadConfig(t *testing.T) {
 					RandomizationFactor: backoff.DefaultRandomizationFactor,
 					Multiplier:          backoff.DefaultMultiplier,
 				},
-				QueueSettings: func() exporterhelper.QueueBatchConfig {
-					queue := exporterhelper.NewDefaultQueueConfig()
-					queue.Enabled = true
-					queue.NumConsumers = 2
-					queue.QueueSize = 10
-					return queue
-				}(),
+				QueueSettings: exporterhelper.QueueBatchConfig{
+					Enabled:      true,
+					NumConsumers: 2,
+					QueueSize:    10,
+					Sizer:        exporterhelper.RequestSizerTypeRequests,
+				},
 			},
 		},
 	}

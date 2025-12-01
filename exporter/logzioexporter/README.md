@@ -36,7 +36,7 @@ Logz.io exporter is utilizing opentelemetry [exporter helper](https://github.com
 - `timeout`: Time to wait per individual attempt to send data to a backend. default = 30s
 
 #### Tracing example:
-* We recommend using `sending_queue::batch` option. Batching helps better compress the data and reduce the number of outgoing connections required to transmit the data.
+* We recommend using `batch` processor. Batching helps better compress the data and reduce the number of outgoing connections required to transmit the data.
 
 ```yaml
 receivers:
@@ -56,6 +56,10 @@ receivers:
         endpoint: "0.0.0.0:14250"
       thrift_http:
         endpoint: "0.0.0.0:14268"
+processors:
+  batch:
+    send_batch_size: 10000
+    timeout: 1s
 exporters:
   logzio/traces:
     account_token: "LOGZIOtraceTOKEN"
@@ -64,13 +68,14 @@ service:
   pipelines:
     traces:
       receivers: [ otlp,jaeger ]
+      processors: [ batch ]
       exporters: [ logzio/traces ]
   telemetry:
     logs:
       level: "debug"
 ```
 #### Logs example:
-* We recommend using `sending_queue::batch` option. Batching helps better compress the data and reduce the number of outgoing connections required to transmit the data.
+* We recommend using `batch` processor. Batching helps better compress the data and reduce the number of outgoing connections required to transmit the data.
 * We recommend adding `type` attribute to classify your log records
 * We recommend adding `resourcedetection` processor to add metadata to your log records
 
@@ -87,6 +92,9 @@ receivers:
     attributes:
       type: <<your-logzio-type>>
 processors:
+  batch:
+    send_batch_size: 10000
+    timeout: 1s
   resourcedetection/system:
     detectors: [ "system" ]
     system:
@@ -99,7 +107,7 @@ service:
   pipelines:
     logs:
       receivers: [filelog]
-      processors: [ resourcedetection/system ]
+      processors: [ resourcedetection/system, batch ]
       exporters: [logzio/logs]
   telemetry:
     logs:
@@ -142,11 +150,17 @@ exporters:
     endpoint: "https://listener.logz.io:8053"
     headers:
       Authorization: "Bearer LOGZIOprometheusTOKEN"
+
+processors:
+  batch:
+    send_batch_size: 10000
+    timeout: 1s
     
 service:
   pipelines:
     traces:
       receivers: [jaeger]
+      processors: [batch]
       exporters: [logzio/traces]
 
     metrics:

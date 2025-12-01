@@ -18,25 +18,25 @@ func Test_HasPrefix(t *testing.T) {
 	tests := []struct {
 		name     string
 		target   any
-		prefix   ottl.StringGetter[any]
+		prefix   string
 		expected bool
 	}{
 		{
 			name:     "has prefix true",
 			target:   "hello world",
-			prefix:   &ottl.StandardStringGetter[any]{Getter: func(context.Context, any) (any, error) { return "hello ", nil }},
+			prefix:   "hello ",
 			expected: true,
 		},
 		{
 			name:     "has prefix false",
 			target:   "hello world",
-			prefix:   &ottl.StandardStringGetter[any]{Getter: func(context.Context, any) (any, error) { return " world", nil }},
+			prefix:   " world",
 			expected: false,
 		},
 		{
 			name:     "target pcommon.Value",
 			target:   pcommon.NewValueStr("hello world"),
-			prefix:   &ottl.StandardStringGetter[any]{Getter: func(context.Context, any) (any, error) { return "hello", nil }},
+			prefix:   `hello`,
 			expected: true,
 		},
 	}
@@ -53,7 +53,7 @@ func Test_HasPrefix(t *testing.T) {
 					},
 					Prefix: tt.prefix,
 				})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			result, err := exprFunc(t.Context(), nil)
 			require.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
@@ -67,28 +67,8 @@ func Test_HasPrefix_Error(t *testing.T) {
 			return true, nil
 		},
 	}
-	prefix := &ottl.StandardStringGetter[any]{
-		Getter: func(context.Context, any) (any, error) {
-			return "test", nil
-		},
-	}
-	exprFunc := HasPrefix[any](target, prefix)
-	_, err := exprFunc(t.Context(), nil)
-	require.Error(t, err)
-}
-
-func Test_HasPrefix_Error_prefix(t *testing.T) {
-	target := &ottl.StandardStringGetter[any]{
-		Getter: func(context.Context, any) (any, error) {
-			return true, nil
-		},
-	}
-	prefix := &ottl.StandardStringGetter[any]{
-		Getter: func(context.Context, any) (any, error) {
-			return true, nil
-		},
-	}
-	exprFunc := HasPrefix[any](target, prefix)
-	_, err := exprFunc(t.Context(), nil)
+	exprFunc, err := HasPrefix[any](target, "test")
+	assert.NoError(t, err)
+	_, err = exprFunc(t.Context(), nil)
 	require.Error(t, err)
 }

@@ -35,12 +35,6 @@ func newPrometheusExporter(config *Config, set exporter.Settings) (*prometheusEx
 		return nil, errBlankPrometheusAddress
 	}
 
-	// Return error early because newCollector
-	// will call logger.Error if it fails to build the namespace.
-	if set.Logger == nil {
-		return nil, errors.New("nil logger")
-	}
-
 	collector := newCollector(config, set.Logger)
 	registry := prometheus.NewRegistry()
 	_ = registry.Register(collector)
@@ -71,7 +65,7 @@ func (pe *prometheusExporter) Start(ctx context.Context, host component.Host) er
 
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", pe.handler)
-	srv, err := pe.config.ToServer(ctx, host.GetExtensions(), pe.settings, mux)
+	srv, err := pe.config.ToServer(ctx, host, pe.settings, mux)
 	if err != nil {
 		lnerr := ln.Close()
 		return errors.Join(err, lnerr)

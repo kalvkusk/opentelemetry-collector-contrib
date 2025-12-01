@@ -48,8 +48,4 @@ resourceLogs:
             severityNumber: 17
             severityText: ERROR
             timeUnixNano: "1631502614801613786"
-        scope:
-          attributes:
-            - key: encoding.format
-              value:
-                stringValue: gcp.auditlog
+        scope: {}

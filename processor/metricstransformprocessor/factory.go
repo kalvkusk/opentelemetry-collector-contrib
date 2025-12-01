@@ -61,8 +61,7 @@ func createMetricsProcessor(
 // validateConfiguration validates the input configuration has all of the required fields for the processor
 // An error is returned if there are any invalid inputs.
 func validateConfiguration(config *Config) error {
-	for i := range config.Transforms {
-		transform := &config.Transforms[i]
+	for _, transform := range config.Transforms {
 		if transform.MetricIncludeFilter.Include == "" {
 			return fmt.Errorf("missing required field %q", includeFieldName)
 		}
@@ -98,8 +97,7 @@ func validateConfiguration(config *Config) error {
 			return fmt.Errorf("%q must be in %q", submatchCaseFieldName, submatchCases)
 		}
 
-		for i := range transform.Operations {
-			op := &transform.Operations[i]
+		for i, op := range transform.Operations {
 			if !op.Action.isValid() {
 				return fmt.Errorf("operation %v: %q must be in %q", i+1, actionFieldName, operationActions)
 			}
@@ -128,8 +126,7 @@ func validateConfiguration(config *Config) error {
 // buildHelperConfig constructs the maps that will be useful for the operations
 func buildHelperConfig(config *Config, version string) ([]internalTransform, error) {
 	helperDataTransforms := make([]internalTransform, len(config.Transforms))
-	for i := range config.Transforms {
-		t := &config.Transforms[i]
+	for i, t := range config.Transforms {
 		if t.MetricIncludeFilter.MatchType == "" {
 			t.MetricIncludeFilter.MatchType = strictMatchType
 		}
@@ -148,8 +145,7 @@ func buildHelperConfig(config *Config, version string) ([]internalTransform, err
 			Operations:          make([]internalOperation, len(t.Operations)),
 		}
 
-		for j := range t.Operations {
-			op := &t.Operations[j]
+		for j, op := range t.Operations {
 			op.NewValue = strings.ReplaceAll(op.NewValue, "{{version}}", version)
 
 			mtpOp := internalOperation{
@@ -193,7 +189,7 @@ func createFilter(filterConfig filterConfig) (internalFilter, error) {
 // createLabelValueMapping creates the labelValue rename mappings based on the valueActions
 func createLabelValueMapping(valueActions []valueAction, version string) map[string]string {
 	mapping := make(map[string]string)
-	for i := range valueActions {
+	for i := 0; i < len(valueActions); i++ {
 		valueActions[i].NewValue = strings.ReplaceAll(valueActions[i].NewValue, "{{version}}", version)
 		mapping[valueActions[i].Value] = valueActions[i].NewValue
 	}

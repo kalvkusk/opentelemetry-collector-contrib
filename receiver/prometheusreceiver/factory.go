@@ -40,13 +40,6 @@ var enableCreatedTimestampZeroIngestionGate = featuregate.GlobalRegistry().MustR
 		" Created timestamps are injected as 0 valued samples when appropriate."),
 )
 
-var enableReportExtraScrapeMetricsGate = featuregate.GlobalRegistry().MustRegister(
-	"receiver.prometheusreceiver.EnableReportExtraScrapeMetrics",
-	featuregate.StageAlpha,
-	featuregate.WithRegisterDescription("Enables reporting of extra scrape metrics."+
-		" Extra scrape metrics are metrics that are not scraped by Prometheus but are reported by the Prometheus server."),
-)
-
 // NewFactory creates a new Prometheus receiver factory.
 func NewFactory() receiver.Factory {
 	return receiver.NewFactory(
@@ -70,7 +63,6 @@ func createMetricsReceiver(
 	nextConsumer consumer.Metrics,
 ) (receiver.Metrics, error) {
 	configWarnings(set.Logger, cfg.(*Config))
-	cfg.(*Config).enableNativeHistograms = enableNativeHistogramsGate.IsEnabled()
 	return newPrometheusReceiver(set, cfg.(*Config), nextConsumer)
 }
 

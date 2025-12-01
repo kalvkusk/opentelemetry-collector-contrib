@@ -159,7 +159,6 @@ func TestNewObfuscator(t *testing.T) {
 			o := NewObfuscator(tt.config)
 			assert.Len(t, o.obfuscators, tt.expectedObfuscatorCount)
 			assert.Equal(t, tt.expectedProcessSpecific, o.HasSpecificAttributes())
-			assert.Equal(t, tt.expectedObfuscatorCount > 0, o.HasObfuscators())
 		})
 	}
 }

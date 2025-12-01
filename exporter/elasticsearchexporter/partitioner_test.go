@@ -70,8 +70,8 @@ func BenchmarkGetKey(b *testing.B) {
 	})
 
 	b.ReportAllocs()
-
-	for b.Loop() {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
 		_ = p.GetKey(ctx, nil)
 	}
 }

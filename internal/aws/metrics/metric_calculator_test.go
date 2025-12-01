@@ -38,7 +38,7 @@ func TestFloat64RateCalculatorWithTooFrequentUpdate(t *testing.T) {
 	assert.Equal(t, float64(0), r)
 
 	nextTime := initTime
-	for range 10 {
+	for i := 0; i < 10; i++ {
 		nextTime = nextTime.Add(5 * time.Millisecond)
 		r, ok = c.Calculate(mKey, float64(105), nextTime)
 		assert.False(t, ok)
@@ -158,7 +158,7 @@ func TestMapWithExpiryConcurrency(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
-		for range 30 {
+		for i := 0; i < 30; i++ {
 			store.Lock()
 			sum, _ := store.Get(Key{MetricMetadata: "sum"})
 			newSum := MetricValue{
@@ -171,7 +171,7 @@ func TestMapWithExpiryConcurrency(t *testing.T) {
 	}()
 
 	go func() {
-		for range 30 {
+		for i := 0; i < 30; i++ {
 			store.Lock()
 			sum, _ := store.Get(Key{MetricMetadata: "sum"})
 			newSum := MetricValue{

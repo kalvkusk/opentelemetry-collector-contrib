@@ -1,9 +1,6 @@
 local/
 vendor/
 
-# Dev Container
-/.devcontainer/
-
 # GoLand IDEA
 /.idea/
 *.iml

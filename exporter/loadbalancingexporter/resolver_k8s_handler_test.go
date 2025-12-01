@@ -7,47 +7,56 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	discoveryv1 "k8s.io/api/discovery/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestConvertToEndpoints(tst *testing.T) {
-	hostname1 := "pod-1"
-	hostname2 := "pod-2"
-
-	// Create dummy EndpointSlice objects
-	endpoints1 := &discoveryv1.EndpointSlice{
+	// Create dummy Endpoints objects
+	endpoints1 := &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-endpoints-1",
 			Namespace: "test-namespace",
 		},
-		Endpoints: []discoveryv1.Endpoint{
+		Subsets: []corev1.EndpointSubset{
 			{
-				Addresses: []string{"192.168.10.101"},
-				Hostname:  &hostname1,
+				Addresses: []corev1.EndpointAddress{
+					{
+						Hostname: "pod-1",
+						IP:       "192.168.10.101",
+					},
+				},
 			},
 		},
 	}
-	endpoints2 := &discoveryv1.EndpointSlice{
+	endpoints2 := &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-endpoints-2",
 			Namespace: "test-namespace",
 		},
-		Endpoints: []discoveryv1.Endpoint{
+		Subsets: []corev1.EndpointSubset{
 			{
-				Addresses: []string{"192.168.10.102"},
-				Hostname:  &hostname2,
+				Addresses: []corev1.EndpointAddress{
+					{
+						Hostname: "pod-2",
+						IP:       "192.168.10.102",
+					},
+				},
 			},
 		},
 	}
-	endpoints3 := &discoveryv1.EndpointSlice{
+	endpoints3 := &corev1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-endpoints-3",
 			Namespace: "test-namespace",
 		},
-		Endpoints: []discoveryv1.Endpoint{
+		Subsets: []corev1.EndpointSubset{
 			{
-				Addresses: []string{"192.168.10.103"},
+				Addresses: []corev1.EndpointAddress{
+					{
+						IP: "192.168.10.103",
+					},
+				},
 			},
 		},
 	}
@@ -55,28 +64,28 @@ func TestConvertToEndpoints(tst *testing.T) {
 	tests := []struct {
 		name              string
 		returnNames       bool
-		includedEndpoints []*discoveryv1.EndpointSlice
+		includedEndpoints []*corev1.Endpoints
 		expectedEndpoints map[string]bool
 		wantNil           bool
 	}{
 		{
 			name:              "return hostnames",
 			returnNames:       true,
-			includedEndpoints: []*discoveryv1.EndpointSlice{endpoints1, endpoints2},
+			includedEndpoints: []*corev1.Endpoints{endpoints1, endpoints2},
 			expectedEndpoints: map[string]bool{"pod-1": true, "pod-2": true},
 			wantNil:           false,
 		},
 		{
 			name:              "return IPs",
 			returnNames:       false,
-			includedEndpoints: []*discoveryv1.EndpointSlice{endpoints1, endpoints2, endpoints3},
+			includedEndpoints: []*corev1.Endpoints{endpoints1, endpoints2, endpoints3},
 			expectedEndpoints: map[string]bool{"192.168.10.101": true, "192.168.10.102": true, "192.168.10.103": true},
 			wantNil:           false,
 		},
 		{
 			name:              "missing hostname",
 			returnNames:       true,
-			includedEndpoints: []*discoveryv1.EndpointSlice{endpoints1, endpoints3},
+			includedEndpoints: []*corev1.Endpoints{endpoints1, endpoints3},
 			expectedEndpoints: nil,
 			wantNil:           true,
 		},

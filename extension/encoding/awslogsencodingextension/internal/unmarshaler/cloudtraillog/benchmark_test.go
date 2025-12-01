@@ -85,7 +85,7 @@ func BenchmarkUnmarshalLogs(b *testing.B) {
 			b.SetBytes(int64(len(logContent)))
 			b.ResetTimer()
 
-			for b.Loop() {
+			for i := 0; i < b.N; i++ {
 				// Create a new reader for each iteration to ensure consistent behavior
 				reader := bytes.NewReader(logContent)
 

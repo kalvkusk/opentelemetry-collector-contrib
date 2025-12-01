@@ -5,6 +5,9 @@ package samplingpolicy // import "github.com/open-telemetry/opentelemetry-collec
 
 import (
 	"context"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -12,10 +15,17 @@ import (
 
 // TraceData stores the sampling related trace data.
 type TraceData struct {
+	sync.Mutex
+	// Arrival time the first span for the trace was received.
+	ArrivalTime time.Time
+	// DecisionTime time when sampling decision was taken.
+	DecisionTime time.Time
 	// SpanCount track the number of spans on the trace.
-	SpanCount int64
+	SpanCount *atomic.Int64
 	// ReceivedBatches stores all the batches received for the trace.
 	ReceivedBatches ptrace.Traces
+	// FinalDecision.
+	FinalDecision Decision
 }
 
 // Decision gives the status of sampling decision.
@@ -50,8 +60,4 @@ const (
 type Evaluator interface {
 	// Evaluate looks at the trace data and returns a corresponding SamplingDecision.
 	Evaluate(ctx context.Context, traceID pcommon.TraceID, trace *TraceData) (Decision, error)
-}
-
-type Extension interface {
-	NewEvaluator(policyName string, cfg map[string]any) (Evaluator, error)
 }

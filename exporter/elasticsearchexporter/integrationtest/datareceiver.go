@@ -67,7 +67,7 @@ type esDataReceiver struct {
 	receiver          receiver.Logs
 	endpoint          string
 	decodeBulkRequest bool
-	enableBatching    bool
+	batcherEnabled    *bool
 	t                 testing.TB
 }
 
@@ -92,9 +92,9 @@ func withDecodeBulkRequest(decode bool) dataReceiverOption {
 	}
 }
 
-func withBatching(enabled bool) dataReceiverOption {
+func withBatcherEnabled(enabled bool) dataReceiverOption {
 	return func(r *esDataReceiver) {
-		r.enableBatching = enabled
+		r.batcherEnabled = &enabled
 	}
 }
 
@@ -153,6 +153,9 @@ func (es *esDataReceiver) GenConfigYAMLStr() string {
     logs_index: %s
     metrics_index: %s
     traces_index: %s
+    sending_queue:
+      enabled: true
+      block_on_overflow: true
     mapping:
       mode: otel
     retry:
@@ -166,24 +169,17 @@ func (es *esDataReceiver) GenConfigYAMLStr() string {
 		es.endpoint, TestLogsIndex, TestMetricsIndex, TestTracesIndex,
 	)
 
-	if es.enableBatching {
+	if es.batcherEnabled == nil {
 		cfgFormat += `
-    sending_queue:
-      enabled: true
-      block_on_overflow: true
-      batch:
-        flush_timeout: 1s
-        sizer: bytes`
+    flush:
+      interval: 1s`
 	} else {
-		// Batching is disabled using `min_size` as we are setting batching
-		// as a default behavior.
-		cfgFormat += `
-    sending_queue:
-      enabled: true
-      block_on_overflow: true
-      batch:
-        min_size: 0
-        sizer: bytes`
+		cfgFormat += fmt.Sprintf(`
+    batcher:
+      flush_timeout: 1s
+      enabled: %v`,
+			*es.batcherEnabled,
+		)
 	}
 	return cfgFormat + "\n"
 }
@@ -298,8 +294,7 @@ func (es *mockESReceiver) Start(ctx context.Context, host component.Host) error 
 		var itemCount int
 		_, response := docappendertest.DecodeBulkRequest(r)
 		for _, itemMap := range response.Items {
-			for k := range itemMap {
-				item := itemMap[k]
+			for _, item := range itemMap {
 				if index == "" {
 					index = item.Index
 				} else if item.Index != index {
@@ -354,8 +349,7 @@ func (es *mockESReceiver) Start(ctx context.Context, host component.Host) error 
 			}
 			response.HasErrors = true
 			for _, itemMap := range response.Items {
-				for k := range itemMap {
-					item := itemMap[k]
+				for k, item := range itemMap {
 					item.Status = errES.httpDocStatus
 					item.Error.Type = "simulated_es_error"
 					item.Error.Reason = consumeErr.Error()
@@ -368,7 +362,7 @@ func (es *mockESReceiver) Start(ctx context.Context, host component.Host) error 
 		}
 	})
 
-	es.server, err = es.config.ToServer(ctx, host.GetExtensions(), es.params.TelemetrySettings, r)
+	es.server, err = es.config.ToServer(ctx, host, es.params.TelemetrySettings, r)
 	if err != nil {
 		return fmt.Errorf("failed to create mock ES server: %w", err)
 	}

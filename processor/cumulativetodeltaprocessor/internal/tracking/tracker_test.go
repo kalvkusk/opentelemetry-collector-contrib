@@ -257,29 +257,29 @@ func Test_metricTracker_removeStale(t *testing.T) {
 
 	type fields struct {
 		MaxStaleness time.Duration
-		States       map[string]*state
+		States       map[string]*State
 	}
 	tests := []struct {
 		name    string
 		fields  fields
-		wantOut map[string]*state
+		wantOut map[string]*State
 	}{
 		{
 			name: "Removes stale entry, leaves fresh entry",
 			fields: fields{
 				MaxStaleness: 0, // This logic isn't tested here
-				States: map[string]*state{
+				States: map[string]*State{
 					"stale": {
-						prevPoint: stalePoint,
+						PrevPoint: stalePoint,
 					},
 					"fresh": {
-						prevPoint: freshPoint,
+						PrevPoint: freshPoint,
 					},
 				},
 			},
-			wantOut: map[string]*state{
+			wantOut: map[string]*State{
 				"fresh": {
-					prevPoint: freshPoint,
+					PrevPoint: freshPoint,
 				},
 			},
 		},
@@ -295,9 +295,9 @@ func Test_metricTracker_removeStale(t *testing.T) {
 			}
 			tr.removeStale(currentTime)
 
-			gotOut := make(map[string]*state)
+			gotOut := make(map[string]*State)
 			tr.states.Range(func(key, value any) bool {
-				gotOut[key.(string)] = value.(*state)
+				gotOut[key.(string)] = value.(*State)
 				return true
 			})
 			assert.Equal(t, tt.wantOut, gotOut)

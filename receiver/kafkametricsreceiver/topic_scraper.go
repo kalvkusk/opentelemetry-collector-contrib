@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -30,7 +29,6 @@ type topicScraper struct {
 	topicFilter  *regexp.Regexp
 	config       Config
 	mb           *metadata.MetricsBuilder
-	mu           sync.Mutex
 }
 
 const (
@@ -52,7 +50,7 @@ func (s *topicScraper) start(_ context.Context, _ component.Host) error {
 }
 
 func (s *topicScraper) scrape(context.Context) (pmetric.Metrics, error) {
-	if s.client == nil || s.client.Closed() {
+	if s.client == nil {
 		client, err := newSaramaClient(context.Background(), s.config.ClientConfig)
 		if err != nil {
 			return pmetric.Metrics{}, fmt.Errorf("failed to create client in topics scraper: %w", err)
@@ -63,7 +61,7 @@ func (s *topicScraper) scrape(context.Context) (pmetric.Metrics, error) {
 	topics, err := s.client.Topics()
 	if err != nil {
 		s.settings.Logger.Error("Error fetching cluster topics ", zap.Error(err))
-		return pmetric.Metrics{}, s.resetClientOnError(err)
+		return pmetric.Metrics{}, err
 	}
 
 	scrapeErrors := scrapererror.ScrapeErrors{}
@@ -185,16 +183,4 @@ func createTopicsScraper(_ context.Context, cfg Config, settings receiver.Settin
 		scraper.WithStart(s.start),
 		scraper.WithShutdown(s.shutdown),
 	)
-}
-
-func (s *topicScraper) resetClientOnError(err error) error {
-	if isRecoverableError(err) {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		s.client.Close()
-		s.client = nil
-		return fmt.Errorf("closing client because of reconnection error %w", err)
-	}
-
-	return err
 }

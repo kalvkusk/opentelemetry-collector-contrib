@@ -66,7 +66,7 @@ func newExporter(cfg component.Config, set exporter.Settings) (*faroExporter, er
 }
 
 func (fe *faroExporter) start(ctx context.Context, host component.Host) error {
-	client, err := fe.config.ToClient(ctx, host.GetExtensions(), fe.settings)
+	client, err := fe.config.ToClient(ctx, host, fe.settings)
 	if err != nil {
 		return err
 	}
@@ -145,15 +145,14 @@ func (fe *faroExporter) consume(ctx context.Context, fp []faro.Payload) error {
 	var wg sync.WaitGroup
 	wg.Add(len(fp))
 	var mu sync.Mutex
-	for i := range fp {
-		p := &fp[i]
-		go func(p *faro.Payload) {
+	for _, p := range fp {
+		go func() {
 			defer wg.Done()
-			err := fe.export(ctx, p)
+			err := fe.export(ctx, &p)
 			mu.Lock()
 			errs = multierr.Append(errs, err)
 			mu.Unlock()
-		}(p)
+		}()
 	}
 	wg.Wait()
 	return errs

@@ -226,7 +226,6 @@ func (p *postgreSQLScraper) collectQuerySamples(ctx context.Context, dbClient cl
 			atts[dbAttributePrefix+"wait_event"].(string),
 			atts[dbAttributePrefix+"wait_event_type"].(string),
 			atts[dbAttributePrefix+"query_id"].(string),
-			atts["duration"].(float64),
 		)
 	}
 }
@@ -298,7 +297,7 @@ func (p *postgreSQLScraper) collectTopQuery(ctx context.Context, clientFactory p
 			}
 			finalValue := float64(0)
 			if valDelta > 0 {
-				p.cache.Add(queryID.(string)+columnName, valInAtts)
+				p.cache.Add(queryID.(string)+columnName, valDelta)
 				finalValue = valDelta
 			}
 			if info.finalConverter != nil {

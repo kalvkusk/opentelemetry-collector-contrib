@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/ottl"
 )
@@ -112,10 +111,10 @@ func Test_RemoveXML(t *testing.T) {
 					},
 					XPath: tt.xPath,
 				})
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			result, err := exprFunc(t.Context(), nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.want, result)
 		})
 	}
@@ -144,7 +143,7 @@ func TestCreateRemoveXMLFunc(t *testing.T) {
 			Target: invalidXMLGetter(),
 			XPath:  "/",
 		})
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.NotNil(t, exprFunc)
 	_, err = exprFunc(t.Context(), nil)
 	assert.Error(t, err)

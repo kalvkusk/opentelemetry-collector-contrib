@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/collector/processor/memorylimiterprocessor"
 	"go.opentelemetry.io/collector/receiver"
 	"go.opentelemetry.io/collector/receiver/otlpreceiver"
-	"go.opentelemetry.io/collector/service/telemetry/otelconftelemetry"
 	"go.uber.org/multierr"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/routingconnector"
@@ -26,7 +25,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/syslogexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/zipkinexporter"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/jaegerreceiver"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/otelarrowreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/stefreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/syslogreceiver"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/zipkinreceiver"
@@ -47,7 +45,6 @@ func Components() (
 	receivers, err := otelcol.MakeFactoryMap[receiver.Factory](
 		jaegerreceiver.NewFactory(),
 		otlpreceiver.NewFactory(),
-		otelarrowreceiver.NewFactory(),
 		stefreceiver.NewFactory(),
 		syslogreceiver.NewFactory(),
 		zipkinreceiver.NewFactory(),
@@ -82,7 +79,6 @@ func Components() (
 		Processors: processors,
 		Exporters:  exporters,
 		Connectors: connectors,
-		Telemetry:  otelconftelemetry.NewFactory(),
 	}
 
 	return factories, errs

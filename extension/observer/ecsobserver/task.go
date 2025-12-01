@@ -5,7 +5,6 @@ package ecsobserver // import "github.com/open-telemetry/opentelemetry-collector
 
 import (
 	"fmt"
-	"maps"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
@@ -16,7 +15,7 @@ import (
 // taskAnnotated contains both raw task info and its definition.
 // It is generated from taskFetcher.
 type taskAnnotated struct {
-	Task       *ecstypes.Task
+	Task       ecstypes.Task
 	Definition *ecstypes.TaskDefinition
 	EC2        *ec2types.Instance
 	Service    *ecstypes.Service
@@ -66,7 +65,9 @@ func (t *taskAnnotated) ContainerLabels(containerIndex int) map[string]string {
 		return nil
 	}
 	labels := make(map[string]string, len(def.DockerLabels))
-	maps.Copy(labels, def.DockerLabels)
+	for k, v := range def.DockerLabels {
+		labels[k] = v
+	}
 	return labels
 }
 
@@ -185,8 +186,7 @@ func (t *taskAnnotated) MappedPort(def ecstypes.ContainerDefinition, containerPo
 		return 0, errNotFound
 	case "", ecstypes.NetworkModeBridge:
 		//  task->containers->networkBindings
-		for i := range t.Task.Containers {
-			c := &t.Task.Containers[i]
+		for _, c := range t.Task.Containers {
 			if aws.ToString(def.Name) == aws.ToString(c.Name) {
 				for _, b := range c.NetworkBindings {
 					if containerPort == aws.ToInt32(b.ContainerPort) {

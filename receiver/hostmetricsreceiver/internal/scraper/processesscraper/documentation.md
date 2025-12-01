@@ -16,20 +16,20 @@ metrics:
 
 Total number of processes in each state.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {processes} | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {processes} | Sum | Int | Cumulative | false |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| status | Breakdown status of the processes. | Str: ``blocked``, ``daemon``, ``detached``, ``idle``, ``locked``, ``orphan``, ``paging``, ``running``, ``sleeping``, ``stopped``, ``system``, ``unknown``, ``zombies`` | Recommended |
+| status | Breakdown status of the processes. | Str: ``blocked``, ``daemon``, ``detached``, ``idle``, ``locked``, ``orphan``, ``paging``, ``running``, ``sleeping``, ``stopped``, ``system``, ``unknown``, ``zombies`` | false |
 
 ### system.processes.created
 
 Total number of created processes.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {processes} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {processes} | Sum | Int | Cumulative | true |

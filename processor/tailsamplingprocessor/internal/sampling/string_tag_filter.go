@@ -5,7 +5,6 @@ package sampling // import "github.com/open-telemetry/opentelemetry-collector-co
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 
 	"github.com/golang/groupcache/lru"
@@ -37,16 +36,13 @@ var _ samplingpolicy.Evaluator = (*stringAttributeFilter)(nil)
 
 // NewStringAttributeFilter creates a policy evaluator that samples all traces with
 // the given attribute in the given numeric range.
-func NewStringAttributeFilter(settings component.TelemetrySettings, key string, values []string, regexMatchEnabled bool, evictSize int, invertMatch bool) (samplingpolicy.Evaluator, error) {
+func NewStringAttributeFilter(settings component.TelemetrySettings, key string, values []string, regexMatchEnabled bool, evictSize int, invertMatch bool) samplingpolicy.Evaluator {
 	// initialize regex filter rules and LRU cache for matched results
 	if regexMatchEnabled {
 		if evictSize <= 0 {
 			evictSize = defaultCacheSize
 		}
-		filterList, err := addFilters(values)
-		if err != nil {
-			return nil, err
-		}
+		filterList := addFilters(values)
 		regexStrSetting := &regexStrSetting{
 			matchedAttrs: lru.New(evictSize),
 			filterList:   filterList,
@@ -72,7 +68,7 @@ func NewStringAttributeFilter(settings component.TelemetrySettings, key string, 
 				return false
 			},
 			invertMatch: invertMatch,
-		}, nil
+		}
 	}
 
 	// initialize the exact value map
@@ -91,7 +87,7 @@ func NewStringAttributeFilter(settings component.TelemetrySettings, key string, 
 			return matched
 		},
 		invertMatch: invertMatch,
-	}, nil
+	}
 }
 
 // Evaluate looks at the trace data and returns a corresponding SamplingDecision.
@@ -99,6 +95,8 @@ func NewStringAttributeFilter(settings component.TelemetrySettings, key string, 
 // which might be static strings or regular expressions.
 func (saf *stringAttributeFilter) Evaluate(_ context.Context, _ pcommon.TraceID, trace *samplingpolicy.TraceData) (samplingpolicy.Decision, error) {
 	saf.logger.Debug("Evaluating spans in string-tag filter")
+	trace.Lock()
+	defer trace.Unlock()
 	batches := trace.ReceivedBatches
 
 	if saf.invertMatch {
@@ -153,14 +151,11 @@ func (saf *stringAttributeFilter) Evaluate(_ context.Context, _ pcommon.TraceID,
 
 // addFilters compiles all the given filters and stores them as regexes.
 // All regexes are automatically anchored to enforce full string matches.
-func addFilters(exprs []string) ([]*regexp.Regexp, error) {
+func addFilters(exprs []string) []*regexp.Regexp {
 	list := make([]*regexp.Regexp, 0, len(exprs))
 	for _, entry := range exprs {
-		rule, err := regexp.Compile(entry)
-		if err != nil {
-			return nil, fmt.Errorf("invalid regex `%s`: %w", entry, err)
-		}
+		rule := regexp.MustCompile(entry)
 		list = append(list, rule)
 	}
-	return list, nil
+	return list
 }

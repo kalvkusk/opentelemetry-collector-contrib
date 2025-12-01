@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tinylib/msgp/msgp"
-	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -44,7 +43,7 @@ func setupServer(t *testing.T) (func() net.Conn, *consumertest.LogsSink, *observ
 
 	receiver, err := newFluentReceiver(set, conf, next)
 	require.NoError(t, err)
-	require.NoError(t, receiver.Start(ctx, componenttest.NewNopHost()))
+	require.NoError(t, receiver.Start(ctx, nil))
 
 	connect := func() net.Conn {
 		conn, err := net.Dial("tcp", receiver.(*fluentReceiver).listener.Addr().String())
@@ -340,7 +339,7 @@ func TestUnixEndpoint(t *testing.T) {
 
 	receiver, err := newFluentReceiver(receivertest.NewNopSettings(metadata.Type), conf, next)
 	require.NoError(t, err)
-	require.NoError(t, receiver.Start(ctx, componenttest.NewNopHost()))
+	require.NoError(t, receiver.Start(ctx, nil))
 	defer func() { require.NoError(t, receiver.Shutdown(ctx)) }()
 
 	conn, err := net.Dial("unix", receiver.(*fluentReceiver).listener.Addr().String())
@@ -377,11 +376,11 @@ func TestHighVolume(t *testing.T) {
 	const totalMessagesPerRoutine = 1000
 
 	var wg sync.WaitGroup
-	for i := range totalRoutines {
+	for i := 0; i < totalRoutines; i++ {
 		wg.Add(1)
 		go func(num int) {
 			conn := connect()
-			for j := range totalMessagesPerRoutine {
+			for j := 0; j < totalMessagesPerRoutine; j++ {
 				eventBytes := makeSampleEvent(fmt.Sprintf("tag-%d-%d", num, j))
 				n, err := conn.Write(eventBytes)
 				assert.NoError(t, err)

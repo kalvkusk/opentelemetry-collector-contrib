@@ -5,7 +5,6 @@ package endpointswatcher // import "github.com/open-telemetry/opentelemetry-coll
 
 import (
 	"encoding/json"
-	"maps"
 	"reflect"
 	"sync"
 	"time"
@@ -134,11 +133,13 @@ func (ew *EndpointsWatcher) updateEndpoints(notify observer.Notify, endpoints []
 	var ok bool
 	if storedEndpoints, ok = le.(map[observer.EndpointID]observer.Endpoint); !ok {
 		ew.logger.Warn("failed to load Endpoint store from EndpointsWatcher", zap.Any("endpoints", le))
-		return removed, added, changed
+		return
 	}
 	// copy to not modify sync.Map value directly (will be reloaded)
 	existingEndpoints := map[observer.EndpointID]observer.Endpoint{}
-	maps.Copy(existingEndpoints, storedEndpoints)
+	for id, endpoint := range storedEndpoints {
+		existingEndpoints[id] = endpoint
+	}
 
 	// Iterate over the latest endpoints obtained. An endpoint needs
 	// to be added or updated in case it is not already available in existingEndpoints or doesn't match
@@ -165,7 +166,7 @@ func (ew *EndpointsWatcher) updateEndpoints(notify observer.Notify, endpoints []
 	}
 
 	ew.existingEndpoints.Store(notifyID, existingEndpoints)
-	return removed, added, changed
+	return
 }
 
 // StopListAndWatch polling the ListEndpoints.

@@ -89,7 +89,7 @@ func Test_batchTimeSeriesUpdatesStateForLargeBatches(t *testing.T) {
 	// Benchmark for large data sizes
 	// First allocate 100k time series
 	tsArray := make([]*prompb.TimeSeries, 0, 100000)
-	for range 100000 {
+	for i := 0; i < 100000; i++ {
 		ts := getTimeSeries(labels, sample1, sample2, sample3)
 		tsArray = append(tsArray, ts)
 	}
@@ -119,7 +119,7 @@ func Benchmark_batchTimeSeries(b *testing.B) {
 	// Benchmark for large data sizes
 	// First allocate 100k time series
 	tsArray := make([]*prompb.TimeSeries, 0, 100000)
-	for range 100000 {
+	for i := 0; i < 100000; i++ {
 		ts := getTimeSeries(labels, sample1, sample2, sample3)
 		tsArray = append(tsArray, ts)
 	}
@@ -127,10 +127,11 @@ func Benchmark_batchTimeSeries(b *testing.B) {
 	tsMap1 := getTimeseriesMap(tsArray)
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
 	state := newBatchTimeServicesState()
 	// Run batchTimeSeries 100 times with a 1mb max request size
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		requests, err := batchTimeSeries(tsMap1, 1000000, nil, state)
 		assert.NoError(b, err)
 		assert.Len(b, requests, 18)
@@ -239,7 +240,7 @@ func TestEnsureTimeseriesPointsAreSortedByTimestamp(t *testing.T) {
 	for ti, ts := range got.Timeseries {
 		for i := range ts.Samples {
 			si := ts.Samples[i]
-			for j := range i {
+			for j := 0; j < i; j++ {
 				sj := ts.Samples[j]
 				assert.LessOrEqual(t, sj.Timestamp, si.Timestamp, "Timeseries[%d]: Sample[%d].Timestamp(%d) > Sample[%d].Timestamp(%d)",
 					ti, j, sj.Timestamp, i, si.Timestamp)

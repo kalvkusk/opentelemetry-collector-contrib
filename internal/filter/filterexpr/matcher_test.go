@@ -224,7 +224,7 @@ func TestParallel(t *testing.T) {
 	testMetric := func(t *testing.T, count int) {
 		defer wg.Done()
 		<-start
-		for range count {
+		for i := 0; i < count; i++ {
 			m := pmetric.NewMetric()
 			m.SetName("my.metric")
 			m.SetEmptySum().DataPoints().AppendEmpty()
@@ -234,7 +234,7 @@ func TestParallel(t *testing.T) {
 		}
 	}
 
-	for range 20 {
+	for i := 0; i < 20; i++ {
 		wg.Add(1)
 		go testMetric(t, 20)
 	}

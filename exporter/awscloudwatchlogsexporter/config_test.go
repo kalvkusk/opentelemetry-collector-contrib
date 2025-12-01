@@ -44,11 +44,12 @@ func TestLoadConfig(t *testing.T) {
 				LogStreamName:      "testing",
 				Endpoint:           "",
 				AWSSessionSettings: awsutil.CreateDefaultSessionConfig(),
-				QueueSettings: func() exporterhelper.QueueBatchConfig {
-					queue := exporterhelper.NewDefaultQueueConfig()
-					queue.NumConsumers = 1
-					return queue
-				}(),
+				QueueSettings: exporterhelper.QueueBatchConfig{
+					Enabled:      true,
+					NumConsumers: 1,
+					QueueSize:    exporterhelper.NewDefaultQueueConfig().QueueSize,
+					Sizer:        exporterhelper.RequestSizerTypeRequests,
+				},
 			},
 		},
 		{
@@ -65,12 +66,12 @@ func TestLoadConfig(t *testing.T) {
 				AWSSessionSettings: awsutil.CreateDefaultSessionConfig(),
 				LogGroupName:       "test-2",
 				LogStreamName:      "testing",
-				QueueSettings: func() exporterhelper.QueueBatchConfig {
-					queue := exporterhelper.NewDefaultQueueConfig()
-					queue.NumConsumers = 1
-					queue.QueueSize = 2
-					return queue
-				}(),
+				QueueSettings: exporterhelper.QueueBatchConfig{
+					Enabled:      true,
+					NumConsumers: 1,
+					QueueSize:    2,
+					Sizer:        exporterhelper.RequestSizerTypeRequests,
+				},
 			},
 		},
 		{
@@ -158,7 +159,7 @@ func TestValidateTags(t *testing.T) {
 	// Create a map with no items and then one with too many items for testing
 	emptyMap := make(map[string]string)
 	bigMap := make(map[string]string)
-	for i := range 51 {
+	for i := 0; i < 51; i++ {
 		bigMap[strconv.Itoa(i)] = basicValue
 	}
 

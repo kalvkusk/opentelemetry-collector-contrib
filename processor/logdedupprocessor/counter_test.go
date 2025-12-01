@@ -94,7 +94,7 @@ func Test_logAggregatorReset(t *testing.T) {
 	require.NoError(t, err)
 
 	aggregator := newLogAggregator("log_count", time.UTC, telemetryBuilder, nil)
-	for i := range 2 {
+	for i := 0; i < 2; i++ {
 		resource := pcommon.NewResource()
 		resource.Attributes().PutInt("i", int64(i))
 		key := getResourceKey(resource)

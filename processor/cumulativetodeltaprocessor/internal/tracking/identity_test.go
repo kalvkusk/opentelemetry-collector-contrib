@@ -167,13 +167,6 @@ func TestMetricIdentity_IsSupportedMetricType(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "exponential_histogram",
-			fields: fields{
-				MetricType: pmetric.MetricTypeExponentialHistogram,
-			},
-			want: true,
-		},
-		{
 			name: "none",
 			fields: fields{
 				MetricType: pmetric.MetricTypeEmpty,
@@ -184,6 +177,13 @@ func TestMetricIdentity_IsSupportedMetricType(t *testing.T) {
 			name: "gauge",
 			fields: fields{
 				MetricType: pmetric.MetricTypeGauge,
+			},
+			want: false,
+		},
+		{
+			name: "exponential_histogram",
+			fields: fields{
+				MetricType: pmetric.MetricTypeExponentialHistogram,
 			},
 			want: false,
 		},

@@ -23,40 +23,32 @@ func Test_extractPatterns(t *testing.T) {
 	tests := []struct {
 		name    string
 		target  ottl.StringGetter[any]
-		pattern ottl.StringGetter[any]
+		pattern string
 		want    func(pcommon.Map)
 	}{
 		{
-			name:   "extract patterns",
-			target: target,
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(context.Context, any) (any, error) {
-					return `^a=(?P<a>\w+)\s+c=(?P<c>\w+)$`, nil
-				},
-			},
+			name:    "extract patterns",
+			target:  target,
+			pattern: `^a=(?P<a>\w+)\s+c=(?P<c>\w+)$`,
 			want: func(expectedMap pcommon.Map) {
 				expectedMap.PutStr("a", "b")
 				expectedMap.PutStr("c", "d")
 			},
 		},
 		{
-			name:   "no pattern found",
-			target: target,
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(context.Context, any) (any, error) {
-					return `^a=(?P<a>\w+)$`, nil
-				},
-			},
-			want: func(_ pcommon.Map) {},
+			name:    "no pattern found",
+			target:  target,
+			pattern: `^a=(?P<a>\w+)$`,
+			want:    func(_ pcommon.Map) {},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exprFunc, err := extractPatterns(tt.target, tt.pattern)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			result, err := exprFunc(t.Context(), nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			resultMap, ok := result.(pcommon.Map)
 			require.True(t, ok)
@@ -78,7 +70,7 @@ func Test_extractPatterns_validation(t *testing.T) {
 	tests := []struct {
 		name    string
 		target  ottl.StringGetter[any]
-		pattern ottl.StringGetter[any]
+		pattern string
 	}{
 		{
 			name: "bad regex",
@@ -87,11 +79,7 @@ func Test_extractPatterns_validation(t *testing.T) {
 					return "foobar", nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(context.Context, any) (any, error) {
-					return "(", nil
-				},
-			},
+			pattern: "(",
 		},
 		{
 			name: "no named capture group",
@@ -100,20 +88,14 @@ func Test_extractPatterns_validation(t *testing.T) {
 					return "foobar", nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(context.Context, any) (any, error) {
-					return "(.*)", nil
-				},
-			},
+			pattern: "(.*)",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exprFunc, err := extractPatterns[any](tt.target, tt.pattern)
-			require.NoError(t, err)
-			assert.NotNil(t, exprFunc)
-			_, err = exprFunc(t.Context(), nil)
 			assert.Error(t, err)
+			assert.Nil(t, exprFunc)
 		})
 	}
 }
@@ -122,7 +104,7 @@ func Test_extractPatterns_bad_input(t *testing.T) {
 	tests := []struct {
 		name    string
 		target  ottl.StringGetter[any]
-		pattern ottl.StringGetter[any]
+		pattern string
 	}{
 		{
 			name: "target is non-string",
@@ -131,11 +113,7 @@ func Test_extractPatterns_bad_input(t *testing.T) {
 					return 123, nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(context.Context, any) (any, error) {
-					return "(?P<line>.*)", nil
-				},
-			},
+			pattern: "(?P<line>.*)",
 		},
 		{
 			name: "target is nil",
@@ -144,18 +122,14 @@ func Test_extractPatterns_bad_input(t *testing.T) {
 					return nil, nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(context.Context, any) (any, error) {
-					return "(?P<line>.*)", nil
-				},
-			},
+			pattern: "(?P<line>.*)",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exprFunc, err := extractPatterns[any](tt.target, tt.pattern)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			result, err := exprFunc(nil, nil)
 			assert.Error(t, err)

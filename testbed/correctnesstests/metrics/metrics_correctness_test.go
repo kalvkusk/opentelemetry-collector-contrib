@@ -24,8 +24,6 @@ func TestHarness_MetricsGoldenData(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-
 	res := results{}
 	res.Init("results")
 	for _, test := range tests {

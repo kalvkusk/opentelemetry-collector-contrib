@@ -37,20 +37,18 @@ type azureType struct {
 func newBatchScraper(conf *Config, settings receiver.Settings) *azureBatchScraper {
 	return &azureBatchScraper{
 		cfg:                   conf,
-		receiverSettings:      settings,
 		settings:              settings.TelemetrySettings,
+		mb:                    metadata.NewMetricsBuilder(conf.MetricsBuilderConfig, settings),
 		mutex:                 &sync.Mutex{},
 		time:                  &timeWrapper{},
 		clientOptionsResolver: newClientOptionsResolver(conf.Cloud),
-		mbs:                   newConcurrentMapImpl[*metadata.MetricsBuilder](),
 	}
 }
 
 type azureBatchScraper struct {
-	cred             azcore.TokenCredential
-	cfg              *Config
-	receiverSettings receiver.Settings
-	settings         component.TelemetrySettings
+	cred     azcore.TokenCredential
+	cfg      *Config
+	settings component.TelemetrySettings
 	// resources on which we'll get attributes. Stored by resource id and subscription id.
 	resources map[string]map[string]*azureResource
 	// resourceTypes on which we'll collect metrics. Stored by resource type and subscription id.
@@ -60,7 +58,7 @@ type azureBatchScraper struct {
 	subscriptionsUpdated time.Time
 	// regions on which we'll collect metrics. Stored by subscription id.
 	regions map[string]map[string]struct{}
-	mbs     concurrentMetricsBuilderMap[*metadata.MetricsBuilder]
+	mb      *metadata.MetricsBuilder
 
 	mutex                 *sync.Mutex
 	time                  timeNowIface
@@ -83,7 +81,7 @@ func (s *azureBatchScraper) start(_ context.Context, host component.Host) (err e
 	s.resources = map[string]map[string]*azureResource{}
 	s.regions = map[string]map[string]struct{}{}
 
-	return err
+	return
 }
 
 func (s *azureBatchScraper) loadSubscription(sub azureSubscription) {
@@ -106,61 +104,39 @@ func (s *azureBatchScraper) unloadSubscription(id string) {
 func (s *azureBatchScraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 	s.getSubscriptions(ctx)
 
-	var subWG sync.WaitGroup
+	for subscriptionID, subscription := range s.subscriptions {
+		s.getResourcesAndTypes(ctx, subscriptionID)
 
-	for subID, subscription := range s.subscriptions {
-		s.mbs.Set(subID, metadata.NewMetricsBuilder(s.cfg.MetricsBuilderConfig, s.receiverSettings))
-		subWG.Add(1)
+		resourceTypesWithDefinitions := make(chan string)
 		go func(subscriptionID string) {
-			defer subWG.Done()
-			s.getResourcesAndTypes(ctx, subscriptionID)
-
-			resourceTypesWithDefinitions := make(chan string)
-			go func() {
-				defer close(resourceTypesWithDefinitions)
-				for resourceType := range s.resourceTypes[subscriptionID] {
-					s.getResourceMetricsDefinitionsByType(ctx, subscriptionID, resourceType)
-					resourceTypesWithDefinitions <- resourceType
-				}
-			}()
-
-			var resourceTypeWG sync.WaitGroup
-			for resourceType := range resourceTypesWithDefinitions {
-				resourceTypeWG.Add(1)
-				go func(subscriptionID, resourceType string) {
-					defer resourceTypeWG.Done()
-					s.getBatchMetricsValues(ctx, subscriptionID, resourceType)
-				}(subscriptionID, resourceType)
+			defer close(resourceTypesWithDefinitions)
+			for resourceType := range s.resourceTypes[subscriptionID] {
+				s.getResourceMetricsDefinitionsByType(ctx, subscriptionID, resourceType)
+				resourceTypesWithDefinitions <- resourceType
 			}
+		}(subscriptionID)
 
-			resourceTypeWG.Wait()
-
-			// Once all metrics has been collected for one subscription, we save them in the associated metrics builder.
-			// Having a map of metrics builders, one per subscription, allows us to collect each subscription concurrently.
-			// We'll be able to emit them all at once at the end of the scrape, once all subscriptions have been processed.
-			mb, ok := s.mbs.Get(subID)
-			if !ok {
-				s.settings.Logger.Fatal("error: metrics builder not found for subscription")
-			}
-			rb := mb.NewResourceBuilder()
-			rb.SetAzuremonitorTenantID(s.cfg.TenantID)
-			rb.SetAzuremonitorSubscriptionID(subID)
-			rb.SetAzuremonitorSubscription(subscription.DisplayName)
-			mb.EmitForResource(metadata.WithResource(rb.Emit()))
-		}(subID)
-	}
-	subWG.Wait()
-
-	resultMetrics := pmetric.NewMetrics()
-	s.mbs.Range(func(_ string, mb *metadata.MetricsBuilder) {
-		metrics := mb.Emit()
-		for _, resourceMetrics := range metrics.ResourceMetrics().All() {
-			resourceMetrics.MoveTo(resultMetrics.ResourceMetrics().AppendEmpty())
+		var wg sync.WaitGroup
+		for resourceType := range resourceTypesWithDefinitions {
+			wg.Add(1)
+			go func(subscriptionID, resourceType string) {
+				defer wg.Done()
+				s.getBatchMetricsValues(ctx, subscriptionID, resourceType)
+			}(subscriptionID, resourceType)
 		}
-	})
 
-	s.mbs.Clear()
-	return resultMetrics, nil
+		wg.Wait()
+
+		// Once all metrics has been collected for one subscription, we move to the next.
+		// We need to keep it synchronous to have the subscription id in resource attributes and not metrics attributes.
+		// It can be revamped later if we need to parallelize more, but currently, resource emit is not thread safe.
+		rb := s.mb.NewResourceBuilder()
+		rb.SetAzuremonitorTenantID(s.cfg.TenantID)
+		rb.SetAzuremonitorSubscriptionID(subscriptionID)
+		rb.SetAzuremonitorSubscription(subscription.DisplayName)
+		s.mb.EmitForResource(metadata.WithResource(rb.Emit()))
+	}
+	return s.mb.Emit(), nil
 }
 
 // TODO: duplicate
@@ -351,7 +327,7 @@ func (s *azureBatchScraper) getResourceMetricsDefinitionsByType(ctx context.Cont
 
 		for _, v := range nextResult.Value {
 			metricName := *v.Name.Value
-			metricAggregations := getMetricAggregations(*v.Namespace, metricName, s.cfg.Metrics, convertAggregationsToStr(v.SupportedAggregationTypes))
+			metricAggregations := getMetricAggregations(*v.Namespace, metricName, s.cfg.Metrics)
 			if len(metricAggregations) == 0 {
 				continue
 			}
@@ -386,10 +362,6 @@ func (s *azureBatchScraper) getBatchMetricsValues(ctx context.Context, subscript
 	if s.cfg.MaximumResourcesPerBatch > 0 {
 		maxPerBatch = s.cfg.MaximumResourcesPerBatch
 	}
-	mb, ok := s.mbs.Get(subscriptionID)
-	if !ok {
-		s.settings.Logger.Fatal("error: metrics builder not found for subscription")
-	}
 
 	for compositeKey, metricsByGrain := range resType.metricsByCompositeKey {
 		now := time.Now().UTC()
@@ -406,11 +378,17 @@ func (s *azureBatchScraper) getBatchMetricsValues(ctx context.Context, subscript
 
 			start := 0
 			for start < len(metricsByGrain.metrics) {
-				end := min(start+s.cfg.MaximumNumberOfMetricsInACall, len(metricsByGrain.metrics))
+				end := start + s.cfg.MaximumNumberOfMetricsInACall
+				if end > len(metricsByGrain.metrics) {
+					end = len(metricsByGrain.metrics)
+				}
 
 				startResources := 0
 				for startResources < len(resType.resourceIDs) {
-					endResources := min(startResources+maxPerBatch, len(resType.resourceIDs))
+					endResources := startResources + maxPerBatch
+					if endResources > len(resType.resourceIDs) {
+						endResources = len(resType.resourceIDs)
+					}
 
 					s.settings.Logger.Debug(
 						"scrape",
@@ -466,7 +444,9 @@ func (s *azureBatchScraper) getBatchMetricsValues(ctx context.Context, subscript
 									continue
 								}
 								attributes := map[string]*string{}
-								maps.Copy(attributes, res.attributes)
+								for name, value := range res.attributes {
+									attributes[name] = value
+								}
 								for _, value := range timeseriesElement.MetadataValues {
 									name := metadataPrefix + *value.Name.Value
 									attributes[name] = value.Value
@@ -479,7 +459,7 @@ func (s *azureBatchScraper) getBatchMetricsValues(ctx context.Context, subscript
 								for i := len(timeseriesElement.Data) - 1; i >= 0; i-- { // reverse for loop because newest timestamp is at the end of the slice
 									metricValue := timeseriesElement.Data[i]
 									if metricValueIsNotEmpty(metricValue) {
-										s.processQueryTimeseriesData(mb, resID, metric, metricValue, attributes)
+										s.processQueryTimeseriesData(resID, metric, metricValue, attributes)
 										break
 									}
 								}
@@ -521,7 +501,6 @@ func metricValueIsNotEmpty(metricValue azmetrics.MetricValue) bool {
 }
 
 func (s *azureBatchScraper) processQueryTimeseriesData(
-	mb *metadata.MetricsBuilder,
 	resourceID string,
 	metric azmetrics.Metric,
 	metricValue azmetrics.MetricValue,
@@ -544,7 +523,7 @@ func (s *azureBatchScraper) processQueryTimeseriesData(
 	}
 	for _, aggregation := range aggregationsData {
 		if aggregation.value != nil {
-			mb.AddDataPoint(
+			s.mb.AddDataPoint(
 				resourceID,
 				*metric.Name.Value,
 				aggregation.name,

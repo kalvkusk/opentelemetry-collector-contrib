@@ -200,7 +200,7 @@ func (c *ConnManager) closeAll(ctx context.Context) error {
 	c.logger.Debug("Closing connections", zap.Int64("count", cnt))
 
 	var errs []error
-	for range cnt {
+	for i := int64(0); i < cnt; i++ {
 		// Get a connection from one of the connection pools.
 		var conn *ManagedConn
 		var discarded bool

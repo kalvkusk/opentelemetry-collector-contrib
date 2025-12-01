@@ -18,7 +18,7 @@ func Test_isMatch(t *testing.T) {
 	tests := []struct {
 		name     string
 		target   ottl.StringLikeGetter[any]
-		pattern  ottl.StringGetter[any]
+		pattern  string
 		expected bool
 	}{
 		{
@@ -28,11 +28,7 @@ func Test_isMatch(t *testing.T) {
 					return "hello world", nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(_ context.Context, _ any) (any, error) {
-					return "hello.*", nil
-				},
-			},
+			pattern:  "hello.*",
 			expected: true,
 		},
 		{
@@ -42,11 +38,7 @@ func Test_isMatch(t *testing.T) {
 					return "goodbye world", nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(_ context.Context, _ any) (any, error) {
-					return "hello.*", nil
-				},
-			},
+			pattern:  "hello.*",
 			expected: false,
 		},
 		{
@@ -56,11 +48,7 @@ func Test_isMatch(t *testing.T) {
 					return "-12.001", nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(_ context.Context, _ any) (any, error) {
-					return "[-+]?\\d*\\.\\d+([eE][-+]?\\d+)?", nil
-				},
-			},
+			pattern:  "[-+]?\\d*\\.\\d+([eE][-+]?\\d+)?",
 			expected: true,
 		},
 		{
@@ -70,11 +58,7 @@ func Test_isMatch(t *testing.T) {
 					return true, nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(_ context.Context, _ any) (any, error) {
-					return "true", nil
-				},
-			},
+			pattern:  "true",
 			expected: true,
 		},
 		{
@@ -84,11 +68,7 @@ func Test_isMatch(t *testing.T) {
 					return int64(1), nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(_ context.Context, _ any) (any, error) {
-					return `\d`, nil
-				},
-			},
+			pattern:  `\d`,
 			expected: true,
 		},
 		{
@@ -98,11 +78,7 @@ func Test_isMatch(t *testing.T) {
 					return 1.1, nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(_ context.Context, _ any) (any, error) {
-					return `\d\.\d`, nil
-				},
-			},
+			pattern:  `\d\.\d`,
 			expected: true,
 		},
 		{
@@ -114,11 +90,7 @@ func Test_isMatch(t *testing.T) {
 					return v, nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(_ context.Context, _ any) (any, error) {
-					return `test`, nil
-				},
-			},
+			pattern:  `test`,
 			expected: true,
 		},
 		{
@@ -128,20 +100,16 @@ func Test_isMatch(t *testing.T) {
 					return nil, nil
 				},
 			},
-			pattern: &ottl.StandardStringGetter[any]{
-				Getter: func(_ context.Context, _ any) (any, error) {
-					return "impossible to match", nil
-				},
-			},
+			pattern:  "impossible to match",
 			expected: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			exprFunc, err := isMatch(tt.target, tt.pattern)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			result, err := exprFunc(t.Context(), nil)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -153,14 +121,7 @@ func Test_isMatch_validation(t *testing.T) {
 			return "anything", nil
 		},
 	}
-	invalidRegexPattern := ottl.StandardStringGetter[any]{
-		Getter: func(_ context.Context, _ any) (any, error) {
-			return "\\K", nil
-		},
-	}
-	exprFunc, err := isMatch[any](target, invalidRegexPattern)
-	require.NoError(t, err)
-	_, err = exprFunc(t.Context(), nil)
+	_, err := isMatch[any](target, "\\K")
 	require.Error(t, err)
 }
 
@@ -170,13 +131,8 @@ func Test_isMatch_error(t *testing.T) {
 			return make(chan int), nil
 		},
 	}
-	regexPattern := ottl.StandardStringGetter[any]{
-		Getter: func(_ context.Context, _ any) (any, error) {
-			return "test", nil
-		},
-	}
-	exprFunc, err := isMatch[any](target, regexPattern)
-	require.NoError(t, err)
+	exprFunc, err := isMatch[any](target, "test")
+	assert.NoError(t, err)
 	_, err = exprFunc(t.Context(), nil)
 	require.Error(t, err)
 }

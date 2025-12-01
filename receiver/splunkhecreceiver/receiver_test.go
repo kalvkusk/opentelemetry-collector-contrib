@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
@@ -615,7 +616,7 @@ func Test_splunkhecReceiver_AccessTokenPassthrough(t *testing.T) {
 
 			if tt.metric {
 				exporter, err := factory.CreateMetrics(t.Context(), exportertest.NewNopSettings(metadata.Type), exporterConfig)
-				assert.NoError(t, exporter.Start(t.Context(), componenttest.NewNopHost()))
+				assert.NoError(t, exporter.Start(t.Context(), nil))
 				defer func() {
 					require.NoError(t, exporter.Shutdown(t.Context()))
 				}()
@@ -631,7 +632,7 @@ func Test_splunkhecReceiver_AccessTokenPassthrough(t *testing.T) {
 				assert.NoError(t, err)
 			} else {
 				exporter, err := factory.CreateLogs(t.Context(), exportertest.NewNopSettings(metadata.Type), exporterConfig)
-				assert.NoError(t, exporter.Start(t.Context(), componenttest.NewNopHost()))
+				assert.NoError(t, exporter.Start(t.Context(), nil))
 				defer func() {
 					require.NoError(t, exporter.Shutdown(t.Context()))
 				}()
@@ -699,7 +700,7 @@ func Test_Logs_splunkhecReceiver_IndexSourceTypePassthrough(t *testing.T) {
 			exporterConfig.DisableCompression = true
 			exporterConfig.Endpoint = endServer.URL
 			exporter, err := factory.CreateLogs(t.Context(), exportertest.NewNopSettings(metadata.Type), exporterConfig)
-			assert.NoError(t, exporter.Start(t.Context(), componenttest.NewNopHost()))
+			assert.NoError(t, exporter.Start(t.Context(), nil))
 			assert.NoError(t, err)
 			defer func() {
 				require.NoError(t, exporter.Shutdown(t.Context()))
@@ -815,7 +816,7 @@ func Test_Metrics_splunkhecReceiver_IndexSourceTypePassthrough(t *testing.T) {
 			exporterConfig.Endpoint = endServer.URL
 
 			exporter, err := factory.CreateMetrics(t.Context(), exportertest.NewNopSettings(metadata.Type), exporterConfig)
-			assert.NoError(t, exporter.Start(t.Context(), componenttest.NewNopHost()))
+			assert.NoError(t, exporter.Start(t.Context(), nil))
 			defer func() {
 				require.NoError(t, exporter.Shutdown(t.Context()))
 			}()
@@ -881,7 +882,7 @@ func buildSplunkHecMetricsMsg(event any, time float64, value int64, dimensions u
 			"metric_name:foo": value,
 		},
 	}
-	for dim := range dimensions {
+	for dim := uint(0); dim < dimensions; dim++ {
 		ev.Fields[fmt.Sprintf("k%d", dim)] = fmt.Sprintf("v%d", dim)
 	}
 
@@ -896,7 +897,7 @@ func buildSplunkHecMsg(time float64, dimensions uint) *splunk.Event {
 		Index:      "myindex",
 		SourceType: "custom:sourcetype",
 	}
-	for dim := range dimensions {
+	for dim := uint(0); dim < dimensions; dim++ {
 		ev.Fields[fmt.Sprintf("k%d", dim)] = fmt.Sprintf("v%d", dim)
 	}
 
@@ -1813,7 +1814,7 @@ func Test_splunkhecreceiver_handle_nested_fields(t *testing.T) {
 			currentTime := float64(time.Now().UnixNano()) / 1e6
 			event := buildSplunkHecMsg(currentTime, 3)
 			event.Fields["nested_map"] = tt.field
-			msgBytes, err := json.Marshal(event)
+			msgBytes, err := jsoniter.Marshal(event)
 			require.NoError(t, err)
 			req := httptest.NewRequest(http.MethodPost, "http://localhost/services/collector", bytes.NewReader(msgBytes))
 
@@ -1963,7 +1964,7 @@ func BenchmarkHandleReq(b *testing.B) {
 	msgBytes, err := json.Marshal(splunkMsg)
 	require.NoError(b, err)
 	totalMessage := make([]byte, 100*len(msgBytes))
-	for i := range 100 {
+	for i := 0; i < 100; i++ {
 		offset := len(msgBytes) * i
 		for bi, b := range msgBytes {
 			totalMessage[offset+bi] = b
@@ -1971,8 +1972,9 @@ func BenchmarkHandleReq(b *testing.B) {
 	}
 
 	b.ReportAllocs()
+	b.ResetTimer()
 
-	for b.Loop() {
+	for n := 0; n < b.N; n++ {
 		req := httptest.NewRequest(http.MethodPost, "http://localhost/foo", bytes.NewReader(totalMessage))
 		rcv.handleReq(w, req)
 

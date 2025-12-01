@@ -5,7 +5,6 @@ package operationsmanagement // import "github.com/open-telemetry/opentelemetry-
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 	"sort"
 	"strings"
@@ -146,7 +145,7 @@ func (mp *MetricsProducer) createHelixMetrics(metric pmetric.Metric, resourceAtt
 	case pmetric.MetricTypeSum:
 		sliceLen := metric.Sum().DataPoints().Len()
 		helixMetrics = slices.Grow(helixMetrics, sliceLen)
-		for i := range sliceLen {
+		for i := 0; i < sliceLen; i++ {
 			dp := metric.Sum().DataPoints().At(i)
 			metricPayload, err := mp.createSingleDatapointMetric(dp, metric, resourceAttrs)
 			if err != nil {
@@ -164,7 +163,7 @@ func (mp *MetricsProducer) createHelixMetrics(metric pmetric.Metric, resourceAtt
 	case pmetric.MetricTypeGauge:
 		sliceLen := metric.Gauge().DataPoints().Len()
 		helixMetrics = slices.Grow(helixMetrics, sliceLen)
-		for i := range sliceLen {
+		for i := 0; i < sliceLen; i++ {
 			dp := metric.Gauge().DataPoints().At(i)
 			metricPayload, err := mp.createSingleDatapointMetric(dp, metric, resourceAttrs)
 			if err != nil {
@@ -221,7 +220,9 @@ func (mp *MetricsProducer) createSingleDatapointMetric(dp pmetric.NumberDataPoin
 	labels["source"] = "OTEL"
 
 	// Add resource attributes
-	maps.Copy(labels, resourceAttrs)
+	for k, v := range resourceAttrs {
+		labels[k] = v
+	}
 
 	// Set the metric unit
 	labels["unit"] = metric.Unit()
@@ -273,7 +274,9 @@ func (*MetricsProducer) updateEntityInformation(labels map[string]string, metric
 	}
 
 	// Add the resource attributes to the metric attributes
-	maps.Copy(stringMetricAttrs, resourceAttrs)
+	for k, v := range resourceAttrs {
+		stringMetricAttrs[k] = v
+	}
 
 	// entityTypeId is required for the BMC Helix Operations Management payload
 	entityTypeID := stringMetricAttrs["entityTypeId"]
@@ -441,7 +444,9 @@ func addPercentageVariants(metrics []BMCHelixOMMetric) []BMCHelixOMMetric {
 
 		// Clone the original
 		percentLabels := make(map[string]string, len(m.Labels))
-		maps.Copy(percentLabels, m.Labels)
+		for k, v := range m.Labels {
+			percentLabels[k] = v
+		}
 
 		// Rename metricName
 		originalName := percentLabels["metricName"]
@@ -473,8 +478,8 @@ func toPercentMetricName(originalName string) string {
 		return originalName // already transformed
 	}
 
-	if trimmed, ok := strings.CutSuffix(originalName, "ratio"); ok {
-		return trimmed + "percent"
+	if strings.HasSuffix(originalName, "ratio") {
+		return strings.TrimSuffix(originalName, "ratio") + "percent"
 	}
 
 	return originalName + ".percent"

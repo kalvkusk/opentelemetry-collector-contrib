@@ -19,15 +19,13 @@ resourceMetrics:
                     - key: span.required
                       value:
                         stringValue: foo
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127929005000"
                 - asInt: "1"
                   attributes:
                     - key: span.required
                       value:
                         stringValue: notfoo
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127929005000"
               isMonotonic: true
           - description: Span event count by attribute if ...
             name: spanevent.count.if.by_attr
@@ -39,15 +37,13 @@ resourceMetrics:
                     - key: event.required
                       value:
                         stringValue: foo
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127929006000"
                 - asInt: "4"
                   attributes:
                     - key: event.required
                       value:
                         stringValue: notfoo
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127929006000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector
@@ -71,15 +67,13 @@ resourceMetrics:
                     - key: span.required
                       value:
                         stringValue: foo
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127929018000"
                 - asInt: "1"
                   attributes:
                     - key: span.required
                       value:
                         stringValue: notfoo
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127929018000"
               isMonotonic: true
           - description: Span event count by attribute if ...
             name: spanevent.count.if.by_attr
@@ -91,15 +85,13 @@ resourceMetrics:
                     - key: event.required
                       value:
                         stringValue: foo
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127929018000"
                 - asInt: "4"
                   attributes:
                     - key: event.required
                       value:
                         stringValue: notfoo
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127929018000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 
 	"go.opentelemetry.io/collector/extension/xextension/storage"
 	"go.uber.org/multierr"
@@ -90,7 +89,9 @@ func LoadKey(ctx context.Context, persister operator.Persister, key string) ([]*
 		if ha, ok := rmd.FileAttributes["HeaderAttributes"]; ok {
 			switch hat := ha.(type) {
 			case map[string]any:
-				maps.Copy(rmd.FileAttributes, hat)
+				for k, v := range hat {
+					rmd.FileAttributes[k] = v
+				}
 				delete(rmd.FileAttributes, "HeaderAttributes")
 			default:
 				errs = multierr.Append(errs, errors.New("migrate header attributes: unexpected format"))

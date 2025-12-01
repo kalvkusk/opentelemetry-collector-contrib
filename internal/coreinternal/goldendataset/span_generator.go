@@ -42,7 +42,7 @@ func appendSpans(count int, pictFile string, random io.Reader, spanList ptrace.S
 	var spanInputs *PICTSpanInputs
 	var traceID pcommon.TraceID
 	var parentID pcommon.SpanID
-	for range count {
+	for i := 0; i < count; i++ {
 		if index >= pairsTotal {
 			index = 1
 		}
@@ -371,14 +371,14 @@ func appendMaxCountAttributes(includeStatus bool, attrMap pcommon.Map) {
 
 func appendSpanEvents(eventCnt PICTInputSpanChild, spanEvents ptrace.SpanEventSlice) {
 	listSize := calculateListSize(eventCnt)
-	for i := range listSize {
+	for i := 0; i < listSize; i++ {
 		appendSpanEvent(i, spanEvents)
 	}
 }
 
 func appendSpanLinks(linkCnt PICTInputSpanChild, random io.Reader, spanLinks ptrace.SpanLinkSlice) {
 	listSize := calculateListSize(linkCnt)
-	for i := range listSize {
+	for i := 0; i < listSize; i++ {
 		appendSpanLink(random, i, spanLinks)
 	}
 }

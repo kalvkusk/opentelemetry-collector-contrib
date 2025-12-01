@@ -156,11 +156,11 @@ func (f *taskFetcher) fetchAndDecorate(ctx context.Context) ([]*taskAnnotated, e
 // getDiscoverableTasks get arns of all running tasks and describe those tasks
 // and filter only fargate tasks or EC2 task which container instance is known.
 // There is no API to list task detail without arn so we need to call two APIs.
-func (f *taskFetcher) getDiscoverableTasks(ctx context.Context) ([]*ecstypes.Task, error) {
+func (f *taskFetcher) getDiscoverableTasks(ctx context.Context) ([]ecstypes.Task, error) {
 	svc := f.ecs
 	cluster := aws.String(f.cluster)
 	req := ecs.ListTasksInput{Cluster: cluster}
-	var tasks []*ecstypes.Task
+	var tasks []ecstypes.Task
 	for {
 		listRes, err := svc.ListTasks(ctx, &req)
 		if err != nil {
@@ -178,8 +178,7 @@ func (f *taskFetcher) getDiscoverableTasks(ctx context.Context) ([]*ecstypes.Tas
 			return nil, fmt.Errorf("ecs.DescribeTasks failed: %w", err)
 		}
 
-		for i := range descRes.Tasks {
-			task := &descRes.Tasks[i]
+		for _, task := range descRes.Tasks {
 			// Preserve only fargate tasks or EC2 tasks with non-nil ContainerInstanceArn.
 			// When ECS task of EC2 launch type is in state Provisioning/Pending, it may
 			// not have EC2 instance. Such tasks have `nil` instance arn and the
@@ -197,12 +196,11 @@ func (f *taskFetcher) getDiscoverableTasks(ctx context.Context) ([]*ecstypes.Tas
 }
 
 // attachTaskDefinition converts ecs.Task into a taskAnnotated to include its ecs.TaskDefinition.
-func (f *taskFetcher) attachTaskDefinition(ctx context.Context, tasks []*ecstypes.Task) ([]*taskAnnotated, error) {
+func (f *taskFetcher) attachTaskDefinition(ctx context.Context, tasks []ecstypes.Task) ([]*taskAnnotated, error) {
 	svc := f.ecs
 	// key is task definition arn
 	arn2Def := make(map[string]*ecstypes.TaskDefinition)
-	for i := range tasks {
-		t := tasks[i]
+	for _, t := range tasks {
 		if t.TaskDefinitionArn != nil {
 			arn2Def[*t.TaskDefinitionArn] = nil
 		}
@@ -229,8 +227,7 @@ func (f *taskFetcher) attachTaskDefinition(ctx context.Context, tasks []*ecstype
 	}
 
 	tasksWithDef := make([]*taskAnnotated, len(tasks))
-	for i := range tasks {
-		t := tasks[i]
+	for i, t := range tasks {
 		if t.TaskDefinitionArn != nil {
 			tasksWithDef[i] = &taskAnnotated{
 				Task:       t,
@@ -315,8 +312,7 @@ func (f *taskFetcher) describeContainerInstances(ctx context.Context, instanceLi
 	// Create the index to map ec2 id back to container instance id.
 	ec2Ids := make([]string, len(res.ContainerInstances))
 	ec2IdToCI := make(map[string]string)
-	for i := range res.ContainerInstances {
-		containerInstance := &res.ContainerInstances[i]
+	for i, containerInstance := range res.ContainerInstances {
 		ec2Id := containerInstance.Ec2InstanceId
 		ec2Ids[i] = *ec2Id
 		ec2IdToCI[*ec2Id] = *containerInstance.ContainerInstanceArn
@@ -332,8 +328,7 @@ func (f *taskFetcher) describeContainerInstances(ctx context.Context, instanceLi
 		return fmt.Errorf("ec2.DescribeInstances failed: %w", err)
 	}
 	for _, reservation := range ec2Res.Reservations {
-		for j := range reservation.Instances {
-			instance := &reservation.Instances[j]
+		for _, instance := range reservation.Instances {
 			if instance.InstanceId == nil {
 				continue
 			}
@@ -342,7 +337,7 @@ func (f *taskFetcher) describeContainerInstances(ctx context.Context, instanceLi
 			if !ok {
 				return fmt.Errorf("mapping from ec2 to container instance not found ec2=%s", ec2Id)
 			}
-			ci2EC2[ci] = instance // update mapping
+			ci2EC2[ci] = &instance // update mapping
 		}
 	}
 	return nil
@@ -398,13 +393,11 @@ func (f *taskFetcher) getAllServices(ctx context.Context) ([]ecstypes.Service, e
 func (*taskFetcher) attachService(tasks []*taskAnnotated, services []ecstypes.Service) {
 	// Map deployment ID to service name
 	idToService := make(map[string]*ecstypes.Service)
-	for i := range services {
-		svc := &services[i]
-		for j := range svc.Deployments {
-			deployment := &svc.Deployments[j]
+	for _, svc := range services {
+		for _, deployment := range svc.Deployments {
 			status := *deployment.Status
 			if status == deploymentStatusActive || status == deploymentStatusPrimary {
-				idToService[*deployment.Id] = svc
+				idToService[*deployment.Id] = &svc
 				break
 			}
 		}

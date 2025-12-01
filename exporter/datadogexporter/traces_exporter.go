@@ -31,9 +31,9 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/datadog/clientutil"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/datadog/hostmetadata"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/datadog/scrub"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/datadog"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/datadog/agentcomponents"
 	datadogconfig "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/datadog/config"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/pkg/datadog/featuregates"
 )
 
 var traceCustomHTTPFeatureGate = featuregate.GlobalRegistry().MustRegister(
@@ -134,11 +134,7 @@ func (exp *traceExporter) consumeTraces(
 	}
 	for i := 0; i < rspans.Len(); i++ {
 		rspan := rspans.At(i)
-		var src source.Source
-		src, err = exp.agent.OTLPReceiver.ReceiveResourceSpans(ctx, rspan, header, exp.gatewayUsage)
-		if err != nil {
-			return err
-		}
+		src := exp.agent.OTLPReceiver.ReceiveResourceSpans(ctx, rspan, header, exp.gatewayUsage)
 		switch src.Kind {
 		case source.HostnameKind:
 			hosts[src.Identifier] = struct{}{}
@@ -211,12 +207,12 @@ func newTraceAgentConfig(ctx context.Context, params exporter.Settings, cfg *dat
 	acfg.PeerTags = cfg.Traces.PeerTags
 	acfg.MaxSenderRetries = 4
 	if traceCustomHTTPFeatureGate.IsEnabled() {
-		params.Logger.Info("Experimental feature: datadog exporter trace export uses a custom HTTP transport from the exporter HTTP configs")
-		acfg.HTTPTransportFunc = func() *http.Transport {
-			return clientutil.NewHTTPTransport(cfg.ClientConfig)
+		params.Logger.Info("Experimental feature: datadog exporter trace export uses a custom HTTP client from the exporter HTTP configs")
+		acfg.HTTPClientFunc = func() *http.Client {
+			return clientutil.NewHTTPClient(cfg.ClientConfig)
 		}
 	}
-	if !featuregates.OperationAndResourceNameV2FeatureGate.IsEnabled() {
+	if !datadog.OperationAndResourceNameV2FeatureGate.IsEnabled() {
 		acfg.Features["disable_operation_and_resource_name_logic_v2"] = struct{}{}
 	}
 	if v := cfg.Traces.GetFlushInterval(); v > 0 {
@@ -231,7 +227,7 @@ func newTraceAgentConfig(ctx context.Context, params exporter.Settings, cfg *dat
 	if cfg.Traces.ComputeTopLevelBySpanKind {
 		acfg.Features["enable_otlp_compute_top_level_by_span_kind"] = struct{}{}
 	}
-	if !featuregates.ReceiveResourceSpansV2FeatureGate.IsEnabled() {
+	if !datadog.ReceiveResourceSpansV2FeatureGate.IsEnabled() {
 		acfg.Features["disable_receive_resource_spans_v2"] = struct{}{}
 	}
 	tracelog.SetLogger(&agentcomponents.ZapLogger{Logger: params.Logger}) // TODO: This shouldn't be a singleton

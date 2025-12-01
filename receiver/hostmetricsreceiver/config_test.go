@@ -22,7 +22,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/loadscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/memoryscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/networkscraper"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/nfsscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/pagingscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processesscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper"
@@ -78,7 +77,6 @@ func TestLoadConfig(t *testing.T) {
 						}
 						return cfg
 					})(),
-					component.MustNewType("nfs"):       nfsscraper.NewFactory().CreateDefaultConfig(),
 					component.MustNewType("processes"): processesscraper.NewFactory().CreateDefaultConfig(),
 					component.MustNewType("paging"):    pagingscraper.NewFactory().CreateDefaultConfig(),
 					component.MustNewType("process"): (func() component.Config {

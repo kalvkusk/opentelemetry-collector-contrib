@@ -301,7 +301,7 @@ func (bq bqTest) verifyMetrics(t *testing.T) (inflight, waiting int64) {
 			}
 		}
 	}
-	return inflight, waiting
+	return
 }
 
 func TestBoundedQueueLIFO(t *testing.T) {

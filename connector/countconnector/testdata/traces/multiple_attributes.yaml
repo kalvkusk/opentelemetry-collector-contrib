@@ -22,8 +22,7 @@ resourceMetrics:
                     - key: span.optional
                       value:
                         stringValue: notbar
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127926637000"
                 - asInt: "1"
                   attributes:
                     - key: span.required
@@ -32,8 +31,7 @@ resourceMetrics:
                     - key: span.optional
                       value:
                         stringValue: bar
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127926637000"
               isMonotonic: true
           - description: Span event count by attributes
             name: spanevent.count.by_attr
@@ -48,8 +46,7 @@ resourceMetrics:
                     - key: event.optional
                       value:
                         stringValue: bar
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127926637000"
                 - asInt: "4"
                   attributes:
                     - key: event.required
@@ -58,8 +55,7 @@ resourceMetrics:
                     - key: event.optional
                       value:
                         stringValue: notbar
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127926637000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector
@@ -86,8 +82,7 @@ resourceMetrics:
                     - key: span.optional
                       value:
                         stringValue: bar
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127926647000"
                 - asInt: "1"
                   attributes:
                     - key: span.required
@@ -96,8 +91,7 @@ resourceMetrics:
                     - key: span.optional
                       value:
                         stringValue: notbar
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127926647000"
               isMonotonic: true
           - description: Span event count by attributes
             name: spanevent.count.by_attr
@@ -112,8 +106,7 @@ resourceMetrics:
                     - key: event.optional
                       value:
                         stringValue: bar
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127926647000"
                 - asInt: "4"
                   attributes:
                     - key: event.required
@@ -122,8 +115,7 @@ resourceMetrics:
                     - key: event.optional
                       value:
                         stringValue: notbar
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127926647000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector
@@ -147,8 +139,7 @@ resourceMetrics:
                     - key: span.optional
                       value:
                         stringValue: bar
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127926654000"
                 - asInt: "1"
                   attributes:
                     - key: span.required
@@ -157,8 +148,7 @@ resourceMetrics:
                     - key: span.optional
                       value:
                         stringValue: notbar
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127926654000"
               isMonotonic: true
           - description: Span event count by attributes
             name: spanevent.count.by_attr
@@ -173,8 +163,7 @@ resourceMetrics:
                     - key: event.optional
                       value:
                         stringValue: bar
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127926654000"
                 - asInt: "4"
                   attributes:
                     - key: event.required
@@ -183,8 +172,7 @@ resourceMetrics:
                     - key: event.optional
                       value:
                         stringValue: notbar
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127926654000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector
@@ -204,8 +192,7 @@ resourceMetrics:
                     - key: span.optional
                       value:
                         stringValue: bar
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127926661000"
                 - asInt: "1"
                   attributes:
                     - key: span.required
@@ -214,8 +201,7 @@ resourceMetrics:
                     - key: span.optional
                       value:
                         stringValue: notbar
-                  startTimeUnixNano: "1581452772000000321"
-                  timeUnixNano: "1581452773000000789"
+                  timeUnixNano: "1678392127926661000"
               isMonotonic: true
           - description: Span event count by attributes
             name: spanevent.count.by_attr
@@ -230,8 +216,7 @@ resourceMetrics:
                     - key: event.optional
                       value:
                         stringValue: bar
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127926661000"
                 - asInt: "4"
                   attributes:
                     - key: event.required
@@ -240,8 +225,7 @@ resourceMetrics:
                     - key: event.optional
                       value:
                         stringValue: notbar
-                  startTimeUnixNano: "1581452773000000123"
-                  timeUnixNano: "1581452773000000123"
+                  timeUnixNano: "1678392127926661000"
               isMonotonic: true
         scope:
           name: github.com/open-telemetry/opentelemetry-collector-contrib/connector/countconnector

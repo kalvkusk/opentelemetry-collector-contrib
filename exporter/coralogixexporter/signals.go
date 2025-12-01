@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"runtime"
 
 	"go.opentelemetry.io/collector/component"
@@ -22,25 +21,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type signalConfig interface {
-	ToClientConn(ctx context.Context, host component.Host, settings component.TelemetrySettings, opts ...configgrpc.ToClientConnOption) (*grpc.ClientConn, error)
-	ToHTTPClient(ctx context.Context, host component.Host, settings component.TelemetrySettings) (*http.Client, error)
-	GetWaitForReady() bool
-	GetEndpoint() string
-}
-
-var _ signalConfig = (*signalConfigWrapper)(nil)
-
+// signalConfigWrapper wraps configgrpc.ClientConfig to implement signalConfig interface
 type signalConfigWrapper struct {
-	config *TransportConfig
+	config *configgrpc.ClientConfig
 }
 
 func (w *signalConfigWrapper) ToClientConn(ctx context.Context, host component.Host, settings component.TelemetrySettings, opts ...configgrpc.ToClientConnOption) (*grpc.ClientConn, error) {
-	return w.config.ToClientConn(ctx, host.GetExtensions(), settings, opts...)
-}
-
-func (w *signalConfigWrapper) ToHTTPClient(ctx context.Context, host component.Host, settings component.TelemetrySettings) (*http.Client, error) {
-	return w.config.ToHTTPClient(ctx, host, settings)
+	return w.config.ToClientConn(ctx, host, settings, opts...)
 }
 
 func (w *signalConfigWrapper) GetWaitForReady() bool {
@@ -51,7 +38,7 @@ func (w *signalConfigWrapper) GetEndpoint() string {
 	return w.config.Endpoint
 }
 
-func newSignalExporter(oCfg *Config, set exp.Settings, signalEndpoint string, headers configopaque.MapList) (*signalExporter, error) {
+func newSignalExporter(oCfg *Config, set exp.Settings, signalEndpoint string, headers map[string]configopaque.String) (*signalExporter, error) {
 	if isEmpty(oCfg.Domain) && isEmpty(signalEndpoint) {
 		return nil, errors.New("coralogix exporter config requires `domain` or `logs.endpoint` configuration")
 	}
@@ -60,7 +47,7 @@ func newSignalExporter(oCfg *Config, set exp.Settings, signalEndpoint string, he
 		set.BuildInfo.Description, set.BuildInfo.Version, runtime.GOOS, runtime.GOARCH)
 
 	md := metadata.New(nil)
-	for k, v := range headers.Iter {
+	for k, v := range headers {
 		md.Set(k, string(v))
 	}
 
@@ -77,16 +64,18 @@ func newSignalExporter(oCfg *Config, set exp.Settings, signalEndpoint string, he
 	}, nil
 }
 
+type signalConfig interface {
+	ToClientConn(ctx context.Context, host component.Host, settings component.TelemetrySettings, opts ...configgrpc.ToClientConnOption) (*grpc.ClientConn, error)
+	GetWaitForReady() bool
+	GetEndpoint() string
+}
+
 type signalExporter struct {
 	// Input configuration.
 	config *Config
 
-	// GRPC exporter
 	clientConn  *grpc.ClientConn
 	callOptions []grpc.CallOption
-
-	// HTTP exporter
-	clientHTTP *http.Client
 
 	settings component.TelemetrySettings
 
@@ -100,14 +89,10 @@ type signalExporter struct {
 }
 
 func (e *signalExporter) shutdown(_ context.Context) error {
-	if e.clientConn != nil {
-		return e.clientConn.Close()
+	if e.clientConn == nil {
+		return nil
 	}
-
-	if e.clientHTTP != nil {
-		e.clientHTTP.CloseIdleConnections()
-	}
-	return nil
+	return e.clientConn.Close()
 }
 
 func (e *signalExporter) enhanceContext(ctx context.Context) context.Context {
@@ -119,39 +104,30 @@ func (e *signalExporter) enhanceContext(ctx context.Context) context.Context {
 }
 
 func (e *signalExporter) startSignalExporter(ctx context.Context, host component.Host, signalConfig signalConfig) (err error) {
+	switch {
+	case !isEmpty(signalConfig.GetEndpoint()):
+		if e.clientConn, err = signalConfig.ToClientConn(ctx, host, e.settings, configgrpc.WithGrpcDialOption(grpc.WithUserAgent(e.userAgent))); err != nil {
+			return err
+		}
+	case !isEmpty(e.config.Domain):
+		if e.clientConn, err = e.config.getDomainGrpcSettings().ToClientConn(ctx, host, e.settings, configgrpc.WithGrpcDialOption(grpc.WithUserAgent(e.userAgent))); err != nil {
+			return err
+		}
+	}
+
 	if signalConfigWrapper, ok := signalConfig.(*signalConfigWrapper); ok {
-		signalConfigWrapper.config.Headers.Set("Authorization", configopaque.String("Bearer "+string(e.config.PrivateKey)))
-		if e.config.Protocol != httpProtocol {
-			for k, v := range signalConfigWrapper.config.Headers.Iter {
-				e.metadata.Set(k, string(v))
-			}
+		if signalConfigWrapper.config.Headers == nil {
+			signalConfigWrapper.config.Headers = make(map[string]configopaque.String)
+		}
+		signalConfigWrapper.config.Headers["Authorization"] = configopaque.String("Bearer " + string(e.config.PrivateKey))
+
+		for k, v := range signalConfigWrapper.config.Headers {
+			e.metadata.Set(k, string(v))
 		}
 	}
 
-	signalConfigWrapper, isWrapper := signalConfig.(*signalConfigWrapper)
-	if !isWrapper {
-		return errors.New("unexpected signal config type")
-	}
-
-	var transportConfig *TransportConfig
-	if !isEmpty(e.config.Domain) && isEmpty(signalConfig.GetEndpoint()) {
-		transportConfig = e.config.getMergedTransportConfig(signalConfigWrapper.config)
-	} else {
-		transportConfig = signalConfigWrapper.config
-	}
-
-	if e.config.Protocol == httpProtocol {
-		e.clientHTTP, err = transportConfig.ToHTTPClient(ctx, host, e.settings)
-		if err != nil {
-			return err
-		}
-	} else {
-		if e.clientConn, err = transportConfig.ToClientConn(ctx, host.GetExtensions(), e.settings, configgrpc.WithGrpcDialOption(grpc.WithUserAgent(e.userAgent))); err != nil {
-			return err
-		}
-		e.callOptions = []grpc.CallOption{
-			grpc.WaitForReady(signalConfig.GetWaitForReady()),
-		}
+	e.callOptions = []grpc.CallOption{
+		grpc.WaitForReady(signalConfig.GetWaitForReady()),
 	}
 
 	return nil
@@ -178,51 +154,26 @@ func (e *signalExporter) canSend() bool {
 // Send a telemetry data request to the server. "perform" function is expected to make
 // the actual gRPC unary call that sends the request.
 func (e *signalExporter) processError(err error) error {
-	switch e.config.Protocol {
-	case grpcProtocol:
-		st := status.Convert(err)
-		if st.Code() == codes.OK {
-			e.rateError.errorCount.Store(0)
-			return nil
-		}
-
-		retryInfo := getRetryInfo(st)
-
-		shouldRetry, shouldFlagRateLimit := shouldRetry(st.Code(), retryInfo)
-		if !shouldRetry {
-			if shouldFlagRateLimit {
-				e.EnableRateLimit()
-			}
-			return consumererror.NewPermanent(err)
-		}
-
-		throttleDuration := getThrottleDuration(retryInfo)
-		if throttleDuration != 0 {
-			return exporterhelper.NewThrottleRetry(err, throttleDuration)
-		}
-	case httpProtocol:
-		var httpErr *httpError
-		if !errors.As(err, &httpErr) {
-			return err
-		}
-
-		if httpErr.StatusCode == http.StatusOK {
-			e.rateError.errorCount.Store(0)
-			return nil
-		}
-
-		shouldRetry, shouldFlagRateLimit := shouldRetryHTTP(httpErr.StatusCode)
-		if !shouldRetry {
-			if shouldFlagRateLimit {
-				e.EnableRateLimit()
-			}
-			return consumererror.NewPermanent(err)
-		}
-
-		throttleDuration := getHTTPThrottleDuration(httpErr.StatusCode, httpErr.Header)
-		if throttleDuration != 0 {
-			return exporterhelper.NewThrottleRetry(err, throttleDuration)
-		}
+	st := status.Convert(err)
+	if st.Code() == codes.OK {
+		e.rateError.errorCount.Store(0)
+		return nil
 	}
+
+	retryInfo := getRetryInfo(st)
+
+	shouldRetry, shouldFlagRateLimit := shouldRetry(st.Code(), retryInfo)
+	if !shouldRetry {
+		if shouldFlagRateLimit {
+			e.EnableRateLimit()
+		}
+		return consumererror.NewPermanent(err)
+	}
+
+	throttleDuration := getThrottleDuration(retryInfo)
+	if throttleDuration != 0 {
+		return exporterhelper.NewThrottleRetry(err, throttleDuration)
+	}
+
 	return err
 }

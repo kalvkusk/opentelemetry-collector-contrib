@@ -4,7 +4,6 @@
 package azuredataexplorerexporter // import "github.com/open-telemetry/opentelemetry-collector-contrib/exporter/azuredataexplorerexporter"
 
 import (
-	"maps"
 	"time"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -44,8 +43,8 @@ type link struct {
 
 func mapToAdxTrace(resource pcommon.Resource, scope pcommon.InstrumentationScope, spanData ptrace.Span) *adxTrace {
 	traceAttrib := spanData.Attributes().AsRaw()
-	clonedTraceAttrib := maps.Clone(traceAttrib)
-	maps.Copy(clonedTraceAttrib, getScopeMap(scope))
+	clonedTraceAttrib := cloneMap(traceAttrib)
+	copyMap(clonedTraceAttrib, getScopeMap(scope))
 
 	return &adxTrace{
 		TraceID:            traceutil.TraceIDToHexOrEmptyString(spanData.TraceID()),

@@ -18,16 +18,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
-	"go.opentelemetry.io/collector/featuregate"
-	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/receiver/receivertest"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/prometheusreceiver/internal/metadata"
 )
-
-var tsZero = pcommon.Timestamp(0)
 
 // Test data and validation functions for all four core metrics for Prometheus Receiver.
 // Make sure every page has a gauge, we are relying on it to figure out the start time if needed
@@ -153,7 +149,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts1),
 						compareDoubleValue(100),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -161,7 +157,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts1),
 						compareDoubleValue(5),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -177,7 +173,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts1),
 						compareHistogram(2500, 5000, []float64{0.05, 0.5, 1}, []uint64{1000, 500, 500, 500}),
 					},
@@ -192,7 +188,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts1),
 						compareSummary(1000, 5000, [][]float64{{0.01, 1}, {0.9, 5}, {0.99, 8}}),
 					},
@@ -231,7 +227,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts2),
 						compareDoubleValue(199),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -239,7 +235,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts2),
 						compareDoubleValue(12),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -256,7 +252,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				{
 					histogramPointComparator: []histogramPointComparator{
 						// TODO: Prometheus Receiver Issue- start_timestamp are incorrect for Summary and Histogram metrics after a failed scrape (issue not yet posted on collector-contrib repo)
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts2),
 						compareHistogram(2600, 5050, []float64{0.05, 0.5, 1}, []uint64{1100, 500, 500, 500}),
 					},
@@ -272,7 +268,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				{
 					summaryPointComparator: []summaryPointComparator{
 						// TODO: Prometheus Receiver Issue- start_timestamp are incorrect for Summary and Histogram metrics after a failed scrape (issue not yet posted on collector-contrib repo)
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts2),
 						compareSummary(1001, 5002, [][]float64{{0.01, 1}, {0.9, 6}, {0.99, 8}}),
 					},
@@ -311,7 +307,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				{
 					numberPointComparator: []numberPointComparator{
 						// TODO: #6360 Prometheus Receiver Issue- start_timestamp should reset if the prior scrape had higher value
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts3),
 						compareTimestamp(ts3),
 						compareDoubleValue(99),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -320,7 +316,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				{
 					numberPointComparator: []numberPointComparator{
 						// TODO: #6360 Prometheus Receiver Issue- start_timestamp should reset if the prior scrape had higher value
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts3),
 						compareTimestamp(ts3),
 						compareDoubleValue(3),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -337,7 +333,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				{
 					histogramPointComparator: []histogramPointComparator{
 						// TODO: #6360 Prometheus Receiver Issue- start_timestamp should reset if the prior scrape had higher value
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts3),
 						compareHistogramTimestamp(ts3),
 						compareHistogram(2400, 4900, []float64{0.05, 0.5, 1}, []uint64{900, 500, 500, 500}),
 					},
@@ -353,7 +349,7 @@ func verifyTarget1(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				{
 					summaryPointComparator: []summaryPointComparator{
 						// TODO: #6360 Prometheus Receiver Issue- start_timestamp should reset if the prior scrape had higher value
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts3),
 						compareSummaryTimestamp(ts3),
 						compareSummary(900, 4900, [][]float64{{0.01, 1}, {0.9, 4}, {0.99, 6}}),
 					},
@@ -587,7 +583,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts1),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "200"}),
 						compareHistogram(10, 7, []float64{1}, []uint64{8, 2}),
@@ -595,7 +591,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts1),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "400"}),
 						compareHistogram(50, 25, []float64{1}, []uint64{30, 20}),
@@ -611,7 +607,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts1),
 						compareDoubleValue(10),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -619,7 +615,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts1),
 						compareDoubleValue(50),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -635,7 +631,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts1),
 						compareSummaryAttributes(map[string]string{"code": "0"}),
 						compareSummary(50, 100, [][]float64{{0.5, 47}}),
@@ -643,7 +639,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts1),
 						compareSummaryAttributes(map[string]string{"code": "5"}),
 						compareSummary(400, 180, [][]float64{{0.5, 35}}),
@@ -683,7 +679,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts2),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "200"}),
 						compareHistogram(50, 43, []float64{1}, []uint64{40, 10}),
@@ -691,7 +687,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts2),
 						compareHistogramTimestamp(ts2),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "300"}),
 						compareHistogram(3, 2, []float64{1}, []uint64{3, 0}),
@@ -699,7 +695,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts2),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "400"}),
 						compareHistogram(60, 30, []float64{1}, []uint64{35, 25}),
@@ -715,7 +711,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts2),
 						compareDoubleValue(50),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -723,7 +719,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts2),
 						compareTimestamp(ts2),
 						compareDoubleValue(3),
 						compareAttributes(map[string]string{"method": "post", "code": "300"}),
@@ -731,7 +727,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts2),
 						compareDoubleValue(60),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -747,7 +743,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts2),
 						compareSummaryAttributes(map[string]string{"code": "0"}),
 						compareSummary(60, 110, [][]float64{{0.5, 57}}),
@@ -755,7 +751,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts2),
 						compareSummaryTimestamp(ts2),
 						compareSummaryAttributes(map[string]string{"code": "3"}),
 						compareSummary(30, 50, [][]float64{{0.5, 42}}),
@@ -763,7 +759,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts2),
 						compareSummaryAttributes(map[string]string{"code": "5"}),
 						compareSummary(410, 190, [][]float64{{0.5, 45}}),
@@ -803,7 +799,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts3),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "200"}),
 						compareHistogram(50, 43, []float64{1}, []uint64{40, 10}),
@@ -811,7 +807,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts2),
 						compareHistogramTimestamp(ts3),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "300"}),
 						compareHistogram(5, 7, []float64{1}, []uint64{3, 2}),
@@ -819,7 +815,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts3),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "400"}),
 						compareHistogram(60, 30, []float64{1}, []uint64{35, 25}),
@@ -835,7 +831,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts3),
 						compareDoubleValue(50),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -843,7 +839,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts2),
 						compareTimestamp(ts3),
 						compareDoubleValue(5),
 						compareAttributes(map[string]string{"method": "post", "code": "300"}),
@@ -851,7 +847,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts3),
 						compareDoubleValue(60),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -867,7 +863,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts3),
 						compareSummaryAttributes(map[string]string{"code": "0"}),
 						compareSummary(70, 120, [][]float64{{0.5, 67}}),
@@ -875,7 +871,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts2),
 						compareSummaryTimestamp(ts3),
 						compareSummaryAttributes(map[string]string{"code": "3"}),
 						compareSummary(40, 60, [][]float64{{0.5, 52}}),
@@ -883,7 +879,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts3),
 						compareSummaryAttributes(map[string]string{"code": "5"}),
 						compareSummary(420, 200, [][]float64{{0.5, 55}}),
@@ -923,7 +919,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts4),
 						compareHistogramTimestamp(ts4),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "200"}),
 						compareHistogram(49, 42, []float64{1}, []uint64{40, 9}),
@@ -931,7 +927,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts4),
 						compareHistogramTimestamp(ts4),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "300"}),
 						compareHistogram(3, 4, []float64{1}, []uint64{2, 1}),
@@ -939,7 +935,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts4),
 						compareHistogramTimestamp(ts4),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "400"}),
 						compareHistogram(59, 29, []float64{1}, []uint64{34, 25}),
@@ -955,7 +951,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts4),
 						compareTimestamp(ts4),
 						compareDoubleValue(49),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -963,7 +959,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts4),
 						compareTimestamp(ts4),
 						compareDoubleValue(3),
 						compareAttributes(map[string]string{"method": "post", "code": "300"}),
@@ -971,7 +967,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts4),
 						compareTimestamp(ts4),
 						compareDoubleValue(59),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -987,7 +983,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts4),
 						compareSummaryTimestamp(ts4),
 						compareSummaryAttributes(map[string]string{"code": "0"}),
 						compareSummary(69, 119, [][]float64{{0.5, 66}}),
@@ -995,7 +991,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts4),
 						compareSummaryTimestamp(ts4),
 						compareSummaryAttributes(map[string]string{"code": "3"}),
 						compareSummary(39, 59, [][]float64{{0.5, 51}}),
@@ -1003,7 +999,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts4),
 						compareSummaryTimestamp(ts4),
 						compareSummaryAttributes(map[string]string{"code": "5"}),
 						compareSummary(419, 199, [][]float64{{0.5, 54}}),
@@ -1043,7 +1039,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts4),
 						compareHistogramTimestamp(ts5),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "200"}),
 						compareHistogram(50, 43, []float64{1}, []uint64{41, 9}),
@@ -1051,7 +1047,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts4),
 						compareHistogramTimestamp(ts5),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "300"}),
 						compareHistogram(5, 4, []float64{1}, []uint64{4, 1}),
@@ -1059,7 +1055,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts4),
 						compareHistogramTimestamp(ts5),
 						compareHistogramAttributes(map[string]string{"method": "post", "code": "400"}),
 						compareHistogram(59, 29, []float64{1}, []uint64{34, 25}),
@@ -1075,7 +1071,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts4),
 						compareTimestamp(ts5),
 						compareDoubleValue(50),
 						compareAttributes(map[string]string{"method": "post", "code": "200"}),
@@ -1083,7 +1079,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts4),
 						compareTimestamp(ts5),
 						compareDoubleValue(5),
 						compareAttributes(map[string]string{"method": "post", "code": "300"}),
@@ -1091,7 +1087,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts4),
 						compareTimestamp(ts5),
 						compareDoubleValue(59),
 						compareAttributes(map[string]string{"method": "post", "code": "400"}),
@@ -1107,7 +1103,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts4),
 						compareSummaryTimestamp(ts5),
 						compareSummaryAttributes(map[string]string{"code": "0"}),
 						compareSummary(79, 129, [][]float64{{0.5, 76}}),
@@ -1115,7 +1111,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts4),
 						compareSummaryTimestamp(ts5),
 						compareSummaryAttributes(map[string]string{"code": "3"}),
 						compareSummary(49, 69, [][]float64{{0.5, 61}}),
@@ -1123,7 +1119,7 @@ func verifyTarget2(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts4),
 						compareSummaryTimestamp(ts5),
 						compareSummaryAttributes(map[string]string{"code": "5"}),
 						compareSummary(429, 209, [][]float64{{0.5, 64}}),
@@ -1249,7 +1245,7 @@ func verifyTarget3(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts1),
 						compareHistogram(13003, 50000, []float64{0.2, 0.5, 1}, []uint64{10000, 1000, 1001, 1002}),
 					},
@@ -1264,7 +1260,7 @@ func verifyTarget3(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts1),
 						compareHistogram(10, 100, nil, []uint64{10}),
 					},
@@ -1279,7 +1275,7 @@ func verifyTarget3(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts1),
 						compareSummaryAttributes(map[string]string{"foo": "bar"}),
 						compareSummary(900, 8000, [][]float64{{0.01, 31}, {0.05, 35}, {0.5, 47}, {0.9, 70}, {0.99, 76}}),
@@ -1287,7 +1283,7 @@ func verifyTarget3(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts1),
 						compareSummaryAttributes(map[string]string{"foo": "no_quantile"}),
 						compareSummary(50, 100, [][]float64{}),
@@ -1327,7 +1323,7 @@ func verifyTarget3(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts2),
 						compareHistogram(14003, 50100, []float64{0.2, 0.5, 1}, []uint64{11000, 1000, 1001, 1002}),
 					},
@@ -1342,7 +1338,7 @@ func verifyTarget3(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					histogramPointComparator: []histogramPointComparator{
-						compareHistogramStartTimestamp(tsZero),
+						compareHistogramStartTimestamp(ts1),
 						compareHistogramTimestamp(ts2),
 						compareHistogram(15, 101, nil, []uint64{15}),
 					},
@@ -1357,7 +1353,7 @@ func verifyTarget3(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 			[]dataPointExpectation{
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts2),
 						compareSummaryAttributes(map[string]string{"foo": "bar"}),
 						compareSummary(950, 8100, [][]float64{{0.01, 32}, {0.05, 35}, {0.5, 47}, {0.9, 70}, {0.99, 77}}),
@@ -1365,7 +1361,7 @@ func verifyTarget3(t *testing.T, td *testData, resourceMetrics []pmetric.Resourc
 				},
 				{
 					summaryPointComparator: []summaryPointComparator{
-						compareSummaryStartTimestamp(tsZero),
+						compareSummaryStartTimestamp(ts1),
 						compareSummaryTimestamp(ts2),
 						compareSummaryAttributes(map[string]string{"foo": "no_quantile"}),
 						compareSummary(55, 101, [][]float64{}),
@@ -1508,7 +1504,7 @@ func verifyStartTimeMetricPage(t *testing.T, td *testData, result []pmetric.Reso
 	numTimeseries := 0
 	for _, rm := range result {
 		metrics := getMetrics(rm)
-		for i := range metrics {
+		for i := 0; i < len(metrics); i++ {
 			timestamp := startTimeMetricPageStartTimestamp
 			switch metrics[i].Type() {
 			case pmetric.MetricTypeGauge:
@@ -1545,11 +1541,6 @@ func verifyStartTimeMetricPage(t *testing.T, td *testData, result []pmetric.Reso
 
 // TestStartTimeMetric validates that timeseries have start time set to 'process_start_time_seconds'
 func TestStartTimeMetric(t *testing.T) {
-	err := featuregate.GlobalRegistry().Set("receiver.prometheusreceiver.RemoveStartTimeAdjustment", false)
-	require.NoError(t, err)
-	defer func() {
-		_ = featuregate.GlobalRegistry().Set("receiver.prometheusreceiver.RemoveStartTimeAdjustment", true)
-	}()
 	targets := []*testData{
 		{
 			name: "target1",
@@ -1594,7 +1585,6 @@ example_process_start_time_seconds 400.8
 
 // TestStartTimeMetricRegex validates that timeseries have start time regex set to 'process_start_time_seconds'
 func TestStartTimeMetricRegex(t *testing.T) {
-	t.Skip("Skipping test since it is flaky, see https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/42684.")
 	targets := []*testData{
 		{
 			name: "target1",

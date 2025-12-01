@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 	"go.opentelemetry.io/collector/confmap/xconfmap"
 
+	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/splunk"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/signalfxreceiver/internal/metadata"
 )
 
@@ -39,6 +40,9 @@ func TestLoadConfig(t *testing.T) {
 				ServerConfig: confighttp.ServerConfig{
 					Endpoint: "localhost:9943",
 				},
+				AccessTokenPassthroughConfig: splunk.AccessTokenPassthroughConfig{
+					AccessTokenPassthrough: true,
+				},
 			},
 		},
 		{
@@ -52,6 +56,9 @@ func TestLoadConfig(t *testing.T) {
 							KeyFile:  "/test.key",
 						},
 					}),
+				},
+				AccessTokenPassthroughConfig: splunk.AccessTokenPassthroughConfig{
+					AccessTokenPassthrough: false,
 				},
 			},
 		},

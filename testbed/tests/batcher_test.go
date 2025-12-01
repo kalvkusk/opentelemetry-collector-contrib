@@ -5,6 +5,7 @@
 // RUN_TESTBED=1 go test -v
 
 //go:build batcher
+// +build batcher
 
 package tests
 

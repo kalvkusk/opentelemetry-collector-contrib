@@ -14,7 +14,7 @@ import (
 func AssertEqualOtelarrowAdmissionInFlightBytes(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol_otelarrow_admission_in_flight_bytes",
-		Description: "Number of bytes that have started processing but are not finished. [Development]",
+		Description: "Number of bytes that have started processing but are not finished.",
 		Unit:        "By",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -30,7 +30,7 @@ func AssertEqualOtelarrowAdmissionInFlightBytes(t *testing.T, tt *componenttest.
 func AssertEqualOtelarrowAdmissionWaitingBytes(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol_otelarrow_admission_waiting_bytes",
-		Description: "Number of items waiting to start processing. [Development]",
+		Description: "Number of items waiting to start processing.",
 		Unit:        "By",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,

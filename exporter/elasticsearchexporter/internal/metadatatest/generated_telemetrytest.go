@@ -24,7 +24,7 @@ func NewSettings(tt *componenttest.Telemetry) exporter.Settings {
 func AssertEqualElasticsearchBulkRequestsCount(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol.elasticsearch.bulk_requests.count",
-		Description: "Count of the completed bulk requests. [Alpha]",
+		Description: "Count of the completed bulk requests. [alpha]",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -40,7 +40,7 @@ func AssertEqualElasticsearchBulkRequestsCount(t *testing.T, tt *componenttest.T
 func AssertEqualElasticsearchBulkRequestsLatency(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.HistogramDataPoint[float64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol.elasticsearch.bulk_requests.latency",
-		Description: "Latency of Elasticsearch bulk operations in seconds. [Alpha]",
+		Description: "Latency of Elasticsearch bulk operations in seconds. [alpha]",
 		Unit:        "s",
 		Data: metricdata.Histogram[float64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -55,7 +55,7 @@ func AssertEqualElasticsearchBulkRequestsLatency(t *testing.T, tt *componenttest
 func AssertEqualElasticsearchDocsProcessed(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol.elasticsearch.docs.processed",
-		Description: "Count of documents flushed to Elasticsearch. [Alpha]",
+		Description: "Count of documents flushed to Elasticsearch. [alpha]",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -71,7 +71,7 @@ func AssertEqualElasticsearchDocsProcessed(t *testing.T, tt *componenttest.Telem
 func AssertEqualElasticsearchDocsReceived(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol.elasticsearch.docs.received",
-		Description: "Count of Elasticsearch documents successfully received to be buffered. [Alpha]",
+		Description: "Count of Elasticsearch documents successfully received to be buffered. [alpha]",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -87,7 +87,7 @@ func AssertEqualElasticsearchDocsReceived(t *testing.T, tt *componenttest.Teleme
 func AssertEqualElasticsearchDocsRetried(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol.elasticsearch.docs.retried",
-		Description: "Count of document retries. [Alpha]",
+		Description: "Count of document retries. [alpha]",
 		Unit:        "1",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -103,7 +103,7 @@ func AssertEqualElasticsearchDocsRetried(t *testing.T, tt *componenttest.Telemet
 func AssertEqualElasticsearchFlushedBytes(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol.elasticsearch.flushed.bytes",
-		Description: "Number of bytes flushed by the indexer. [Alpha]",
+		Description: "Number of bytes flushed by the indexer. [alpha]",
 		Unit:        "By",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,
@@ -119,7 +119,7 @@ func AssertEqualElasticsearchFlushedBytes(t *testing.T, tt *componenttest.Teleme
 func AssertEqualElasticsearchFlushedUncompressedBytes(t *testing.T, tt *componenttest.Telemetry, dps []metricdata.DataPoint[int64], opts ...metricdatatest.Option) {
 	want := metricdata.Metrics{
 		Name:        "otelcol.elasticsearch.flushed.uncompressed_bytes",
-		Description: "Number of uncompressed bytes flushed by the indexer. [Alpha]",
+		Description: "Number of uncompressed bytes flushed by the indexer. [alpha]",
 		Unit:        "By",
 		Data: metricdata.Sum[int64]{
 			Temporality: metricdata.CumulativeTemporality,

@@ -130,12 +130,12 @@ func TestExtractRawAttributes(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		log      *azureLogRecord
+		log      azureLogRecord
 		expected map[string]any
 	}{
 		{
 			name: "minimal",
-			log: &azureLogRecord{
+			log: azureLogRecord{
 				Time:          "",
 				ResourceID:    "resource.id",
 				OperationName: "operation.name",
@@ -149,7 +149,7 @@ func TestExtractRawAttributes(t *testing.T) {
 		},
 		{
 			name: "bad-duration",
-			log: &azureLogRecord{
+			log: azureLogRecord{
 				Time:          "",
 				ResourceID:    "resource.id",
 				OperationName: "operation.name",
@@ -163,7 +163,7 @@ func TestExtractRawAttributes(t *testing.T) {
 		},
 		{
 			name: "everything",
-			log: &azureLogRecord{
+			log: azureLogRecord{
 				Time:              "",
 				ResourceID:        "resource.id",
 				TenantID:          &tenantID,
@@ -199,7 +199,7 @@ func TestExtractRawAttributes(t *testing.T) {
 		},
 		{
 			name: "nil properties",
-			log: &azureLogRecord{
+			log: azureLogRecord{
 				Time:          "",
 				ResourceID:    "resource.id",
 				OperationName: "operation.name",
@@ -214,7 +214,7 @@ func TestExtractRawAttributes(t *testing.T) {
 		},
 		{
 			name: "string properties",
-			log: &azureLogRecord{
+			log: azureLogRecord{
 				Time:          "",
 				ResourceID:    "resource.id",
 				OperationName: "operation.name",
@@ -230,7 +230,7 @@ func TestExtractRawAttributes(t *testing.T) {
 		},
 		{
 			name: "int properties",
-			log: &azureLogRecord{
+			log: azureLogRecord{
 				Time:          "",
 				ResourceID:    "resource.id",
 				OperationName: "operation.name",
@@ -246,7 +246,7 @@ func TestExtractRawAttributes(t *testing.T) {
 		},
 		{
 			name: "json properties",
-			log: &azureLogRecord{
+			log: azureLogRecord{
 				Time:          "",
 				ResourceID:    "resource.id",
 				OperationName: "operation.name",
@@ -272,7 +272,7 @@ func TestExtractRawAttributes(t *testing.T) {
 func TestUnmarshalLogs_AzureCdnAccessLog(t *testing.T) {
 	t.Parallel()
 
-	dir := "testdata/cdnaccesslog"
+	dir := "testdata/azurecdnaccesslog"
 	tests := map[string]struct {
 		logFilename      string
 		expectedFilename string
@@ -408,58 +408,58 @@ func TestUnmarshalLogs_Files(t *testing.T) {
 	t.Parallel()
 
 	logsDir := "testdata"
-	expectedDir := "testdata"
+	expectedDir := "testdata/expected"
 	tests := map[string]struct {
 		logFilename      string
 		expectedFilename string
 	}{
 		"app_logs": {
-			logFilename:      "appservicelog/appservice_applogs.json",
-			expectedFilename: "appservicelog/appservice_applogs_expected.yaml",
+			logFilename:      "log-appserviceapplogs.json",
+			expectedFilename: "service-app-expected.yaml",
 		},
 		"audit_logs": {
-			logFilename:      "appservicelog/appservice_auditlogs.json",
-			expectedFilename: "appservicelog/appservice_auditlogs_expected.yaml",
+			logFilename:      "log-appserviceauditlogs.json",
+			expectedFilename: "audit-logs-expected.yaml",
 		},
 		"audit_logs_2": {
-			logFilename:      "appservicelog/appservice_ipsecauditlogs.json",
-			expectedFilename: "appservicelog/appservice_ipsecauditlogs_expected.yaml",
+			logFilename:      "log-appserviceipsecauditlogs.json",
+			expectedFilename: "audit-logs-2-expected.yaml",
 		},
 		"console_logs": {
-			logFilename:      "appservicelog/appservice_consolelogs.json",
-			expectedFilename: "appservicelog/appservice_consolelogs_expected.yaml",
+			logFilename:      "log-appserviceconsolelogs.json",
+			expectedFilename: "console-logs-expected.yaml",
 		},
 		"http_logs": {
-			logFilename:      "appservicelog/appservice_httplogs.json",
-			expectedFilename: "appservicelog/appservice_httplogs_expected.yaml",
+			logFilename:      "log-appservicehttplogs.json",
+			expectedFilename: "http-logs-expected.yaml",
 		},
 		"platform_logs": {
-			logFilename:      "appservicelog/appservice_platformlogs.json",
-			expectedFilename: "appservicelog/appservice_platformlogs_expected.yaml",
+			logFilename:      "log-appserviceplatformlogs.json",
+			expectedFilename: "platform-logs-expected.yaml",
 		},
 		"front_door_health_probe_logs": {
-			logFilename:      "frontdoorhealthprobelog/valid_1.json",
-			expectedFilename: "frontdoorhealthprobelog/valid_1_expected.yaml",
+			logFilename:      "log-frontdoorhealthprobelog.json",
+			expectedFilename: "front-door-health-probe-log-expected.yaml",
 		},
 		"log_bad_time": {
-			logFilename:      "cornercases/bad_time.json",
-			expectedFilename: "cornercases/bad_time_expected.yaml",
+			logFilename:      "log-bad-time.json",
+			expectedFilename: "log-bad-time-expected.yaml",
 		},
 		"log_bad_level": {
-			logFilename:      "cornercases/bad_level.json",
-			expectedFilename: "cornercases/bad_level_expected.yaml",
+			logFilename:      "log-bad-level.json",
+			expectedFilename: "log-bad-level-expected.yaml",
 		},
 		"log_maximum": {
-			logFilename:      "cornercases/maximum.json",
-			expectedFilename: "cornercases/maximum_expected.yaml",
+			logFilename:      "log-maximum.json",
+			expectedFilename: "log-maximum-expected.yaml",
 		},
 		"log_minimum": {
-			logFilename:      "cornercases/minimum.json",
-			expectedFilename: "cornercases/minimum_expected.yaml",
+			logFilename:      "log-minimum.json",
+			expectedFilename: "log-minimum-expected.yaml",
 		},
 		"log_minimum_2": {
-			logFilename:      "cornercases/minimum-2.json",
-			expectedFilename: "cornercases/minimum-2_expected.yaml",
+			logFilename:      "log-minimum-2.json",
+			expectedFilename: "log-minimum-2-expected.yaml",
 		},
 	}
 

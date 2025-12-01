@@ -90,7 +90,7 @@ func Test_informerListFuncWithSelectors(t *testing.T) {
 	assert.NoError(t, err)
 	listFunc := informerListFuncWithSelectors(c, "test-ns", ls, fs)
 	opts := metav1.ListOptions{}
-	obj, err := listFunc(t.Context(), opts)
+	obj, err := listFunc(opts)
 	assert.NoError(t, err)
 	assert.NotNil(t, obj)
 }
@@ -100,7 +100,7 @@ func Test_namespaceInformerListFunc(t *testing.T) {
 	assert.NoError(t, err)
 	listFunc := namespaceInformerListFunc(c)
 	opts := metav1.ListOptions{}
-	obj, err := listFunc(t.Context(), opts)
+	obj, err := listFunc(opts)
 	assert.NoError(t, err)
 	assert.NotNil(t, obj)
 }
@@ -127,7 +127,7 @@ func Test_informerWatchFuncWithSelectors(t *testing.T) {
 	assert.NoError(t, err)
 	watchFunc := informerWatchFuncWithSelectors(c, "test-ns", ls, fs)
 	opts := metav1.ListOptions{}
-	obj, err := watchFunc(t.Context(), opts)
+	obj, err := watchFunc(opts)
 	assert.NoError(t, err)
 	assert.NotNil(t, obj)
 }
@@ -137,7 +137,7 @@ func Test_namespaceInformerWatchFunc(t *testing.T) {
 	assert.NoError(t, err)
 	watchFunc := namespaceInformerWatchFunc(c)
 	opts := metav1.ListOptions{}
-	obj, err := watchFunc(t.Context(), opts)
+	obj, err := watchFunc(opts)
 	assert.NoError(t, err)
 	assert.NotNil(t, obj)
 }

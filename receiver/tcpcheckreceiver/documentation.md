@@ -16,41 +16,41 @@ metrics:
 
 Measures the duration of TCP connection.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| ms | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| ms | Gauge | Int |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| tcpcheck.endpoint | TCP endpoint | Any Str | Recommended |
+| tcpcheck.endpoint | TCP endpoint | Any Str | false |
 
 ### tcpcheck.error
 
 Records errors occurring during TCP check.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| {error} | Sum | Int | Cumulative | true | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| {error} | Sum | Int | Cumulative | true |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| tcpcheck.endpoint | TCP endpoint | Any Str | Recommended |
-| error.code | Error code recorded during check | Str: ``connection_refused``, ``connection_timeout``, ``invalid_endpoint``, ``network_unreachable``, ``unknown_error`` | Recommended |
+| tcpcheck.endpoint | TCP endpoint | Any Str | false |
+| error.code | Error code recorded during check | Str: ``connection_refused``, ``connection_timeout``, ``invalid_endpoint``, ``network_unreachable``, ``unknown_error`` | false |
 
 ### tcpcheck.status
 
 1 if the TCP client successfully connected, otherwise 0.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| 1 | Gauge | Int |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| tcpcheck.endpoint | TCP endpoint | Any Str | Recommended |
+| tcpcheck.endpoint | TCP endpoint | Any Str | false |

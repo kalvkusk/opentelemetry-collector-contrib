@@ -16,15 +16,15 @@ metrics:
 
 Bytes of memory in use.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| By | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| By | Sum | Int | Cumulative | false |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| state | Breakdown of memory usage by type. | Str: ``buffered``, ``cached``, ``inactive``, ``free``, ``slab_reclaimable``, ``slab_unreclaimable``, ``used`` | Recommended |
+| state | Breakdown of memory usage by type. | Str: ``buffered``, ``cached``, ``inactive``, ``free``, ``slab_reclaimable``, ``slab_unreclaimable``, ``used`` | false |
 
 ## Optional Metrics
 
@@ -40,44 +40,44 @@ metrics:
 
 An estimate of how much memory is available for starting new applications, without swapping. This is a more accurate alternative than system.memory.usage with state=free. (Linux only)
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| By | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| By | Sum | Int | Cumulative | false |
 
 ### system.linux.memory.dirty
 
 The amount of dirty memory according to `/proc/meminfo`.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| By | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| By | Sum | Int | Cumulative | false |
 
 ### system.memory.limit
 
 Total bytes of memory available.
 
-| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic | Stability |
-| ---- | ----------- | ---------- | ----------------------- | --------- | --------- |
-| By | Sum | Int | Cumulative | false | Development |
+| Unit | Metric Type | Value Type | Aggregation Temporality | Monotonic |
+| ---- | ----------- | ---------- | ----------------------- | --------- |
+| By | Sum | Int | Cumulative | false |
 
 ### system.memory.page_size
 
 A constant value for the system's configured page size.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| By | Gauge | Int | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| By | Gauge | Int |
 
 ### system.memory.utilization
 
 Percentage of memory bytes in use.
 
-| Unit | Metric Type | Value Type | Stability |
-| ---- | ----------- | ---------- | --------- |
-| 1 | Gauge | Double | Development |
+| Unit | Metric Type | Value Type |
+| ---- | ----------- | ---------- |
+| 1 | Gauge | Double |
 
 #### Attributes
 
-| Name | Description | Values | Requirement Level |
+| Name | Description | Values | Optional |
 | ---- | ----------- | ------ | -------- |
-| state | Breakdown of memory usage by type. | Str: ``buffered``, ``cached``, ``inactive``, ``free``, ``slab_reclaimable``, ``slab_unreclaimable``, ``used`` | Recommended |
+| state | Breakdown of memory usage by type. | Str: ``buffered``, ``cached``, ``inactive``, ``free``, ``slab_reclaimable``, ``slab_unreclaimable``, ``used`` | false |

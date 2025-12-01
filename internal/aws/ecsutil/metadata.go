@@ -11,7 +11,7 @@ type TaskMetadata struct {
 	Family           string              `json:"Family,omitempty"`
 	KnownStatus      string              `json:"KnownStatus,omitempty"`
 	LaunchType       string              `json:"LaunchType,omitempty"`
-	Limits           Limits              `json:"Limits,omitzero"`
+	Limits           Limits              `json:"Limits,omitempty"`
 	PullStartedAt    string              `json:"PullStartedAt,omitempty"`
 	PullStoppedAt    string              `json:"PullStoppedAt,omitempty"`
 	Revision         string              `json:"Revision,omitempty"`
@@ -32,9 +32,9 @@ type ContainerMetadata struct {
 	ImageID       string            `json:"ImageID,omitempty"`
 	KnownStatus   string            `json:"KnownStatus,omitempty"`
 	Labels        map[string]string `json:"Labels,omitempty"`
-	Limits        Limits            `json:"Limits,omitzero"`
+	Limits        Limits            `json:"Limits,omitempty"`
 	LogDriver     string            `json:"LogDriver,omitempty"`
-	LogOptions    LogOptions        `json:"LogOptions,omitzero"`
+	LogOptions    LogOptions        `json:"LogOptions,omitempty"`
 	Networks      []Network         `json:"Networks,omitempty"`
 	StartedAt     string            `json:"StartedAt,omitempty"`
 	Type          string            `json:"Type,omitempty"`

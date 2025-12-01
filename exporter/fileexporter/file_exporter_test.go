@@ -19,7 +19,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component/componenttest"
-	"go.opentelemetry.io/collector/exporter/exportertest"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
 	"go.opentelemetry.io/collector/pdata/pprofile"
@@ -27,7 +26,6 @@ import (
 	"go.uber.org/zap"
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter/internal/metadata"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal/testdata"
 )
 
@@ -906,48 +904,4 @@ func TestAppend(t *testing.T) {
 	bComplete = append(bComplete, b2...)
 	assert.Equal(t, bComplete, bbuf.Bytes())
 	assert.NoError(t, fe.Shutdown(ctx))
-}
-
-func TestCreateDirectoryOption(t *testing.T) {
-	t.Run("create_directory=false should fail when parent missing", func(t *testing.T) {
-		base := t.TempDir()
-		nonExistingDir := filepath.Join(base, "nested", "dir")
-		path := filepath.Join(nonExistingDir, "out.log")
-		cfg := &Config{
-			Path:            path,
-			FormatType:      formatTypeJSON,
-			CreateDirectory: false,
-		}
-		exp, err := createLogsExporter(
-			t.Context(),
-			exportertest.NewNopSettings(metadata.Type),
-			cfg)
-		require.NoError(t, err)
-		err = exp.Start(t.Context(), componenttest.NewNopHost())
-		require.Error(t, err)
-	})
-
-	t.Run("create_directory=true should create parent and succeed", func(t *testing.T) {
-		base := t.TempDir()
-		nonExistingDir := filepath.Join(base, "nested", "dir2")
-		path := filepath.Join(nonExistingDir, "out.log")
-		cfg := &Config{
-			Path:                 path,
-			FormatType:           formatTypeJSON,
-			CreateDirectory:      true,
-			DirectoryPermissions: "0755",
-			FlushInterval:        time.Second,
-		}
-		exp, err := createLogsExporter(
-			t.Context(),
-			exportertest.NewNopSettings(metadata.Type),
-			cfg)
-		require.NoError(t, err)
-		err = exp.Start(t.Context(), componenttest.NewNopHost())
-		require.NoError(t, err)
-		defer func() { _ = exp.Shutdown(t.Context()) }()
-		// Directory should exist
-		_, statErr := os.Stat(nonExistingDir)
-		require.NoError(t, statErr)
-	})
 }

@@ -18,7 +18,7 @@ jobs:
       already-added: ${{ steps.check-jmx-metrics-version.outputs.already-added }}
       already-opened: ${{ steps.check-jmx-metrics-version.outputs.already-opened }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - id: check-jmx-metrics-version
         name: Check versions
@@ -47,11 +47,7 @@ jobs:
             already_opened=true
           fi
 
-          {
-            echo "latest-version=$latest_version"
-            echo "already-added=$already_added"
-            echo "already-opened=$already_opened"
-          } >> "$GITHUB_OUTPUT"
+          echo "latest-version=$latest_version"; echo "already-added=$already_added"; echo "already-opened=$already_opened" >> "$GITHUB_OUTPUT"
 
   update-jmx-metrics-component:
     permissions:
@@ -64,7 +60,7 @@ jobs:
     needs:
       - check-jmx-metrics-version
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Update version
         env:
@@ -88,7 +84,7 @@ jobs:
           git config user.name otelbot
           git config user.email 197425009+otelbot@users.noreply.github.com
 
-      - uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2.2.0
+      - uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
         id: otelbot-token
         with:
           app-id: ${{ vars.OTELBOT_APP_ID }}
@@ -137,7 +133,7 @@ jobs:
       already-added: ${{ steps.check-jmx-scraper-version.outputs.already-added }}
       already-opened: ${{ steps.check-jmx-scraper-version.outputs.already-opened }}
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - id: check-jmx-scraper-version
         name: Check versions
@@ -166,11 +162,7 @@ jobs:
             already_opened=true
           fi
 
-          {
-            echo "latest-version=$latest_version"
-            echo "already-added=$already_added"
-            echo "already-opened=$already_opened"
-          } >> "$GITHUB_OUTPUT"
+          echo "latest-version=$latest_version"; echo "already-added=$already_added"; echo "already-opened=$already_opened" >> "$GITHUB_OUTPUT"
 
   update-jmx-scraper-component:
     permissions:
@@ -183,7 +175,7 @@ jobs:
     needs:
       - check-jmx-scraper-version
     steps:
-      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
 
       - name: Update version
         env:
@@ -194,7 +186,7 @@ jobs:
             exit 1
           fi
 
-          hash=$(curl -L "https://github.com/open-telemetry/opentelemetry-java-contrib/releases/download/v${VERSION//-alpha/}/opentelemetry-jmx-scraper.jar" \
+          hash=$(curl -L "https://repo1.maven.org/maven2/io/opentelemetry/contrib/opentelemetry-jmx-scraper/${VERSION//-alpha/}/opentelemetry-jmx-scraper-$VERSION.jar" \
                          | sha256sum \
                          | cut -d ' ' -f 1)
 
@@ -208,7 +200,7 @@ jobs:
           git config user.name otelbot
           git config user.email 197425009+otelbot@users.noreply.github.com
 
-      - uses: actions/create-github-app-token@7e473efe3cb98aa54f8d4bac15400b15fad77d94 # v2.2.0
+      - uses: actions/create-github-app-token@a8d616148505b5069dccd32f177bb87d7f39123b # v2.1.1
         id: otelbot-token
         with:
           app-id: ${{ vars.OTELBOT_APP_ID }}

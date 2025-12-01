@@ -141,7 +141,7 @@ func verifyOpenMetricsCreatedTimestampZeroIngestionDisabled(t *testing.T, td *te
 			[]dataPointExpectation{
 				{
 					numberPointComparator: []numberPointComparator{
-						compareStartTimestamp(tsZero),
+						compareStartTimestamp(ts1),
 						compareTimestamp(ts1),
 						compareDoubleValue(1.0),
 					},

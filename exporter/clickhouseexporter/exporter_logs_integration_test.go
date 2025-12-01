@@ -6,7 +6,6 @@
 package clickhouseexporter
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -18,35 +17,21 @@ import (
 )
 
 func testLogsExporter(t *testing.T, endpoint string, mapBody bool) {
-	exporter := newTestLogsExporter(t, endpoint, false)
-	verifyExportLogs(t, exporter, mapBody, false)
+	exporter := newTestLogsExporter(t, endpoint)
+	verifyExportLogs(t, exporter, mapBody)
 }
 
-func testLogsExporterSchemaFeatures(t *testing.T, endpoint string, mapBody bool) {
-	exporter := newTestLogsExporter(t, endpoint, true)
-	verifyExportLogs(t, exporter, mapBody, true)
-}
-
-func newTestLogsExporter(t *testing.T, dsn string, testSchemaFeatures bool, fns ...func(*Config)) *logsExporter {
+func newTestLogsExporter(t *testing.T, dsn string, fns ...func(*Config)) *logsExporter {
 	exporter := newLogsExporter(zaptest.NewLogger(t), withTestExporterConfig(fns...)(dsn))
 
 	require.NoError(t, exporter.start(t.Context(), nil))
-
-	// Tests the schema feature flags by disabling newer columns. The insert logic should adapt.
-	if testSchemaFeatures {
-		exporter.schemaFeatures.EventName = false
-		exporter.renderInsertLogsSQL()
-	}
 
 	t.Cleanup(func() { _ = exporter.shutdown(t.Context()) })
 	return exporter
 }
 
-func verifyExportLogs(t *testing.T, exporter *logsExporter, mapBody, testSchemaFeatures bool) {
-	tableName := fmt.Sprintf("%q.%q", exporter.cfg.database(), exporter.cfg.LogsTableName)
-
-	// Clear table for when mapBody test runs under same table name
-	err := exporter.db.Exec(t.Context(), fmt.Sprintf("TRUNCATE %s", tableName))
+func verifyExportLogs(t *testing.T, exporter *logsExporter, mapBody bool) {
+	err := exporter.db.Exec(t.Context(), "TRUNCATE otel_int_test.otel_logs")
 	require.NoError(t, err)
 
 	pushConcurrentlyNoError(t, func() error {
@@ -70,7 +55,6 @@ func verifyExportLogs(t *testing.T, exporter *logsExporter, mapBody, testSchemaF
 		ScopeVersion       string            `ch:"ScopeVersion"`
 		ScopeAttributes    map[string]string `ch:"ScopeAttributes"`
 		LogAttributes      map[string]string `ch:"LogAttributes"`
-		EventName          string            `ch:"EventName"`
 	}
 
 	expectedLog := log{
@@ -95,17 +79,12 @@ func verifyExportLogs(t *testing.T, exporter *logsExporter, mapBody, testSchemaF
 		LogAttributes: map[string]string{
 			"service.namespace": "default",
 		},
-		EventName: "event",
 	}
 	if mapBody {
 		expectedLog.Body = `{"error":"message"}`
 	}
 
-	if testSchemaFeatures {
-		expectedLog.EventName = ""
-	}
-
-	row := exporter.db.QueryRow(t.Context(), fmt.Sprintf("SELECT * FROM %s", tableName))
+	row := exporter.db.QueryRow(t.Context(), "SELECT * FROM otel_int_test.otel_logs")
 	require.NoError(t, row.Err())
 
 	var actualLog log
@@ -126,13 +105,12 @@ func simpleLogs(count int, mapBody bool) plog.Logs {
 	sl.Scope().SetVersion("1.0.0")
 	sl.Scope().Attributes().PutStr("lib", "clickhouse")
 	timestamp := telemetryTimestamp
-	for i := range count {
+	for i := 0; i < count; i++ {
 		r := sl.LogRecords().AppendEmpty()
 		r.SetTimestamp(pcommon.NewTimestampFromTime(timestamp))
 		r.SetObservedTimestamp(pcommon.NewTimestampFromTime(timestamp))
 		r.SetSeverityNumber(plog.SeverityNumberError2)
 		r.SetSeverityText("error")
-		r.SetEventName("event")
 
 		if mapBody {
 			r.Body().SetEmptyMap()

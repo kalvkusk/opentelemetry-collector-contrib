@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v2"
 	"golang.org/x/mod/modfile"
 )
 
@@ -44,7 +44,7 @@ var _ encoding.TextUnmarshaler = (*CommaSeparatedSet)(nil)
 
 func (c *CommaSeparatedSet) UnmarshalText(text []byte) error {
 	*c = make(map[string]struct{})
-	for key := range strings.SplitSeq(string(text), ",") {
+	for _, key := range strings.Split(string(text), ",") {
 		key = strings.TrimSpace(key)
 		if key == "" {
 			return errors.New("empty key in comma-separated list")
@@ -98,19 +98,19 @@ func main() {
 	}
 }
 
-// component represents a component in the Codecov configuration.
-type component struct {
+// Component represents a component in the Codecov configuration.
+type Component struct {
 	ComponentID string   `yaml:"component_id"`
 	Name        string   `yaml:"name"`
 	Paths       []string `yaml:"paths"`
 }
 
-type componentManagement struct {
-	IndividualComponents []component `yaml:"individual_components"`
+type ComponentManagement struct {
+	IndividualComponents []Component `yaml:"individual_components"`
 }
 
-type codecovConfig struct {
-	ComponentManagement componentManagement `yaml:"component_management"`
+type CodecovConfig struct {
+	ComponentManagement ComponentManagement `yaml:"component_management"`
 }
 
 var (
@@ -145,8 +145,8 @@ func generateComponentID(moduleName string, cli Args) (string, error) {
 }
 
 // walkTree uses filepath.Walk to recursively traverse the base directory looking for go.mod files
-func walkTree(cli Args) (*codecovConfig, error) {
-	config := &codecovConfig{}
+func walkTree(cli Args) (*CodecovConfig, error) {
+	config := &CodecovConfig{}
 
 	err := filepath.WalkDir(cli.Dir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
@@ -187,13 +187,13 @@ func walkTree(cli Args) (*codecovConfig, error) {
 		if err != nil {
 			return err
 		}
-		cmp := component{
+		component := Component{
 			ComponentID: componentID,
 			Name:        componentID,
 			Paths:       []string{relativePath + "/**"},
 		}
 
-		config.ComponentManagement.IndividualComponents = append(config.ComponentManagement.IndividualComponents, cmp)
+		config.ComponentManagement.IndividualComponents = append(config.ComponentManagement.IndividualComponents, component)
 
 		return nil
 	})
@@ -231,18 +231,13 @@ const (
 
 var matchComponentSection = regexp.MustCompile("(?s)" + startComponentList + ".*" + endComponentList)
 
-func addComponentList(config *codecovConfig) error {
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	enc.CompactSeqIndent()
-
-	err := enc.Encode(config)
+func addComponentList(config *CodecovConfig) error {
+	yamlData, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal YAML: %w", err)
 	}
 
-	replacement := []byte(startComponentList + "\n" + buf.String() + endComponentList)
+	replacement := []byte(startComponentList + "\n" + string(yamlData) + endComponentList)
 	codecovCfg, err := os.ReadFile(codecovFileName)
 	if err != nil {
 		return fmt.Errorf("failed to read %q: %w", codecovFileName, err)

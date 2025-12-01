@@ -52,7 +52,7 @@ func newBestOfNPrioritizer(dc doneCancel, numChoices, numStreams int, lf loadFun
 	// Limit numChoices to the number of streams.
 	numChoices = min(numStreams, numChoices)
 
-	for range numStreams {
+	for i := 0; i < numStreams; i++ {
 		ws := &streamWorkState{
 			maxStreamLifetime: addJitter(maxLifetime),
 			waiters:           map[int64]chan<- error{},
@@ -70,7 +70,7 @@ func newBestOfNPrioritizer(dc doneCancel, numChoices, numStreams int, lf loadFun
 		loadFunc:   lf,
 	}
 
-	for range numStreams {
+	for i := 0; i < numStreams; i++ {
 		// TODO It's not clear if/when the prioritizer can
 		// become a bottleneck.
 		go lp.run()

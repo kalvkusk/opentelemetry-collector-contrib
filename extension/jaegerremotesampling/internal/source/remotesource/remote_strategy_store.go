@@ -19,7 +19,7 @@ import (
 )
 
 type grpcRemoteStrategyStore struct {
-	headerAdditions configopaque.MapList
+	headerAdditions map[string]configopaque.String
 	delegate        *ConfigManagerProxy
 	cache           serviceStrategyCache
 }
@@ -63,7 +63,7 @@ func (g *grpcRemoteStrategyStore) GetSamplingStrategy(
 // This function is used to add the extension configuration defined HTTP headers to a given outbound gRPC call's context.
 func (g *grpcRemoteStrategyStore) enhanceContext(ctx context.Context) context.Context {
 	md := metadata.New(nil)
-	for k, v := range g.headerAdditions.Iter {
+	for k, v := range g.headerAdditions {
 		md.Set(k, string(v))
 	}
 	return metadata.NewOutgoingContext(ctx, md)

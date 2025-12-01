@@ -11,8 +11,6 @@ import (
 
 type Profiles struct {
 	ResourceProfiles []ResourceProfile
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 func (p Profiles) Transform() pprofile.Profiles {
@@ -25,10 +23,7 @@ func (p Profiles) Transform() pprofile.Profiles {
 
 type ResourceProfile struct {
 	ScopeProfiles []ScopeProfile
-	Resource      pcommon.Resource
-	SchemaURL     string
-	// prevent unkeyed literal initialization
-	_ struct{}
+	Resource      Resource
 }
 
 func (rp ResourceProfile) Transform(pp pprofile.Profiles) pprofile.ResourceProfiles {
@@ -36,40 +31,66 @@ func (rp ResourceProfile) Transform(pp pprofile.Profiles) pprofile.ResourceProfi
 	for _, sp := range rp.ScopeProfiles {
 		sp.Transform(pp.Dictionary(), prp)
 	}
-
-	rp.Resource.Attributes().CopyTo(prp.Resource().Attributes())
-
+	for _, a := range rp.Resource.Attributes {
+		if prp.Resource().Attributes().PutEmpty(a.Key).FromRaw(a.Value) != nil {
+			panic(fmt.Sprintf("unsupported resource attribute value: {%s: %v (type %T)}",
+				a.Key, a.Value, a.Value))
+		}
+	}
 	return prp
 }
 
+type Resource struct {
+	Attributes []Attribute
+}
+
 type ScopeProfile struct {
-	Profiles  []Profile
-	Scope     pcommon.InstrumentationScope
+	Profile   []Profile
+	Scope     Scope
 	SchemaURL string
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 func (sp ScopeProfile) Transform(dic pprofile.ProfilesDictionary, prp pprofile.ResourceProfiles) pprofile.ScopeProfiles {
 	psp := prp.ScopeProfiles().AppendEmpty()
-	for i := range sp.Profiles {
-		p := &sp.Profiles[i]
+	for _, p := range sp.Profile {
 		p.Transform(dic, psp)
 	}
+	sp.Scope.Transform(psp)
 	psp.SetSchemaUrl(sp.SchemaURL)
 
-	sp.Scope.CopyTo(psp.Scope())
-
 	return psp
+}
+
+type Scope struct {
+	Attributes             []Attribute
+	Name                   string
+	Version                string
+	DroppedAttributesCount uint32
+}
+
+func (sc Scope) Transform(psp pprofile.ScopeProfiles) pcommon.InstrumentationScope {
+	psc := psp.Scope()
+	for _, a := range sc.Attributes {
+		if psc.Attributes().PutEmpty(a.Key).FromRaw(a.Value) != nil {
+			panic(fmt.Sprintf("unsupported scope attribute value: {%s: %v (type %T)}",
+				a.Key, a.Value, a.Value))
+		}
+	}
+	psc.SetName(sc.Name)
+	psc.SetVersion(sc.Version)
+	psc.SetDroppedAttributesCount(sc.DroppedAttributesCount)
+
+	return psc
 }
 
 type Profile struct {
 	SampleType             ValueTypes
 	Sample                 []Sample
 	TimeNanos              pcommon.Timestamp
-	DurationNanos          uint64
+	DurationNanos          pcommon.Timestamp
 	PeriodType             ValueType
 	Period                 int64
+	Comment                []string
 	DefaultSampleType      ValueType
 	ProfileID              pprofile.ProfileID
 	DroppedAttributesCount uint32
@@ -86,11 +107,11 @@ func (p *Profile) Transform(dic pprofile.ProfilesDictionary, psp pprofile.ScopeP
 	addString(dic, "")
 
 	// If valueTypes are not set, set them to the default value.
-	defaultValueType := ValueType{Typ: "samples", Unit: "count"}
-	if p.PeriodType.Typ == "" && p.PeriodType.Unit == "" {
+	defaultValueType := ValueType{Typ: "samples", Unit: "count", AggregationTemporality: pprofile.AggregationTemporalityDelta}
+	if p.PeriodType.Typ == "" && p.PeriodType.Unit == "" && p.PeriodType.AggregationTemporality == 0 {
 		p.PeriodType = defaultValueType
 	}
-	if p.DefaultSampleType.Typ == "" && p.DefaultSampleType.Unit == "" {
+	if p.DefaultSampleType.Typ == "" && p.DefaultSampleType.Unit == "" && p.DefaultSampleType.AggregationTemporality == 0 {
 		p.DefaultSampleType = defaultValueType
 	}
 
@@ -99,9 +120,12 @@ func (p *Profile) Transform(dic pprofile.ProfilesDictionary, psp pprofile.ScopeP
 		sa.Transform(dic, pp)
 	}
 	pp.SetTime(p.TimeNanos)
-	pp.SetDurationNano(p.DurationNanos)
+	pp.SetDuration(p.DurationNanos)
 	p.PeriodType.CopyTo(dic, pp.PeriodType())
 	pp.SetPeriod(p.Period)
+	for _, c := range p.Comment {
+		pp.CommentStrindices().Append(addString(dic, c))
+	}
 	p.DefaultSampleType.Transform(dic, pp)
 	pp.SetProfileID(p.ProfileID)
 	pp.SetDroppedAttributesCount(p.DroppedAttributesCount)
@@ -136,14 +160,16 @@ func (vts *ValueTypes) Transform(dic pprofile.ProfilesDictionary, pp pprofile.Pr
 }
 
 type ValueType struct {
-	Typ  string
-	Unit string
+	Typ                    string
+	Unit                   string
+	AggregationTemporality pprofile.AggregationTemporality
 }
 
 func (vt *ValueType) exists(dic pprofile.ProfilesDictionary, pp pprofile.Profile) bool {
 	st := pp.SampleType()
 	if vt.Typ == dic.StringTable().At(int(st.TypeStrindex())) &&
-		vt.Unit == dic.StringTable().At(int(st.UnitStrindex())) {
+		vt.Unit == dic.StringTable().At(int(st.UnitStrindex())) &&
+		vt.AggregationTemporality == st.AggregationTemporality() {
 		return true
 	}
 	return false
@@ -152,6 +178,7 @@ func (vt *ValueType) exists(dic pprofile.ProfilesDictionary, pp pprofile.Profile
 func (vt *ValueType) CopyTo(dic pprofile.ProfilesDictionary, pvt pprofile.ValueType) {
 	pvt.SetTypeStrindex(addString(dic, vt.Typ))
 	pvt.SetUnitStrindex(addString(dic, vt.Unit))
+	pvt.SetAggregationTemporality(vt.AggregationTemporality)
 }
 
 func (vt *ValueType) Transform(dic pprofile.ProfilesDictionary, pp pprofile.Profile) {
@@ -166,13 +193,11 @@ type Sample struct {
 	Locations          []Location
 	Attributes         []Attribute
 	TimestampsUnixNano []uint64
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 func (sa *Sample) Transform(dic pprofile.ProfilesDictionary, pp pprofile.Profile) {
 	stack := dic.StackTable().AppendEmpty()
-	psa := pp.Samples().AppendEmpty()
+	psa := pp.Sample().AppendEmpty()
 	psa.SetStackIndex(int32(dic.StackTable().Len() - 1))
 
 	for _, loc := range sa.Locations {
@@ -184,7 +209,7 @@ func (sa *Sample) Transform(dic pprofile.ProfilesDictionary, pp pprofile.Profile
 		}
 		ploc.SetAddress(loc.Address)
 		for _, l := range loc.Line {
-			pl := ploc.Lines().AppendEmpty()
+			pl := ploc.Line().AppendEmpty()
 			pl.SetLine(l.Line)
 			pl.SetColumn(l.Column)
 			pl.SetFunctionIndex(l.Function.Transform(dic))
@@ -210,15 +235,11 @@ type Location struct {
 	Line       []Line
 	IsFolded   bool
 	Attributes []Attribute
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 type Link struct {
 	TraceID pcommon.TraceID
 	SpanID  pcommon.SpanID
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 func (l *Link) Transform(dic pprofile.ProfilesDictionary) int32 {
@@ -234,8 +255,6 @@ type Mapping struct {
 	FileOffset  uint64
 	Filename    string
 	Attributes  []Attribute
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 func (m *Mapping) Transform(dic pprofile.ProfilesDictionary) {
@@ -252,8 +271,6 @@ func (m *Mapping) Transform(dic pprofile.ProfilesDictionary) {
 type Attribute struct {
 	Key   string
 	Value any
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 type attributable interface {
@@ -261,31 +278,21 @@ type attributable interface {
 }
 
 func (a *Attribute) Transform(dic pprofile.ProfilesDictionary, record attributable) {
-	kvu := pprofile.NewKeyValueAndUnit()
-	keyIdx, err := pprofile.SetString(dic.StringTable(), a.Key)
-	if err != nil {
-		panic(fmt.Sprintf("failed to put key string: %s: %v", a.Key, err))
-	}
-	kvu.SetKeyStrindex(keyIdx)
-	err = kvu.Value().FromRaw(a.Value)
-	if err != nil {
+	v := pcommon.NewValueEmpty()
+	if err := v.FromRaw(a.Value); err != nil {
 		panic(fmt.Sprintf("unsupported attribute value: {%s: %v (type %T)}",
 			a.Key, a.Value, a.Value))
 	}
-	idx, err := pprofile.SetAttribute(dic.AttributeTable(), kvu)
-	if err != nil {
-		panic(fmt.Sprintf("failed to set attribute: {%s: %v (type %T)}: %v",
+	if err := pprofile.PutAttribute(dic.AttributeTable(), record, dic, a.Key, v); err != nil {
+		panic(fmt.Sprintf("failed to put attribute: {%s: %v (type %T)}: %v",
 			a.Key, a.Value, a.Value, err))
 	}
-	record.AttributeIndices().Append(idx)
 }
 
 type KeyValueAndUnit struct {
 	Key   string
 	Value any
 	Unit  string
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 func (a *KeyValueAndUnit) Transform(dic pprofile.ProfilesDictionary) int32 {
@@ -300,8 +307,6 @@ type Line struct {
 	Line     int64
 	Column   int64
 	Function Function
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 type Function struct {
@@ -309,8 +314,6 @@ type Function struct {
 	SystemName string
 	Filename   string
 	StartLine  int64
-	// prevent unkeyed literal initialization
-	_ struct{}
 }
 
 func (f *Function) Transform(dic pprofile.ProfilesDictionary) int32 {

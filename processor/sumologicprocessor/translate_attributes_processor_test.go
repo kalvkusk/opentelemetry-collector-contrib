@@ -137,7 +137,7 @@ var (
 func BenchmarkTranslateAttributes(b *testing.B) {
 	err := attributes.FromRaw(benchPdataAttributes)
 	require.NoError(b, err)
-	for b.Loop() {
+	for i := 0; i < b.N; i++ {
 		translateAttributes(attributes)
 	}
 }

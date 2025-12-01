@@ -9,13 +9,9 @@ import (
 	"os"
 	"testing"
 
-	//nolint:staticcheck // SA1019: WIP in https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/36699
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	//nolint:staticcheck // SA1019: WIP in https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/36699
 	"github.com/aws/aws-sdk-go/aws/endpoints"
-	//nolint:staticcheck // SA1019: WIP in https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/36699
 	"github.com/aws/aws-sdk-go/aws/session"
-	//nolint:staticcheck // SA1019: WIP in https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/36699
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -54,7 +50,7 @@ func setupMock(sess *session.Session) (f1 func(s *session.Session) (string, erro
 	m := mock{sn: sess}
 	getEC2Region = m.getEC2Region
 	newAWSSession = m.newAWSSession
-	return f1, f2
+	return
 }
 
 func tearDownMock(

@@ -141,7 +141,7 @@ func (proc *nestingProcessor) processAttributes(attributes pcommon.Map) error {
 		nextMap := prevValue.Map()
 		newMap.CopyTo(nextMap)
 
-		for i := range keys {
+		for i := 0; i < len(keys); i++ {
 			if prevValue.Type() != pcommon.ValueTypeMap {
 				// If previous value was not a map, change it into a map.
 				// The former value will be set under the key "".

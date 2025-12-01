@@ -1,4 +1,0 @@
-filter/profiles:
-  profiles:
-    profile:
-      - 'attributes["test"] == "pass"'

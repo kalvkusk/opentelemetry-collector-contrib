@@ -6,7 +6,6 @@ package parser // import "github.com/open-telemetry/opentelemetry-collector-cont
 import (
 	"encoding/hex"
 	"errors"
-	"net/http"
 	"net/url"
 	"slices"
 	"time"
@@ -19,14 +18,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/libhoneyreceiver/internal/libhoneyevent"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/libhoneyreceiver/internal/response"
 )
-
-// IndexMapping tracks which original libhoney event indices became logs vs traces
-type IndexMapping struct {
-	LogIndices   []int // Original event indices that became logs
-	TraceIndices []int // Original event indices that became traces/spans/span events
-}
 
 // GetDatasetFromRequest extracts the dataset name from the request path
 func GetDatasetFromRequest(path string) (string, error) {
@@ -40,8 +32,8 @@ func GetDatasetFromRequest(path string) (string, error) {
 	return dataset, nil
 }
 
-// ToPdata converts a list of LibhoneyEvents to a Pdata Logs object and tracks which original indices became what
-func ToPdata(dataset string, lhes []libhoneyevent.LibhoneyEvent, cfg libhoneyevent.FieldMapConfig, logger zap.Logger) (plog.Logs, ptrace.Traces, IndexMapping, []response.ResponseInBatch) {
+// ToPdata converts a list of LibhoneyEvents to a Pdata Logs object
+func ToPdata(dataset string, lhes []libhoneyevent.LibhoneyEvent, cfg libhoneyevent.FieldMapConfig, logger zap.Logger) (plog.Logs, ptrace.Traces) {
 	foundServices := libhoneyevent.ServiceHistory{}
 	foundServices.NameCount = make(map[string]int)
 	foundScopes := libhoneyevent.ScopeHistory{}
@@ -49,15 +41,6 @@ func ToPdata(dataset string, lhes []libhoneyevent.LibhoneyEvent, cfg libhoneyeve
 
 	spanLinks := map[trc.SpanID][]libhoneyevent.LibhoneyEvent{}
 	spanEvents := map[trc.SpanID][]libhoneyevent.LibhoneyEvent{}
-
-	// Initialize index mapping to track which original events become logs vs traces
-	indexMapping := IndexMapping{
-		LogIndices:   make([]int, 0),
-		TraceIndices: make([]int, 0),
-	}
-
-	// Initialize parsing results to track success/failure per original event
-	parsingResults := make([]response.ResponseInBatch, len(lhes))
 
 	foundScopes.Scope = make(map[string]libhoneyevent.SimpleScope) // a list of already seen scopes
 
@@ -68,7 +51,7 @@ func ToPdata(dataset string, lhes []libhoneyevent.LibhoneyEvent, cfg libhoneyeve
 		cfg.Attributes.Error, cfg.Attributes.SpanKind,
 	}
 
-	for i, lhe := range lhes {
+	for _, lhe := range lhes {
 		parentID, err := lhe.GetParentID(cfg.Attributes.ParentID)
 		if err != nil {
 			logger.Debug("parent id not found")
@@ -85,16 +68,6 @@ func ToPdata(dataset string, lhes []libhoneyevent.LibhoneyEvent, cfg libhoneyeve
 			err := lhe.ToPTraceSpan(&newSpan, &alreadyUsedFields, cfg, logger)
 			if err != nil {
 				logger.Warn("span could not be converted from libhoney to ptrace", zap.String("span.object", lhe.DebugString()))
-				parsingResults[i] = response.ResponseInBatch{
-					Status:   http.StatusBadRequest,
-					ErrorStr: "span parsing failed: " + err.Error(),
-				}
-			} else {
-				// Track successful span for consumer processing
-				indexMapping.TraceIndices = append(indexMapping.TraceIndices, i)
-				parsingResults[i] = response.ResponseInBatch{
-					Status: http.StatusAccepted,
-				}
 			}
 		case "log":
 			logService, _ := lhe.GetService(cfg, &foundServices, dataset)
@@ -103,24 +76,10 @@ func ToPdata(dataset string, lhes []libhoneyevent.LibhoneyEvent, cfg libhoneyeve
 			err := lhe.ToPLogRecord(&newLog, &alreadyUsedFields, logger)
 			if err != nil {
 				logger.Warn("log could not be converted from libhoney to plog", zap.String("span.object", lhe.DebugString()))
-				parsingResults[i] = response.ResponseInBatch{
-					Status:   http.StatusBadRequest,
-					ErrorStr: "log parsing failed: " + err.Error(),
-				}
-			} else {
-				// Track successful log for consumer processing
-				indexMapping.LogIndices = append(indexMapping.LogIndices, i)
-				parsingResults[i] = response.ResponseInBatch{
-					Status: http.StatusAccepted,
-				}
 			}
 		case "span_event":
-			// Span events are processed later, so we need index mapping for them
-			indexMapping.TraceIndices = append(indexMapping.TraceIndices, i)
 			spanEvents[parentID] = append(spanEvents[parentID], lhe)
 		case "span_link":
-			// Span links are processed later, so we need index mapping for them
-			indexMapping.TraceIndices = append(indexMapping.TraceIndices, i)
 			spanLinks[parentID] = append(spanLinks[parentID], lhe)
 		}
 	}
@@ -168,19 +127,13 @@ func ToPdata(dataset string, lhes []libhoneyevent.LibhoneyEvent, cfg libhoneyeve
 		}
 	}
 
-	return resultLogs, resultTraces, indexMapping, parsingResults
+	return resultLogs, resultTraces
 }
 
 func addSpanEventsToSpan(sp ptrace.Span, events []libhoneyevent.LibhoneyEvent, alreadyUsedFields []string, logger *zap.Logger) {
 	for _, spe := range events {
 		newEvent := sp.Events().AppendEmpty()
-		// Handle cases where MsgPackTimestamp might be nil (e.g., JSON data from Refinery)
-		if spe.MsgPackTimestamp != nil {
-			newEvent.SetTimestamp(pcommon.Timestamp(spe.MsgPackTimestamp.UnixNano()))
-		} else {
-			// Use current time if timestamp is not available
-			newEvent.SetTimestamp(pcommon.Timestamp(time.Now().UnixNano()))
-		}
+		newEvent.SetTimestamp(pcommon.Timestamp(spe.MsgPackTimestamp.UnixNano()))
 		newEvent.SetName(spe.Data["name"].(string))
 		for lkey, lval := range spe.Data {
 			if slices.Contains(alreadyUsedFields, lkey) {

@@ -29,7 +29,7 @@ func (tp *tracesProcessor) insertAttrIfMissingOrShouldOverride(sattr pcommon.Map
 			err = errors.New("unsupported value type")
 		}
 	}
-	return err
+	return
 }
 
 func (tp *tracesProcessor) processTraces(ctx context.Context, td ptrace.Traces) (output ptrace.Traces, err error) {

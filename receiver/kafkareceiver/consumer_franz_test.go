@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/config/configretry"
+	"go.opentelemetry.io/collector/featuregate"
 	"go.opentelemetry.io/collector/pdata/ptrace"
 	"go.opentelemetry.io/collector/pdata/testdata"
 	"go.opentelemetry.io/collector/receiver/receiverhelper"
@@ -29,12 +30,11 @@ import (
 )
 
 func setFranzGo(tb testing.TB, value bool) {
-	// Feature gate is now stable and always enabled.
-	// This function is kept for backward compatibility with existing tests
-	// but no longer modifies the feature gate state.
-	if !value {
-		tb.Skip("Sarama client tests are skipped as the franz-go feature gate is now stable and always enabled")
-	}
+	currentFranzState := franzGoConsumerFeatureGate.IsEnabled()
+	require.NoError(tb, featuregate.GlobalRegistry().Set(franzGoConsumerFeatureGate.ID(), value))
+	tb.Cleanup(func() {
+		require.NoError(tb, featuregate.GlobalRegistry().Set(franzGoConsumerFeatureGate.ID(), currentFranzState))
+	})
 }
 
 func TestConsumerShutdownConsuming(t *testing.T) {
@@ -148,28 +148,16 @@ func TestConsumerShutdownConsuming(t *testing.T) {
 		},
 	}
 
-	// Create some traces for sending to the otlp_spans topic.
-	const topic = "otlp_spans"
-	traces := testdata.GenerateTraces(5)
-	data, err := (&ptrace.ProtoMarshaler{}).MarshalTraces(traces)
-	require.NoError(t, err)
-	rs := []*kgo.Record{
-		{Topic: topic, Value: data},
-		{Topic: topic, Value: data},
-	}
-
 	testShutdown := func(tb testing.TB, testConfig tCfg, want assertions) {
 		// Test that the consumer shuts down while consuming a message and
 		// commits the offset after it's left the group.
 		setFranzGo(tb, true)
 
+		topic := "otlp_spans"
 		kafkaClient, cfg := mustNewFakeCluster(tb, kfake.SeedTopics(1, topic))
 		cfg.ConsumerConfig = configkafka.ConsumerConfig{
 			GroupID:    tb.Name(),
 			AutoCommit: configkafka.AutoCommitConfig{Enable: true, Interval: 10 * time.Second},
-
-			// Set MinFetchSize to ensure all records are fetched at once
-			MinFetchSize: int32(len(data) * len(rs)),
 		}
 		cfg.ErrorBackOff = testConfig.backOff
 		cfg.MessageMarking = testConfig.mark
@@ -196,10 +184,19 @@ func TestConsumerShutdownConsuming(t *testing.T) {
 			}, consuming
 		}
 
+		// Send some traces to the otlp_spans topic.
+		traces := testdata.GenerateTraces(5)
+		data, err := (&ptrace.ProtoMarshaler{}).MarshalTraces(traces)
+		require.NoError(t, err)
+		rs := []*kgo.Record{
+			{Topic: topic, Value: data},
+			{Topic: topic, Value: data},
+		}
+
 		test := func(tb testing.TB, expected int64) {
 			ctx := t.Context()
 			consumeFn, consuming := newConsumeFunc()
-			consumer, e := newFranzKafkaConsumer(cfg, settings, []string{topic}, nil, consumeFn)
+			consumer, e := newFranzKafkaConsumer(cfg, settings, []string{topic}, consumeFn)
 			require.NoError(tb, e)
 			require.NoError(tb, consumer.Start(ctx, componenttest.NewNopHost()))
 			require.NoError(tb, kafkaClient.ProduceSync(ctx, rs...).FirstErr())
@@ -210,7 +207,6 @@ func TestConsumerShutdownConsuming(t *testing.T) {
 			case <-time.After(time.Second):
 				tb.Fatal("expected to consume a message")
 			}
-
 			require.NoError(tb, consumer.Shutdown(ctx))
 			wg.Wait() // Wait for the consume functions to exit.
 			// Ensure that the consume function was called twice.
@@ -239,21 +235,13 @@ func TestConsumerShutdownNotStarted(t *testing.T) {
 
 	_, cfg := mustNewFakeCluster(t, kfake.SeedTopics(1, "test"))
 	settings, _, _ := mustNewSettings(t)
-	consumeFn := func(component.Host, *receiverhelper.ObsReport, *metadata.TelemetryBuilder) (consumeMessageFunc, error) {
-		return func(_ context.Context, _ kafkaMessage, _ attribute.Set) error {
-			return nil
-		}, nil
-	}
-	c, err := newFranzKafkaConsumer(cfg, settings, []string{"test"}, nil, consumeFn)
+	c, err := newFranzKafkaConsumer(cfg, settings, []string{"test"}, nil)
 	require.NoError(t, err)
 
-	for range 2 {
-		require.NoError(t, c.Shutdown(t.Context()))
+	for i := 0; i < 2; i++ {
+		require.EqualError(t, c.Shutdown(t.Context()),
+			"kafka consumer: consumer isn't running")
 	}
-
-	// Verify internal signal that there's nothing to shut down.
-	// (Same package, so we can call the unexported helper.)
-	require.False(t, c.triggerShutdown(), "triggerShutdown should indicate no-op when never started")
 }
 
 // TestRaceLostVsConsume verifies no data race occurs between concurrent
@@ -274,7 +262,7 @@ func TestRaceLostVsConsume(t *testing.T) {
 
 	// Produce records.
 	var rs []*kgo.Record
-	for range 500 {
+	for i := 0; i < 500; i++ {
 		traces := testdata.GenerateTraces(5)
 		data, err := (&ptrace.ProtoMarshaler{}).MarshalTraces(traces)
 		require.NoError(t, err)
@@ -290,7 +278,7 @@ func TestRaceLostVsConsume(t *testing.T) {
 		}, nil
 	}
 
-	c, err := newFranzKafkaConsumer(cfg, settings, []string{topic}, nil, consumeFn)
+	c, err := newFranzKafkaConsumer(cfg, settings, []string{topic}, consumeFn)
 	require.NoError(t, err)
 	require.NoError(t, c.Start(t.Context(), componenttest.NewNopHost()))
 
@@ -299,7 +287,7 @@ func TestRaceLostVsConsume(t *testing.T) {
 	go func() {
 		defer close(done)
 		topicMap := map[string][]int32{topic: {0}}
-		for range 2000 {
+		for i := 0; i < 2000; i++ {
 			c.lost(t.Context(), nil, topicMap, false)
 			c.assigned(t.Context(), kafkaClient, topicMap)
 			c.client.ForceRebalance()
@@ -323,7 +311,7 @@ func TestLost(t *testing.T) {
 			return nil
 		}, nil
 	}
-	c, err := newFranzKafkaConsumer(cfg, settings, []string{"test"}, nil, consumeFn)
+	c, err := newFranzKafkaConsumer(cfg, settings, []string{"test"}, consumeFn)
 	require.NoError(t, err)
 	require.NoError(t, c.Start(t.Context(), componenttest.NewNopHost()))
 	defer func() { require.NoError(t, c.Shutdown(t.Context())) }()
@@ -335,150 +323,4 @@ func TestLost(t *testing.T) {
 
 	// Call lost for a topic and partition that was not assigned
 	c.lost(t.Context(), nil, map[string][]int32{"404": {0}}, true)
-}
-
-func TestFranzConsumer_UseLeaderEpoch_Smoke(t *testing.T) {
-	setFranzGo(t, true)
-
-	topic := "otlp_spans"
-	kafkaClient, cfg := mustNewFakeCluster(t, kfake.SeedTopics(1, topic))
-	cfg.UseLeaderEpoch = false // <-- exercise the option
-	cfg.ConsumerConfig = configkafka.ConsumerConfig{
-		GroupID:    t.Name(),
-		AutoCommit: configkafka.AutoCommitConfig{Enable: true, Interval: 100 * time.Millisecond},
-	}
-
-	var called atomic.Int64
-	settings, _, _ := mustNewSettings(t)
-	consumeFn := func(component.Host, *receiverhelper.ObsReport, *metadata.TelemetryBuilder) (consumeMessageFunc, error) {
-		return func(_ context.Context, _ kafkaMessage, _ attribute.Set) error {
-			called.Add(1)
-			return nil
-		}, nil
-	}
-
-	// produce a couple of records
-	traces := testdata.GenerateTraces(5)
-	data, err := (&ptrace.ProtoMarshaler{}).MarshalTraces(traces)
-	require.NoError(t, err)
-	rs := []*kgo.Record{
-		{Topic: topic, Value: data},
-		{Topic: topic, Value: data},
-	}
-
-	c, err := newFranzKafkaConsumer(cfg, settings, []string{topic}, nil, consumeFn)
-	require.NoError(t, err)
-	require.NoError(t, c.Start(t.Context(), componenttest.NewNopHost()))
-	require.NoError(t, kafkaClient.ProduceSync(t.Context(), rs...).FirstErr())
-
-	// wait briefly for consumption
-	deadline := time.After(2 * time.Second)
-	for called.Load() < 2 {
-		select {
-		case <-deadline:
-			t.Fatalf("expected to consume 2 records, got %d", called.Load())
-		case <-time.After(25 * time.Millisecond):
-		}
-	}
-
-	require.NoError(t, c.Shutdown(t.Context()))
-}
-
-func TestMakeUseLeaderEpochAdjuster_ClearsEpoch(t *testing.T) {
-	adj := makeClearLeaderEpochAdjuster()
-
-	input := map[string]map[int32]kgo.Offset{
-		"t": {
-			0: kgo.NewOffset().At(42).WithEpoch(7),
-			1: kgo.NewOffset().At(100), // no epoch set
-		},
-	}
-	out, err := adj(t.Context(), input)
-	require.NoError(t, err)
-
-	require.Equal(t, kgo.NewOffset().At(42).WithEpoch(-1), out["t"][0])
-	require.Equal(t, kgo.NewOffset().At(100).WithEpoch(-1), out["t"][1])
-}
-
-// TestExcludeTopicWithRegex tests that exclude_topic works correctly with regex topic patterns.
-// It creates three topics (logs-a, logs-b, logs-c) matching the pattern ^logs-.*
-// and excludes logs-a and logs-b using ^logs-(a|b)$, expecting only logs-c to be consumed.
-func TestExcludeTopicWithRegex(t *testing.T) {
-	setFranzGo(t, true)
-
-	// Create three topics: logs-a, logs-b, logs-c
-	kafkaClient, cfg := mustNewFakeCluster(t,
-		kfake.SeedTopics(1, "logs-a"),
-		kfake.SeedTopics(1, "logs-b"),
-		kfake.SeedTopics(1, "logs-c"),
-	)
-
-	cfg.ConsumerConfig = configkafka.ConsumerConfig{
-		GroupID:       t.Name(),
-		InitialOffset: "earliest",
-		AutoCommit:    configkafka.AutoCommitConfig{Enable: true, Interval: 100 * time.Millisecond},
-	}
-
-	// Prepare test data
-	traces := testdata.GenerateTraces(5)
-	data, err := (&ptrace.ProtoMarshaler{}).MarshalTraces(traces)
-	require.NoError(t, err)
-
-	// Produce records to all three topics
-	rs := []*kgo.Record{
-		{Topic: "logs-a", Value: data},
-		{Topic: "logs-b", Value: data},
-		{Topic: "logs-c", Value: data},
-	}
-	require.NoError(t, kafkaClient.ProduceSync(t.Context(), rs...).FirstErr())
-
-	// Track which topics were consumed
-	consumedTopics := make(map[string]int)
-	var mu sync.Mutex
-	var called atomic.Int64
-
-	settings, _, _ := mustNewSettings(t)
-	consumeFn := func(component.Host, *receiverhelper.ObsReport, *metadata.TelemetryBuilder) (consumeMessageFunc, error) {
-		return func(_ context.Context, msg kafkaMessage, _ attribute.Set) error {
-			mu.Lock()
-			consumedTopics[msg.topic()]++
-			mu.Unlock()
-			called.Add(1)
-			return nil
-		}, nil
-	}
-
-	// Create consumer with regex topic pattern and exclude pattern
-	c, err := newFranzKafkaConsumer(
-		cfg,
-		settings,
-		[]string{"^logs-.*"},     // Match all logs-* topics
-		[]string{"^logs-(a|b)$"}, // Exclude logs-a and logs-b
-		consumeFn,
-	)
-	require.NoError(t, err)
-	require.NoError(t, c.Start(t.Context(), componenttest.NewNopHost()))
-	defer func() { require.NoError(t, c.Shutdown(t.Context())) }()
-
-	// Wait for consumption (should only consume 1 record from logs-c)
-	deadline := time.After(5 * time.Second)
-	for called.Load() < 1 {
-		select {
-		case <-deadline:
-			t.Fatalf("expected to consume 1 record, got %d", called.Load())
-		case <-time.After(50 * time.Millisecond):
-		}
-	}
-
-	// Give it a bit more time to ensure no other messages are consumed
-	time.Sleep(500 * time.Millisecond)
-
-	// Verify results
-	mu.Lock()
-	defer mu.Unlock()
-
-	require.Equal(t, int64(1), called.Load(), "should consume exactly 1 record")
-	require.Equal(t, 0, consumedTopics["logs-a"], "logs-a should be excluded")
-	require.Equal(t, 0, consumedTopics["logs-b"], "logs-b should be excluded")
-	require.Equal(t, 1, consumedTopics["logs-c"], "logs-c should be consumed")
 }

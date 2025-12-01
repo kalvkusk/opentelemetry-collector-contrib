@@ -26,7 +26,7 @@ type aggregation struct {
 func newAggregateAttributesProcessor(config []aggregationPair) *aggregateAttributesProcessor {
 	aggregations := []*aggregation{}
 
-	for i := range config {
+	for i := 0; i < len(config); i++ {
 		pair := &aggregation{
 			attribute: config[i].Attribute,
 			prefixes:  config[i].Prefixes,
@@ -122,7 +122,7 @@ func (proc *aggregateAttributesProcessor) processAttributes(attributes pcommon.M
 			newMap.EnsureCapacity(attributes.Len())
 
 			for key, value := range attributes.All() {
-				trimmedKey, ok := strings.CutPrefix(key, prefix)
+				ok, trimmedKey := getNewKey(key, prefix)
 				if ok {
 					// TODO: Potential name conflict to resolve, eg.:
 					// pod_* matches pod_foo
@@ -159,4 +159,13 @@ func (proc *aggregateAttributesProcessor) processAttributes(attributes pcommon.M
 	}
 
 	return nil
+}
+
+// Checks if the key has given prefix and trims it if so.
+func getNewKey(key, prefix string) (bool, string) {
+	if strings.HasPrefix(key, prefix) {
+		return true, strings.TrimPrefix(key, prefix)
+	}
+
+	return false, ""
 }

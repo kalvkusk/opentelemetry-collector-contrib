@@ -7,18 +7,16 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/obfuscate"
 )
 
+var obfuscateSQLConfig = obfuscate.SQLConfig{DBMS: "oracle"}
+
 type obfuscator obfuscate.Obfuscator
 
 func newObfuscator() *obfuscator {
-	return (*obfuscator)(obfuscate.NewObfuscator(obfuscate.Config{
-		SQL: obfuscate.SQLConfig{
-			DBMS: "oracle",
-		},
-	}))
+	return (*obfuscator)(obfuscate.NewObfuscator(obfuscate.Config{}))
 }
 
 func (o *obfuscator) obfuscateSQLString(sql string) (string, error) {
-	obfuscatedQuery, err := (*obfuscate.Obfuscator)(o).ObfuscateSQLString(sql)
+	obfuscatedQuery, err := (*obfuscate.Obfuscator)(o).ObfuscateSQLStringWithOptions(sql, &obfuscateSQLConfig, "")
 	if err != nil {
 		return "", err
 	}

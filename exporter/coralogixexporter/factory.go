@@ -7,7 +7,6 @@ package coralogixexporter // import "github.com/open-telemetry/opentelemetry-col
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"go.opentelemetry.io/collector/component"
@@ -40,31 +39,23 @@ func createDefaultConfig() component.Config {
 		QueueSettings:   exporterhelper.NewDefaultQueueConfig(),
 		BackOffConfig:   configretry.NewDefaultBackOffConfig(),
 		TimeoutSettings: exporterhelper.NewDefaultTimeoutConfig(),
-		DomainSettings: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Compression: configcompression.TypeGzip,
-			},
+		DomainSettings: configgrpc.ClientConfig{
+			Compression: configcompression.TypeGzip,
 		},
 		// Traces GRPC client
-		Traces: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Endpoint:    "https://",
-				Compression: configcompression.TypeGzip,
-			},
+		Traces: configgrpc.ClientConfig{
+			Endpoint:    "https://",
+			Compression: configcompression.TypeGzip,
 		},
-		Metrics: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Endpoint: "https://",
-				// Default to gzip compression
-				Compression:     configcompression.TypeGzip,
-				WriteBufferSize: 512 * 1024,
-			},
+		Metrics: configgrpc.ClientConfig{
+			Endpoint: "https://",
+			// Default to gzip compression
+			Compression:     configcompression.TypeGzip,
+			WriteBufferSize: 512 * 1024,
 		},
-		Logs: TransportConfig{
-			ClientConfig: configgrpc.ClientConfig{
-				Endpoint:    "https://",
-				Compression: configcompression.TypeGzip,
-			},
+		Logs: configgrpc.ClientConfig{
+			Endpoint:    "https://",
+			Compression: configcompression.TypeGzip,
 		},
 		PrivateKey: "",
 		AppName:    "",
@@ -73,7 +64,6 @@ func createDefaultConfig() component.Config {
 			Threshold: 10,
 			Duration:  time.Minute,
 		},
-		Protocol: grpcProtocol,
 	}
 }
 
@@ -161,11 +151,6 @@ func createProfilesExporter(
 	config component.Config,
 ) (xexporter.Profiles, error) {
 	cfg := config.(*Config)
-
-	// Validate that HTTP protocol is not used with profiles
-	if cfg.Protocol == "http" {
-		return nil, errors.New("profiles signal is not supported with HTTP protocol, use gRPC protocol (default) instead")
-	}
 
 	oce, err := newProfilesExporter(cfg, set)
 	if err != nil {

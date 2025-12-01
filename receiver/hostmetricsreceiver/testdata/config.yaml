@@ -15,7 +15,6 @@ hostmetrics/customname:
       include:
         interfaces: ["test1"]
         match_type: "strict"
-    nfs:
     paging:
     processes:
     process:

@@ -33,6 +33,13 @@ The following settings are required:
 
 The following settings are optional:
 
+- `access_token_passthrough`: (default = `false`) Whether to preserve incoming
+  access token (`X-Sf-Token` header value) as
+  `"com.splunk.signalfx.access_token"` metric resource attribute.  Should only be
+  used in tandem with identical configuration option for [SignalFx
+  exporter](../../exporter/signalfxexporter/README.md) to preserve datapoint
+  origin.  Usage of any other exporter in a metric pipeline with this configuration
+  option enabled will reveal all organization access tokens contained in this attribute.
 - `tls_settings` (no default): This is an optional object used to specify if
   TLS should be used for incoming connections. Both `key_file` and `cert_file`
   are required to support incoming TLS connections.
@@ -45,6 +52,7 @@ Example:
 receivers:
   signalfx:
   signalfx/advanced:
+    access_token_passthrough: true
     tls:
       cert_file: /test.crt
       key_file: /test.key
@@ -60,14 +68,10 @@ service:
   pipelines:
     metrics:
       receivers: [signalfx]
-      processors: [memory_limiter]
+      processors: [memory_limiter, batch]
       exporters: [signalfx]
     logs:
       receivers: [signalfx]
-      processors: [memory_limiter]
+      processors: [memory_limiter, batch]
       exporters: [signalfx]
 ```
-## Access token passthrough
-
-Access token passthrough is no longer supported, to achieve similar behavior configure your collector
-to use the `headers_setter` extension to pass the access token. 

@@ -7,7 +7,6 @@ import (
 	"math/rand/v2"
 	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,16 +16,11 @@ import (
 
 var compressionFileExtensions = map[configcompression.Type]string{
 	configcompression.TypeGzip: ".gz",
-	configcompression.TypeZstd: ".zst",
 }
 
 type PartitionKeyBuilder struct {
-	// PartitionBasePrefix defines the root S3
-	// directory (key) prefix used to write the file.
-	PartitionBasePrefix string
 	// PartitionPrefix defines the S3 directory (key)
-	// prefix used to write the file.
-	// Appended to PartitionBasePrefix if provided.
+	// prefix used to write the file
 	PartitionPrefix string
 	// PartitionFormat is used to separate values into
 	// different time buckets.
@@ -50,10 +44,6 @@ type PartitionKeyBuilder struct {
 	// generating a new unique string to avoid collisions on file upload
 	// across many different instances.
 	UniqueKeyFunc func() string
-	// IsCompressed when true keeps files compressed in S3
-	// by omitting ContentEncoding headers. When false, ContentEncoding
-	// is set for HTTP transfer compression (AWS auto-decompresses).
-	IsCompressed bool
 }
 
 func (pki *PartitionKeyBuilder) Build(ts time.Time, overridePrefix string) string {
@@ -67,24 +57,14 @@ func (pki *PartitionKeyBuilder) bucketKeyPrefix(ts time.Time, overridePrefix str
 	if overridePrefix != "" {
 		prefix = overridePrefix
 	}
-
-	var pathParts []string
-
-	if pki.PartitionBasePrefix != "" {
-		pathParts = append(pathParts, pki.PartitionBasePrefix)
-	}
-
 	if prefix != "" {
-		pathParts = append(pathParts, prefix)
+		prefix += "/"
 	}
-
 	location := pki.PartitionTimeLocation
 	if location == nil {
 		location = time.Local
 	}
-	pathParts = append(pathParts, timefmt.Format(ts.In(location), pki.PartitionFormat))
-
-	return strings.Join(pathParts, "/")
+	return prefix + timefmt.Format(ts.In(location), pki.PartitionFormat)
 }
 
 func (pki *PartitionKeyBuilder) fileName() string {

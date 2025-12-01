@@ -8,11 +8,11 @@ The following telemetry is emitted by this component.
 
 ### otelcol.elasticsearch.bulk_requests.count
 
-Count of the completed bulk requests. [Alpha]
+Count of the completed bulk requests. [alpha]
 
 | Unit | Metric Type | Value Type | Monotonic | Stability |
 | ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Alpha |
+| 1 | Sum | Int | true | alpha |
 
 #### Attributes
 
@@ -23,11 +23,11 @@ Count of the completed bulk requests. [Alpha]
 
 ### otelcol.elasticsearch.bulk_requests.latency
 
-Latency of Elasticsearch bulk operations in seconds. [Alpha]
+Latency of Elasticsearch bulk operations in seconds. [alpha]
 
 | Unit | Metric Type | Value Type | Stability |
 | ---- | ----------- | ---------- | --------- |
-| s | Histogram | Double | Alpha |
+| s | Histogram | Double | alpha |
 
 #### Attributes
 
@@ -38,11 +38,11 @@ Latency of Elasticsearch bulk operations in seconds. [Alpha]
 
 ### otelcol.elasticsearch.docs.processed
 
-Count of documents flushed to Elasticsearch. [Alpha]
+Count of documents flushed to Elasticsearch. [alpha]
 
 | Unit | Metric Type | Value Type | Monotonic | Stability |
 | ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Alpha |
+| 1 | Sum | Int | true | alpha |
 
 #### Attributes
 
@@ -55,34 +55,34 @@ Count of documents flushed to Elasticsearch. [Alpha]
 
 ### otelcol.elasticsearch.docs.received
 
-Count of Elasticsearch documents successfully received to be buffered. [Alpha]
+Count of Elasticsearch documents successfully received to be buffered. [alpha]
 
 | Unit | Metric Type | Value Type | Monotonic | Stability |
 | ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Alpha |
+| 1 | Sum | Int | true | alpha |
 
 ### otelcol.elasticsearch.docs.retried
 
-Count of document retries. [Alpha]
+Count of document retries. [alpha]
 
 Only document level retries are captured, whole bulk request retries are not captured.
 
 | Unit | Metric Type | Value Type | Monotonic | Stability |
 | ---- | ----------- | ---------- | --------- | --------- |
-| 1 | Sum | Int | true | Alpha |
+| 1 | Sum | Int | true | alpha |
 
 ### otelcol.elasticsearch.flushed.bytes
 
-Number of bytes flushed by the indexer. [Alpha]
+Number of bytes flushed by the indexer. [alpha]
 
 | Unit | Metric Type | Value Type | Monotonic | Stability |
 | ---- | ----------- | ---------- | --------- | --------- |
-| By | Sum | Int | true | Alpha |
+| By | Sum | Int | true | alpha |
 
 ### otelcol.elasticsearch.flushed.uncompressed_bytes
 
-Number of uncompressed bytes flushed by the indexer. [Alpha]
+Number of uncompressed bytes flushed by the indexer. [alpha]
 
 | Unit | Metric Type | Value Type | Monotonic | Stability |
 | ---- | ----------- | ---------- | --------- | --------- |
-| By | Sum | Int | true | Alpha |
+| By | Sum | Int | true | alpha |

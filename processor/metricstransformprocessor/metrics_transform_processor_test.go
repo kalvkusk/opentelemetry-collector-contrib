@@ -4,7 +4,6 @@
 package metricstransformprocessor
 
 import (
-	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,7 +44,7 @@ func TestMetricsTransformProcessor(t *testing.T) {
 			inMetrics := pmetric.NewMetrics()
 			inMetricsSlice := inMetrics.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty().Metrics()
 			for _, m := range test.in {
-				m.CopyTo(inMetricsSlice.AppendEmpty())
+				m.MoveTo(inMetricsSlice.AppendEmpty())
 			}
 			cErr := mtp.ConsumeMetrics(t.Context(), inMetrics)
 			assert.NoError(t, cErr)
@@ -115,26 +114,12 @@ func lessAttributes(a, b pcommon.Map) bool {
 		return a.Len() < b.Len()
 	}
 
-	ak := make([]string, 0, a.Len())
-	for k := range a.All() {
-		ak = append(ak, k)
-	}
-	sort.Strings(ak)
-
-	// Compare values by sorted key order.
-	for _, k := range ak {
-		av, _ := a.Get(k)
+	var res bool
+	for k, v := range a.All() {
 		bv, ok := b.Get(k)
-		if !ok {
+		if !ok || v.Str() < bv.Str() {
 			return true
 		}
-		as := av.Str()
-		bs := bv.Str()
-		if as == bs {
-			continue
-		}
-		return as < bs
 	}
-
-	return false
+	return res
 }

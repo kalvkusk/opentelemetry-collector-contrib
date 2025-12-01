@@ -101,11 +101,11 @@ func translateDatadogKeyToOTel(k string) string {
 	}
 
 	// HTTP dynamic attributes
-	if after, ok := strings.CutPrefix(k, "http.response.headers."); ok { // type: string[]
-		header := after
+	if strings.HasPrefix(k, "http.response.headers.") { // type: string[]
+		header := strings.TrimPrefix(k, "http.response.headers.")
 		return "http.response.header." + header
-	} else if after, ok := strings.CutPrefix(k, "http.request.headers."); ok { // type: string[]
-		header := after
+	} else if strings.HasPrefix(k, "http.request.headers.") { // type: string[]
+		header := strings.TrimPrefix(k, "http.request.headers.")
 		return "http.request.header." + header
 	}
 	return k

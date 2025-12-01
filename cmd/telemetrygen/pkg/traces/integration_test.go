@@ -81,14 +81,14 @@ func startMockReceiver(t *testing.T) (*grpc.Server, string, *mockTracesReceiver)
 // TestTelemetrygenIntegration tests the actual behavior of the telemetrygen tool
 func TestTelemetrygenIntegration(t *testing.T) {
 	buildDir := "../../../telemetrygen"
-	binaryName := fmt.Sprintf("telemetrygen-test-%d", time.Now().UnixNano())
-	buildCmd := exec.Command("go", "build", "-o", binaryName, ".")
+	buildCmd := exec.Command("go", "build", "-o", "telemetrygen-test", ".")
 	buildCmd.Dir = buildDir
 	err := buildCmd.Run()
 	require.NoError(t, err, "Failed to build telemetrygen")
 
-	testBinaryPath := fmt.Sprintf("../../../telemetrygen/%s", binaryName)
-	defer os.Remove(testBinaryPath)
+	defer os.Remove("../../../telemetrygen/telemetrygen-test")
+
+	testBinaryPath := "../../../telemetrygen/telemetrygen-test"
 
 	t.Run("RespectsTracesParameter", func(t *testing.T) {
 		server, endpoint, receiver := startMockReceiver(t)
@@ -111,28 +111,12 @@ func TestTelemetrygenIntegration(t *testing.T) {
 		duration := time.Since(start)
 
 		assert.NoError(t, err, "telemetrygen should complete successfully with --traces parameter")
-		assert.Less(t, duration, 8*time.Second, "Should complete quickly without connection issues")
+		assert.Less(t, duration, 6*time.Second, "Should complete quickly without connection issues")
 
 		// Wait for all traces to be processed
 		time.Sleep(500 * time.Millisecond)
 		traces := receiver.GetTraces()
-
-		// Count unique trace IDs across all received traces
-		traceIDs := make(map[string]bool)
-		for _, trace := range traces {
-			for i := 0; i < trace.ResourceSpans().Len(); i++ {
-				resourceSpan := trace.ResourceSpans().At(i)
-				for j := 0; j < resourceSpan.ScopeSpans().Len(); j++ {
-					scopeSpan := resourceSpan.ScopeSpans().At(j)
-					for k := 0; k < scopeSpan.Spans().Len(); k++ {
-						span := scopeSpan.Spans().At(k)
-						traceIDs[span.TraceID().String()] = true
-					}
-				}
-			}
-		}
-
-		assert.Len(t, traceIDs, 3, "Should have received exactly 3 unique traces")
+		assert.Len(t, traces, 3, "Should have received exactly 3 traces")
 	})
 
 	t.Run("DurationOverridesTraces", func(t *testing.T) {

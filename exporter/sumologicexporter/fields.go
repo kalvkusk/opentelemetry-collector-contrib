@@ -73,7 +73,7 @@ func (f fields) string() string {
 // sanitizeFields sanitize field (key or value) to be correctly parsed by sumologic receiver
 // It modifies the field in place.
 func (fields) sanitizeField(fld []byte) {
-	for i := range fld {
+	for i := 0; i < len(fld); i++ {
 		switch fld[i] {
 		case ',':
 			fld[i] = '_'

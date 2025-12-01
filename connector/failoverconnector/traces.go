@@ -59,7 +59,7 @@ func (f *tracesRouter) consumeByHealthyPipeline(ctx context.Context, td ptrace.T
 // sampleRetryConsumers iterates through all unhealthy consumers to re-establish a healthy connection
 func (f *tracesRouter) sampleRetryConsumers(ctx context.Context, td ptrace.Traces) bool {
 	stableIndex := f.pS.CurrentPipeline()
-	for i := range stableIndex {
+	for i := 0; i < stableIndex; i++ {
 		consumer := f.getConsumerAtIndex(i)
 		err := consumer.ConsumeTraces(ctx, td)
 		if err == nil {

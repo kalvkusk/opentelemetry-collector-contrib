@@ -4,7 +4,6 @@
 package regex // import "github.com/open-telemetry/opentelemetry-collector-contrib/pkg/stanza/operator/parser/regex"
 
 import (
-	"maps"
 	"math"
 	"sync"
 	"sync/atomic"
@@ -102,7 +101,9 @@ func (m *memoryCache) copy() map[string]any {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	maps.Copy(cp, m.cache)
+	for k, v := range m.cache {
+		cp[k] = v
+	}
 	return cp
 }
 

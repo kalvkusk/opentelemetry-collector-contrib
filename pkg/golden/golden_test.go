@@ -396,7 +396,7 @@ func CreateTestProfiles() pprofile.Profiles {
 
 	profile.AttributeIndices().Append(2)
 
-	sample := profile.Samples().AppendEmpty()
+	sample := profile.Sample().AppendEmpty()
 	sample.TimestampsUnixNano().Append(0)
 
 	stack := dic.StackTable().AppendEmpty()

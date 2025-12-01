@@ -51,8 +51,7 @@ func createTracesToMetrics(
 	}
 
 	metricDefs := make([]model.MetricDef[ottlspan.TransformContext], 0, len(c.Spans))
-	for i := range c.Spans {
-		info := c.Spans[i]
+	for _, info := range c.Spans {
 		var md model.MetricDef[ottlspan.TransformContext]
 		if err := md.FromMetricInfo(info, parser, set.TelemetrySettings); err != nil {
 			return nil, fmt.Errorf("failed to parse provided metric information; %w", err)
@@ -83,8 +82,7 @@ func createMetricsToMetrics(
 	}
 
 	metricDefs := make([]model.MetricDef[ottldatapoint.TransformContext], 0, len(c.Datapoints))
-	for i := range c.Datapoints {
-		info := c.Datapoints[i]
+	for _, info := range c.Datapoints {
 		var md model.MetricDef[ottldatapoint.TransformContext]
 		if err := md.FromMetricInfo(info, parser, set.TelemetrySettings); err != nil {
 			return nil, fmt.Errorf("failed to parse provided metric information; %w", err)
@@ -115,8 +113,7 @@ func createLogsToMetrics(
 	}
 
 	metricDefs := make([]model.MetricDef[ottllog.TransformContext], 0, len(c.Logs))
-	for i := range c.Logs {
-		info := c.Logs[i]
+	for _, info := range c.Logs {
 		var md model.MetricDef[ottllog.TransformContext]
 		if err := md.FromMetricInfo(info, parser, set.TelemetrySettings); err != nil {
 			return nil, fmt.Errorf("failed to parse provided metric information; %w", err)
@@ -147,8 +144,7 @@ func createProfilesToMetrics(
 	}
 
 	metricDefs := make([]model.MetricDef[ottlprofile.TransformContext], 0, len(c.Profiles))
-	for i := range c.Profiles {
-		info := c.Profiles[i]
+	for _, info := range c.Profiles {
 		var md model.MetricDef[ottlprofile.TransformContext]
 		if err := md.FromMetricInfo(info, parser, set.TelemetrySettings); err != nil {
 			return nil, fmt.Errorf("failed to parse provided metric information; %w", err)

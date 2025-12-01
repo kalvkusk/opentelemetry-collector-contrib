@@ -63,8 +63,7 @@ func mongodbAuditEventToLogData(logger *zap.Logger, logs []model.AuditLog, pc pr
 
 	var errs []error
 
-	for i := range logs {
-		log := &logs[i]
+	for _, log := range logs {
 		lr := sl.LogRecords().AppendEmpty()
 
 		logTsFormat := tsLayout(clusterInfo.MongoDBMajorVersion)

@@ -60,8 +60,4 @@ resourceLogs:
             severityNumber: 9
             severityText: INFO
             timeUnixNano: "1755227272101671000"
-        scope:
-          attributes:
-            - key: encoding.format
-              value:
-                stringValue: gcp.auditlog
+        scope: {}

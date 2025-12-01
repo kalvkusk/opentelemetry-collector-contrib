@@ -5,8 +5,7 @@ status:
   stability:
     development: [logs]
   codeowners:
-    active: [smithclay]
-    emeritus: [nslaughter]
+    active: [nslaughter, smithclay]
 
 # TODO: Update the receiver to pass the tests
 tests:

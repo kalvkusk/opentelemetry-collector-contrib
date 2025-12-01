@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"sync"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -29,7 +28,6 @@ type consumerScraper struct {
 	clusterAdmin sarama.ClusterAdmin
 	config       Config
 	mb           *metadata.MetricsBuilder
-	mu           sync.Mutex
 }
 
 func (s *consumerScraper) start(_ context.Context, _ component.Host) error {
@@ -45,7 +43,7 @@ func (s *consumerScraper) shutdown(_ context.Context) error {
 }
 
 func (s *consumerScraper) scrape(context.Context) (pmetric.Metrics, error) {
-	if s.client == nil || s.client.Closed() {
+	if s.client == nil {
 		client, err := newSaramaClient(context.Background(), s.config.ClientConfig)
 		if err != nil {
 			return pmetric.Metrics{}, fmt.Errorf("failed to create client in consumer scraper: %w", err)
@@ -66,7 +64,7 @@ func (s *consumerScraper) scrape(context.Context) (pmetric.Metrics, error) {
 
 	cgs, listErr := s.clusterAdmin.ListConsumerGroups()
 	if listErr != nil {
-		return pmetric.Metrics{}, s.resetClientOnError(listErr)
+		return pmetric.Metrics{}, listErr
 	}
 
 	var matchedGrpIDs []string
@@ -78,7 +76,7 @@ func (s *consumerScraper) scrape(context.Context) (pmetric.Metrics, error) {
 
 	allTopics, listErr := s.clusterAdmin.ListTopics()
 	if listErr != nil {
-		return pmetric.Metrics{}, s.resetClientOnError(listErr)
+		return pmetric.Metrics{}, listErr
 	}
 
 	matchedTopics := map[string]sarama.TopicDetail{}
@@ -112,7 +110,7 @@ func (s *consumerScraper) scrape(context.Context) (pmetric.Metrics, error) {
 	}
 	consumerGroups, listErr := s.clusterAdmin.DescribeConsumerGroups(matchedGrpIDs)
 	if listErr != nil {
-		return pmetric.Metrics{}, s.resetClientOnError(listErr)
+		return pmetric.Metrics{}, listErr
 	}
 
 	now := pcommon.NewTimestampFromTime(time.Now())
@@ -187,16 +185,4 @@ func createConsumerScraper(_ context.Context, cfg Config, settings receiver.Sett
 		scraper.WithStart(s.start),
 		scraper.WithShutdown(s.shutdown),
 	)
-}
-
-func (s *consumerScraper) resetClientOnError(err error) error {
-	if isRecoverableError(err) {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		s.clusterAdmin.Close()
-		s.clusterAdmin = nil
-		return fmt.Errorf("closing client because of reconnection error %w", err)
-	}
-
-	return err
 }

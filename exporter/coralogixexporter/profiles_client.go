@@ -36,8 +36,7 @@ type profilesExporter struct {
 }
 
 func (e *profilesExporter) start(ctx context.Context, host component.Host) (err error) {
-	transportConfig := TransportConfig{ClientConfig: e.config.Profiles}
-	wrapper := &signalConfigWrapper{config: &transportConfig}
+	wrapper := &signalConfigWrapper{config: &e.config.Profiles}
 	if err := e.startSignalExporter(ctx, host, wrapper); err != nil {
 		return err
 	}

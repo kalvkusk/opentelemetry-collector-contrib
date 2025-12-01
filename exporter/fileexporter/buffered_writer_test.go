@@ -63,7 +63,7 @@ func BenchmarkWriter(b *testing.B) {
 		10 * SizeMegaByte,
 	} {
 		payload := make([]byte, payloadSize)
-		for i := range payloadSize {
+		for i := 0; i < payloadSize; i++ {
 			payload[i] = 'a'
 		}
 		for name, w := range map[string]io.WriteCloser{
@@ -77,7 +77,7 @@ func BenchmarkWriter(b *testing.B) {
 				b.ResetTimer()
 
 				var err error
-				for b.Loop() {
+				for i := 0; i < b.N; i++ {
 					_, err = w.Write(payload)
 				}
 				errBenchmark = errors.Join(err, w.Close())

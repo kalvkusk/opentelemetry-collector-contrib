@@ -59,7 +59,9 @@ resourceLogs:
                 value:
                   stringValue: Microsoft.Cdn/Profiles/WebApplicationFirewallLog/Write
             body: {}
+            spanId: ""
             timeUnixNano: "1745508906000000000"
+            traceId: ""
         scope:
           name: otelcol/azureresourcelogs
           version: 1.2.3
