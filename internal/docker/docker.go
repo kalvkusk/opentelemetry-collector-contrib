@@ -24,7 +24,7 @@ import (
 
 const userAgent = "OpenTelemetry-Collector Docker Stats Receiver/v0.0.1"
 
-var minimumRequiredDockerAPIVersion = MustNewAPIVersion("1.22")
+var minimumRequiredDockerAPIVersion = MustNewAPIVersion("1.44")
 
 // Container is client.ContainerInspect() response container
 // stats and translated environment string map for potential labels.
@@ -112,9 +112,10 @@ func (dc *Client) LoadContainerList(ctx context.Context) error {
 	}
 
 	wg := sync.WaitGroup{}
-	for _, c := range containerList {
+	for i := range containerList {
+		c := &containerList[i]
 		wg.Add(1)
-		go func(container ctypes.Summary) {
+		go func(container *ctypes.Summary) {
 			if !dc.shouldBeExcluded(container.Image) {
 				dc.InspectAndPersistContainer(ctx, container.ID)
 			} else {

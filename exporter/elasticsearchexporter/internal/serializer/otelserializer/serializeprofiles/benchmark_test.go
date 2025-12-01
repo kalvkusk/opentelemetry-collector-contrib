@@ -67,7 +67,7 @@ func BenchmarkTransform(b *testing.B) {
 				pt.SetTypeStrindex(4)
 				pt.SetUnitStrindex(5)
 
-				s := p.Sample().AppendEmpty()
+				s := p.Samples().AppendEmpty()
 				s.TimestampsUnixNano().Append(42)
 				s.Values().Append(1)
 
@@ -84,7 +84,7 @@ func BenchmarkTransform(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				_, _ = Transform(dic, rp.Resource(), sp.Scope(), p)
 			}
 		})

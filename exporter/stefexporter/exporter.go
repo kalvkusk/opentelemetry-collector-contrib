@@ -66,7 +66,7 @@ func newStefExporter(set component.TelemetrySettings, cfg *Config) *stefExporter
 func (s *stefExporter) Start(ctx context.Context, host component.Host) error {
 	// Prepare gRPC connection.
 	var err error
-	s.grpcConn, err = s.cfg.ToClientConn(ctx, host, s.set)
+	s.grpcConn, err = s.cfg.ToClientConn(ctx, host.GetExtensions(), s.set)
 	if err != nil {
 		return err
 	}
@@ -152,8 +152,8 @@ func (s *stefExporter) sendMetricsAsync(
 	md := data.(pmetric.Metrics)
 
 	// Convert and write the data to the Writer.
-	converter := stefpdatametrics.OtlpToSTEFUnsorted{}
-	err = converter.WriteMetrics(md, stefWriter)
+	converter := stefpdatametrics.OtlpToStefUnsorted{}
+	err = converter.Convert(md, stefWriter)
 	if err != nil {
 		s.set.Logger.Debug("WriteMetrics failed", zap.Error(err))
 

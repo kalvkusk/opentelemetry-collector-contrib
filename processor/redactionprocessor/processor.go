@@ -23,6 +23,7 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/redactionprocessor/internal/db"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/processor/redactionprocessor/internal/url"
 )
 
 const attrValuesSeparator = ","
@@ -44,6 +45,8 @@ type redaction struct {
 	config *Config
 	// Logger
 	logger *zap.Logger
+	// URL sanitizer
+	urlSanitizer *url.URLSanitizer
 	// Database obfuscator
 	dbObfuscator *db.Obfuscator
 }
@@ -69,6 +72,13 @@ func newRedaction(ctx context.Context, config *Config, logger *zap.Logger) (*red
 		return nil, fmt.Errorf("failed to process allow list: %w", err)
 	}
 
+	var urlSanitizer *url.URLSanitizer
+	if config.URLSanitization.Enabled {
+		urlSanitizer, err = url.NewURLSanitizer(config.URLSanitization)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create URL sanitizer: %w", err)
+		}
+	}
 	dbObfuscator := db.NewObfuscator(config.DBSanitizer)
 
 	return &redaction{
@@ -80,6 +90,7 @@ func newRedaction(ctx context.Context, config *Config, logger *zap.Logger) (*red
 		hashFunction:      config.HashFunction,
 		config:            config,
 		logger:            logger,
+		urlSanitizer:      urlSanitizer,
 		dbObfuscator:      dbObfuscator,
 	}, nil
 }
@@ -120,6 +131,8 @@ func (s *redaction) processResourceSpan(ctx context.Context, rs ptrace.ResourceS
 
 	for j := 0; j < rs.ScopeSpans().Len(); j++ {
 		ils := rs.ScopeSpans().At(j)
+		scopeAttrs := ils.Scope().Attributes()
+		s.processAttrs(ctx, scopeAttrs)
 		for k := 0; k < ils.Spans().Len(); k++ {
 			span := ils.Spans().At(k)
 			spanAttrs := span.Attributes()
@@ -129,6 +142,21 @@ func (s *redaction) processResourceSpan(ctx context.Context, rs ptrace.ResourceS
 
 			// Attributes can also be part of span events
 			s.processSpanEvents(ctx, span.Events())
+
+			if s.shouldRedactSpanName(&span) {
+				name := span.Name()
+				if s.urlSanitizer != nil {
+					name = s.urlSanitizer.SanitizeURL(name)
+				}
+				if s.dbObfuscator.HasObfuscators() {
+					var err error
+					name, err = s.dbObfuscator.Obfuscate(name)
+					if err != nil {
+						s.logger.Error(err.Error())
+					}
+				}
+				span.SetName(name)
+			}
 		}
 	}
 }
@@ -148,6 +176,8 @@ func (s *redaction) processResourceLog(ctx context.Context, rl plog.ResourceLogs
 
 	for j := 0; j < rl.ScopeLogs().Len(); j++ {
 		ils := rl.ScopeLogs().At(j)
+		scopeAttrs := ils.Scope().Attributes()
+		s.processAttrs(ctx, scopeAttrs)
 		for k := 0; k < ils.LogRecords().Len(); k++ {
 			log := ils.LogRecords().At(k)
 			s.processAttrs(ctx, log.Attributes())
@@ -259,6 +289,8 @@ func (s *redaction) processResourceMetric(ctx context.Context, rm pmetric.Resour
 
 	for j := 0; j < rm.ScopeMetrics().Len(); j++ {
 		ils := rm.ScopeMetrics().At(j)
+		scopeAttrs := ils.Scope().Attributes()
+		s.processAttrs(ctx, scopeAttrs)
 		for k := 0; k < ils.Metrics().Len(); k++ {
 			metric := ils.Metrics().At(k)
 			switch metric.Type() {
@@ -401,7 +433,11 @@ func (s *redaction) processStringValueForAttribute(strVal, attributeKey string) 
 		}
 	}
 
-	if s.dbObfuscator != nil {
+	if s.urlSanitizer != nil {
+		strVal = s.urlSanitizer.SanitizeAttributeURL(strVal, attributeKey)
+	}
+
+	if s.dbObfuscator.HasObfuscators() {
 		obfuscatedQuery, err := s.dbObfuscator.ObfuscateAttribute(strVal, attributeKey)
 		if err != nil {
 			return strVal
@@ -421,7 +457,11 @@ func (s *redaction) processStringValueForLogBody(strVal string) string {
 		}
 	}
 
-	if s.dbObfuscator != nil {
+	if s.urlSanitizer != nil {
+		strVal = s.urlSanitizer.SanitizeURL(strVal)
+	}
+
+	if s.dbObfuscator.HasObfuscators() {
 		obfuscatedQuery, err := s.dbObfuscator.Obfuscate(strVal)
 		if err != nil {
 			return strVal
@@ -466,6 +506,22 @@ func (s *redaction) shouldRedactKey(k string) bool {
 		}
 	}
 	return false
+}
+
+func (s *redaction) shouldRedactSpanName(span *ptrace.Span) bool {
+	if s.urlSanitizer == nil && !s.dbObfuscator.HasObfuscators() {
+		return false
+	}
+	spanKind := span.Kind()
+	if spanKind != ptrace.SpanKindClient && spanKind != ptrace.SpanKindServer {
+		return false
+	}
+
+	spanName := span.Name()
+	if !strings.Contains(spanName, "/") && !s.dbObfuscator.HasObfuscators() {
+		return false
+	}
+	return !s.shouldAllowValue(spanName)
 }
 
 const (

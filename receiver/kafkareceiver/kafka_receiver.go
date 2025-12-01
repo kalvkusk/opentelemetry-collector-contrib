@@ -53,7 +53,7 @@ type messageHandler[T plog.Logs | pmetric.Metrics | ptrace.Traces | pprofile.Pro
 
 	// startObsReport starts an observation report for the unmarshaled data.
 	//
-	// This simply calls the the signal-specific receiverhelper.ObsReport.Start*Op method.
+	// This simply calls the signal-specific receiverhelper.ObsReport.Start*Op method.
 	startObsReport(ctx context.Context) context.Context
 
 	// endObsReport ends the observation report for the unmarshaled data.
@@ -87,7 +87,7 @@ func newLogsReceiver(config *Config, set receiver.Settings, nextConsumer consume
 			)
 		}, nil
 	}
-	return newReceiver(config, set, []string{config.Logs.Topic}, newConsumeMessageFunc)
+	return newReceiver(config, set, []string{config.Logs.Topic}, []string{config.Logs.ExcludeTopic}, newConsumeMessageFunc)
 }
 
 func newMetricsReceiver(config *Config, set receiver.Settings, nextConsumer consumer.Metrics) (receiver.Metrics, error) {
@@ -111,7 +111,7 @@ func newMetricsReceiver(config *Config, set receiver.Settings, nextConsumer cons
 			)
 		}, nil
 	}
-	return newReceiver(config, set, []string{config.Metrics.Topic}, newConsumeMessageFunc)
+	return newReceiver(config, set, []string{config.Metrics.Topic}, []string{config.Metrics.ExcludeTopic}, newConsumeMessageFunc)
 }
 
 func newTracesReceiver(config *Config, set receiver.Settings, nextConsumer consumer.Traces) (receiver.Traces, error) {
@@ -135,7 +135,7 @@ func newTracesReceiver(config *Config, set receiver.Settings, nextConsumer consu
 			)
 		}, nil
 	}
-	return newReceiver(config, set, []string{config.Traces.Topic}, consumeFn)
+	return newReceiver(config, set, []string{config.Traces.Topic}, []string{config.Traces.ExcludeTopic}, consumeFn)
 }
 
 func newProfilesReceiver(config *Config, set receiver.Settings, nextConsumer xconsumer.Profiles) (xreceiver.Profiles, error) {
@@ -159,22 +159,23 @@ func newProfilesReceiver(config *Config, set receiver.Settings, nextConsumer xco
 			)
 		}, nil
 	}
-	return newReceiver(config, set, []string{config.Profiles.Topic}, consumeFn)
+	return newReceiver(config, set, []string{config.Profiles.Topic}, []string{config.Profiles.ExcludeTopic}, consumeFn)
 }
 
 func newReceiver(
 	config *Config,
 	set receiver.Settings,
 	topics []string,
+	excludeTopics []string,
 	consumeFn func(host component.Host,
 		obsrecv *receiverhelper.ObsReport,
 		telBldr *metadata.TelemetryBuilder,
 	) (consumeMessageFunc, error),
 ) (component.Component, error) {
 	if franzGoConsumerFeatureGate.IsEnabled() {
-		return newFranzKafkaConsumer(config, set, topics, consumeFn)
+		return newFranzKafkaConsumer(config, set, topics, excludeTopics, consumeFn)
 	}
-	return newSaramaConsumer(config, set, topics, consumeFn)
+	return newSaramaConsumer(config, set, topics, excludeTopics, consumeFn)
 }
 
 type logsHandler struct {

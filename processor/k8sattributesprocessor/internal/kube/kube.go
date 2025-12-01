@@ -181,9 +181,9 @@ type Node struct {
 type deleteRequest struct {
 	// id is identifier (IP address or Pod UID) of pod to remove from pods map
 	id PodIdentifier
-	// name contains name of pod to remove from pods map
-	podName string
-	ts      time.Time
+	// contains uid of pod to remove from pods map
+	podUID string
+	ts     time.Time
 }
 
 // Filters is used to instruct the client on how to filter out k8s pods.
@@ -232,6 +232,7 @@ type LabelFilter struct {
 // from pods and added to the spans as tags.
 type ExtractionRules struct {
 	CronJobName               bool
+	CronJobUID                bool
 	DeploymentName            bool
 	DeploymentUID             bool
 	DaemonSetUID              bool
@@ -261,14 +262,16 @@ type ExtractionRules struct {
 	ServiceVersion            bool
 	ServiceInstanceID         bool
 
-	Annotations []FieldExtractionRule
-	Labels      []FieldExtractionRule
+	Annotations                  []FieldExtractionRule
+	Labels                       []FieldExtractionRule
+	DeploymentNameFromReplicaSet bool
 }
 
 // IncludesOwnerMetadata determines whether the ExtractionRules include metadata about Pod Owners
 func (rules *ExtractionRules) IncludesOwnerMetadata() bool {
 	rulesNeedingOwnerMetadata := []bool{
 		rules.CronJobName,
+		rules.CronJobUID,
 		rules.DeploymentName,
 		rules.DeploymentUID,
 		rules.DaemonSetUID,
@@ -396,7 +399,6 @@ type Associations struct {
 
 // Association represents one association rule
 type Association struct {
-	Name    string
 	Sources []AssociationSource
 }
 
@@ -446,6 +448,14 @@ type DaemonSet struct {
 
 // Job represents a kubernetes job.
 type Job struct {
+	Name       string
+	UID        string
+	Attributes map[string]string
+	CronJob    CronJob
+}
+
+// CronJob represents a kubernetes cronjob.
+type CronJob struct {
 	Name       string
 	UID        string
 	Attributes map[string]string

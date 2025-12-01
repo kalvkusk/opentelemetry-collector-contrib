@@ -21,14 +21,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen/internal/common"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/cmd/telemetrygen/internal/log"
 )
 
 func Start(cfg *Config) error {
-	logger, err := common.CreateLogger(cfg.SkipSettingGRPCLogger)
+	logger, err := log.CreateLogger(cfg.SkipSettingGRPCLogger)
 	if err != nil {
 		return err
 	}
@@ -152,6 +153,9 @@ func run(c *Config, logger *zap.Logger) error {
 			logger:           logger.With(zap.Int("worker", i)),
 			loadSize:         c.LoadSize,
 			spanDuration:     c.SpanDuration,
+			allowFailures:    c.AllowExportFailures,
+			numSpanLinks:     c.NumSpanLinks,
+			spanContexts:     make([]trace.SpanContext, 0),
 		}
 
 		go w.simulateTraces(telemetryAttributes)

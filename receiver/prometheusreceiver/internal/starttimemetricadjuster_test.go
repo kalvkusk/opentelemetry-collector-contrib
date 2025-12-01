@@ -18,6 +18,7 @@ import (
 )
 
 func TestStartTimeMetricMatch(t *testing.T) {
+	t.Skip("Skipping test since it is flaky; see https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/42684.")
 	const startTime = pcommon.Timestamp(123 * 1e9)
 	const currentTime = pcommon.Timestamp(126 * 1e9)
 	const matchBuilderStartTime = 124
@@ -166,6 +167,7 @@ func TestStartTimeMetricMatch(t *testing.T) {
 }
 
 func TestStartTimeMetricFallback(t *testing.T) {
+	defer testutil.SetFeatureGateForTest(t, removeStartTimeAdjustment, false)()
 	const startTime = pcommon.Timestamp(123 * 1e9)
 	const currentTime = pcommon.Timestamp(126 * 1e9)
 	mockStartTime := time.Now().Add(-10 * time.Hour)

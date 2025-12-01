@@ -76,7 +76,7 @@ var _ client = (*bigipClient)(nil)
 
 // newClient creates an initialized client (but with no token)
 func newClient(ctx context.Context, cfg *Config, host component.Host, settings component.TelemetrySettings, logger *zap.Logger) (client, error) {
-	httpClient, err := cfg.ToClient(ctx, host, settings)
+	httpClient, err := cfg.ToClient(ctx, host.GetExtensions(), settings)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP Client: %w", err)
 	}
@@ -286,13 +286,13 @@ func combinePoolMembers(poolMembersA, poolMembersB *models.PoolMembers) *models.
 	combinedPoolMembers := models.PoolMembers{Entries: make(map[string]models.PoolMemberStats, totalSize)}
 
 	if poolMembersA != nil {
-		for url, data := range poolMembersA.Entries {
-			combinedPoolMembers.Entries[url] = data
+		for url := range poolMembersA.Entries {
+			combinedPoolMembers.Entries[url] = poolMembersA.Entries[url]
 		}
 	}
 	if poolMembersB != nil {
-		for url, data := range poolMembersB.Entries {
-			combinedPoolMembers.Entries[url] = data
+		for url := range poolMembersB.Entries {
+			combinedPoolMembers.Entries[url] = poolMembersB.Entries[url]
 		}
 	}
 
@@ -308,8 +308,8 @@ func addVirtualServerPoolDetails(virtualServers *models.VirtualServers, virtualS
 
 	combinedVirtualServers := models.VirtualServers{Entries: make(map[string]models.VirtualServerStats, vSize)}
 
-	for virtualServerURL, entry := range virtualServers.Entries {
-		combinedVirtualServers.Entries[virtualServerURL] = entry
+	for virtualServerURL := range virtualServers.Entries {
+		combinedVirtualServers.Entries[virtualServerURL] = virtualServers.Entries[virtualServerURL]
 	}
 
 	// for each item in VirtualServersDetails match it with the entry in VirtualServers, combine it, and add it to the combined data object

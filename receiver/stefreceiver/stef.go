@@ -43,7 +43,7 @@ func (r *stefReceiver) Start(ctx context.Context, host component.Host) error {
 	r.stopping.Store(false)
 
 	var err error
-	if r.serverGRPC, err = r.cfg.ToServer(ctx, host, r.settings.TelemetrySettings); err != nil {
+	if r.serverGRPC, err = r.cfg.ToServer(ctx, host.GetExtensions(), r.settings.TelemetrySettings); err != nil {
 		return err
 	}
 
@@ -115,7 +115,7 @@ func (r *stefReceiver) onStream(grpcReader stefgrpc.GrpcReader, stream stefgrpc.
 	defer resp.Stop()
 	go resp.Run()
 
-	converter := stefpdatametrics.STEFToOTLPUnsorted{}
+	converter := stefpdatametrics.StefToOtlpUnsorted{}
 
 	// Read, decode, convert the incoming data and push it to the next consumer.
 	for {
@@ -142,7 +142,7 @@ func (r *stefReceiver) onStream(grpcReader stefgrpc.GrpcReader, stream stefgrpc.
 		// Read and convert records. We use ConvertTillEndOfFrame to make sure we are not
 		// blocked in the middle of a batch indefinitely, with lingering data in memory,
 		// neither pushed to pipeline, nor acked.
-		mdata, err := converter.ConvertTillEndOfFrame(reader)
+		mdata, err := converter.Convert(reader, false)
 		if err != nil {
 			st, ok := status.FromError(err)
 			if ok && st.Code() == codes.Canceled {
