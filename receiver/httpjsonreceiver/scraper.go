@@ -160,30 +160,43 @@ func (s *Scraper) extractAndEmitMetric(jsonData []byte, metricCfg MetricConfig, 
 	var floatValue float64
 	var err error
 
-	switch result.Type {
-	case gjson.Number:
-		floatValue = result.Float()
-		intValue = result.Int()
-	case gjson.String:
-		if metricCfg.ValueType == "int" {
-			intValue, err = strconv.ParseInt(result.String(), 10, 64)
-			floatValue = float64(intValue)
-		} else {
-			floatValue, err = strconv.ParseFloat(result.String(), 64)
-			intValue = int64(floatValue)
-		}
-	case gjson.True:
-		intValue = 1
-		floatValue = 1.0
-	case gjson.False:
-		intValue = 0
-		floatValue = 0.0
-	default:
-		return fmt.Errorf("cannot convert %s to numeric value", result.Type)
-	}
+	rawStr := result.String()
 
-	if err != nil {
-		return fmt.Errorf("failed to parse value: %w", err)
+	// If convert_to_decimal is enabled, treat the value as a hex string and parse it
+	if metricCfg.ConvertToDecimal {
+		hexStr := strings.TrimPrefix(strings.TrimPrefix(rawStr, "0x"), "0X")
+		parsed, parseErr := strconv.ParseInt(hexStr, 16, 64)
+		if parseErr != nil {
+			return fmt.Errorf("failed to parse %q as hex: %w", rawStr, parseErr)
+		}
+		intValue = parsed
+		floatValue = float64(parsed)
+	} else {
+		switch result.Type {
+		case gjson.Number:
+			floatValue = result.Float()
+			intValue = result.Int()
+		case gjson.String:
+			if metricCfg.ValueType == "int" {
+				intValue, err = strconv.ParseInt(result.String(), 10, 64)
+				floatValue = float64(intValue)
+			} else {
+				floatValue, err = strconv.ParseFloat(result.String(), 64)
+				intValue = int64(floatValue)
+			}
+		case gjson.True:
+			intValue = 1
+			floatValue = 1.0
+		case gjson.False:
+			intValue = 0
+			floatValue = 0.0
+		default:
+			return fmt.Errorf("cannot convert %s to numeric value", result.Type)
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed to parse value: %w", err)
+		}
 	}
 
 	metric := sm.Metrics().AppendEmpty()

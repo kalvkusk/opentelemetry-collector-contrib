@@ -35,6 +35,7 @@ type MetricConfig struct {
 	Unit        string            `mapstructure:"unit,omitempty"`
 	Attributes  map[string]string `mapstructure:"attributes,omitempty"`
 	ValueType   string            `mapstructure:"value_type,omitempty"`
+	ConvertToDecimal bool `mapstructure:"convert_to_decimal,omitempty"`
 }
 
 func (cfg *Config) Validate() error {
