@@ -318,6 +318,10 @@ func (s *mongodbScraper) recordReplOperationPerSecond(now pcommon.Timestamp, ope
 }
 
 func (s *mongodbScraper) recordFlushesPerSecond(now pcommon.Timestamp, doc bson.M, errs *scrapererror.ScrapeErrors) {
+	if !s.config.Metrics.MongodbFlushesRate.Enabled {
+		return
+	}
+
 	metricPath := []string{"wiredTiger", "checkpoint", "total succeed number of checkpoints"}
 	metricName := "mongodb.flushes.rate"
 	currentFlushes, err := collectMetric(doc, metricPath)
