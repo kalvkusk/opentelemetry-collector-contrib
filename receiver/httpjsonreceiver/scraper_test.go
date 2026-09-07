@@ -367,3 +367,80 @@ func TestScraperTimeout(t *testing.T) {
 	sm := rm.ScopeMetrics().At(0)
 	assert.Equal(t, 0, sm.Metrics().Len())
 }
+
+// TestScraperConvertToAgeSeconds covers the snapshot-status.json shape: a
+// "last updated" timestamp that is only alertable once turned into an age,
+// since a static threshold cannot be compared against an absolute time.
+func TestScraperConvertToAgeSeconds(t *testing.T) {
+	rfc3339 := time.Now().UTC().Add(-90 * time.Minute).Format(time.RFC3339)
+	rfc3339Nano := time.Now().UTC().Add(-30 * time.Minute).Format(time.RFC3339Nano)
+	epoch := time.Now().UTC().Add(-10 * time.Minute).Unix()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, `{
+            "snapshot": {"time": %q, "block_height": "181992617"},
+            "nano": %q,
+            "epoch_number": %d,
+            "epoch_string": "%d",
+            "junk": "not-a-time"
+        }`, rfc3339, rfc3339Nano, epoch, epoch)
+	}))
+	defer server.Close()
+
+	cfg := &Config{
+		Endpoints: []EndpointConfig{
+			{
+				URL:    server.URL,
+				Method: "GET",
+				Metrics: []MetricConfig{
+					{Name: "snapshot.age_seconds", JSONPath: "snapshot.time", Type: "gauge", ConvertToAgeSeconds: true},
+					{Name: "nano.age_seconds", JSONPath: "nano", Type: "gauge", ConvertToAgeSeconds: true},
+					{Name: "epoch_number.age_seconds", JSONPath: "epoch_number", Type: "gauge", ConvertToAgeSeconds: true},
+					{Name: "epoch_string.age_seconds", JSONPath: "epoch_string", Type: "gauge", ConvertToAgeSeconds: true},
+					// Must be skipped with a warning, not emitted as 0 -- a stale
+					// snapshot alert that silently reads 0 is worse than no metric.
+					{Name: "junk.age_seconds", JSONPath: "junk", Type: "gauge", ConvertToAgeSeconds: true},
+					// block_height is a numeric string and stays an ordinary metric.
+					{Name: "snapshot.block_height", JSONPath: "snapshot.block_height", Type: "gauge", ValueType: "int"},
+				},
+			},
+		},
+	}
+	require.NoError(t, cfg.Validate())
+
+	scraper := NewScraper(cfg, &http.Client{Timeout: 5 * time.Second}, zaptest.NewLogger(t))
+	metrics, err := scraper.Scrape(context.Background())
+	require.NoError(t, err)
+
+	got := map[string]float64{}
+	sm := metrics.ResourceMetrics().At(0).ScopeMetrics().At(0)
+	for i := 0; i < sm.Metrics().Len(); i++ {
+		m := sm.Metrics().At(i)
+		dp := m.Gauge().DataPoints().At(0)
+		if dp.DoubleValue() != 0 {
+			got[m.Name()] = dp.DoubleValue()
+		} else {
+			got[m.Name()] = float64(dp.IntValue())
+		}
+	}
+
+	assert.NotContains(t, got, "junk.age_seconds", "unparseable timestamp must not emit a data point")
+	assert.InDelta(t, 5400, got["snapshot.age_seconds"], 60)
+	assert.InDelta(t, 1800, got["nano.age_seconds"], 60)
+	assert.InDelta(t, 600, got["epoch_number.age_seconds"], 60)
+	assert.InDelta(t, 600, got["epoch_string.age_seconds"], 60)
+	assert.Equal(t, float64(181992617), got["snapshot.block_height"])
+}
+
+func TestConvertFlagsAreMutuallyExclusive(t *testing.T) {
+	cfg := &Config{
+		Endpoints: []EndpointConfig{{
+			URL: "http://example.invalid",
+			Metrics: []MetricConfig{{
+				Name: "bad", JSONPath: "a", ConvertToDecimal: true, ConvertToAgeSeconds: true,
+			}},
+		}},
+	}
+	require.ErrorContains(t, cfg.Validate(), "mutually exclusive")
+}
