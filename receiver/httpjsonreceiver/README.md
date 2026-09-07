@@ -114,6 +114,112 @@ ocb --config builder-config.yaml
 | \`unit\` | string | \`""\` | Metric unit |
 | \`value_type\` | string | \`double\` | Value type: \`int\`, \`double\` |
 | \`attributes\` | map | \`{}\` | Static attributes for this metric |
+| \`convert_to_decimal\` | bool | \`false\` | Parse the extracted value as a hex string |
+| \`convert_to_age_seconds\` | bool | \`false\` | Treat the extracted value as a point in time and emit seconds elapsed since it |
+
+\`convert_to_decimal\` and \`convert_to_age_seconds\` are mutually exclusive; setting both fails validation at startup.
+
+#### convert_to_age_seconds
+
+Use it when an endpoint publishes a "last updated" timestamp and what you actually
+want to alert on is staleness. A timestamp cannot be compared against a static
+threshold -- "older than 8 hours" is not a fixed number for an absolute time -- so
+the receiver does the subtraction and emits an age instead:
+
+\`\`\`yaml
+receivers:
+  httpjson:
+    collection_interval: 5m
+    endpoints:
+      - name: "mainnet snapshot (gcs-asia)"
+        url: "https://storage.googleapis.com/injective-mainnet-snapshots-asia/status.json"
+        method: "GET"
+        metrics:
+          - name: "snapshot.age_seconds"
+            json_path: "snapshot.time"     # "2026-09-07T16:34:18Z"
+            type: "gauge"
+            unit: "s"
+            convert_to_age_seconds: true
+\`\`\`
+
+Accepted inputs: RFC3339 with or without fractional seconds, and Unix epoch
+seconds given either as a JSON number or as a numeric string. A value that
+parses as none of those is logged and **skipped** -- no data point is emitted,
+so a staleness alert reads as missing data rather than silently as zero.
+
+A timestamp in the future yields a negative age; that is left as-is on purpose,
+because it means clock skew between the publisher and the collector and is worth
+seeing rather than clamping away.
+
+#### each (one data point per array element)
+
+By default a metric is one scalar with attributes fixed in the config. \`each\`
+fans the metric out over a JSON array instead, taking both the value and some of
+the attributes from **each element** -- which is what group-by style APIs return,
+and what the config cannot know in advance.
+
+| Sub-key | Type | Default | Description |
+|---------|------|---------|-------------|
+| \`value\` | string | \`""\` | Path to the number inside each element. Empty means the element itself is the number. |
+| \`attributes\` | map | \`{}\` | Extra attributes read per element, as \`name: path\`. Merged over the metric's static attributes. |
+| \`max_points\` | int | \`1000\` | Cap on data points from one array. Excess elements are dropped with a warning. |
+
+\`\`\`yaml
+metrics:
+  - name: "cloudflare.zone.requests"
+    json_path: "data.viewer.zones.0.httpRequestsAdaptiveGroups"   # an array
+    type: "counter"
+    value_type: "int"
+    attributes:
+      zone: "injective.network"          # static, applied to every point
+    each:
+      value: "count"                     # relative to each element
+      attributes:
+        host: "dimensions.clientRequestHTTPHost"
+        status: "dimensions.edgeResponseStatus"
+\`\`\`
+
+An element whose value is missing or not numeric is **skipped with a warning**,
+not emitted as zero. An element missing one of the \`each.attributes\` paths still
+produces a point, with that attribute set to \`""\` -- an absent dimension is still
+a real observation, and dropping it would understate the total.
+
+\`max_points\` exists because the size of a response is the metrics backend's
+cardinality. A query that quietly starts returning ten times as many groups
+should be truncated and logged, not forwarded.
+
+#### Time templates in \`url\` and \`body\`
+
+APIs that filter on an absolute time range need a fresh window on every request,
+which a static config string cannot express. \`url\` and \`body\` are therefore
+rendered per scrape:
+
+| Template | Result |
+|----------|--------|
+| \`{{now}}\` | current time, RFC3339 |
+| \`{{now-5m}}\` | 5 minutes ago |
+| \`{{now+1h}}\` | 1 hour ahead |
+| \`{{now-5m\|unix}}\` | 5 minutes ago, Unix seconds |
+
+Offsets are Go durations (\`90s\`, \`5m\`, \`1h30m\`). Formats are \`rfc3339\` (default),
+\`rfc3339nano\`, \`unix\`, \`unixmilli\` and \`date\`. An unparseable duration or an
+unknown format fails the scrape rather than being passed through, so an API never
+receives a literal \`{{now-5m}}\` for someone to decode from its rejection.
+
+\`\`\`yaml
+- name: "cloudflare zone analytics"
+  url: "https://api.cloudflare.com/client/v4/graphql/"
+  method: "POST"
+  headers:
+    Authorization: "Bearer ${env:CF_API_TOKEN}"
+  body: |
+    {"query":"query($z:[String!],$min:Time!,$max:Time!){...}",
+     "variables":{"z":["<zone id>"],"min":"{{now-6m}}","max":"{{now-5m}}"}}
+\`\`\`
+
+POST/PUT bodies are sent with an explicit \`Content-Length\`. (Before this, \`Body\`
+was assigned without setting \`ContentLength\`, which net/http treats as unknown
+and sends chunked -- rejected by some APIs, and not replayable across a redirect.)
 
 ## JSONPath Examples
 

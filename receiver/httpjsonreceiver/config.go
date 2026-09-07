@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// defaultMaxPoints bounds an `each` fan-out when the config does not.
+const defaultMaxPoints = 1000
+
 type Config struct {
 	CollectionInterval time.Duration     `mapstructure:"collection_interval"`
 	InitialDelay       time.Duration     `mapstructure:"initial_delay"`
@@ -36,6 +39,34 @@ type MetricConfig struct {
 	Attributes  map[string]string `mapstructure:"attributes,omitempty"`
 	ValueType   string            `mapstructure:"value_type,omitempty"`
 	ConvertToDecimal bool `mapstructure:"convert_to_decimal,omitempty"`
+	// ConvertToAgeSeconds turns a point-in-time value into the number of seconds
+	// that have elapsed since it. The extracted value may be an RFC3339 string
+	// (with or without fractional seconds) or a Unix epoch number. This exists
+	// because a "last updated" timestamp is not directly alertable -- a static
+	// threshold cannot be compared against an absolute time -- whereas an age is.
+	ConvertToAgeSeconds bool `mapstructure:"convert_to_age_seconds,omitempty"`
+	// Each turns one JSON array into one data point per element, instead of the
+	// default single scalar. Needed for group-by style APIs -- Cloudflare's
+	// GraphQL analytics returns an array of {dimensions, count} rows -- where the
+	// label values are in the response, not known when the config is written.
+	Each *EachConfig `mapstructure:"each,omitempty"`
+}
+
+// EachConfig fans a metric out over the elements of the array at json_path.
+// Value and the Attributes values are gjson paths evaluated relative to each
+// element.
+type EachConfig struct {
+	// Value is the path to the number within each element. Empty means the
+	// element itself is the number.
+	Value string `mapstructure:"value,omitempty"`
+	// Attributes are extra attributes read from each element, as name -> path.
+	// They are merged over the metric's static attributes.
+	Attributes map[string]string `mapstructure:"attributes,omitempty"`
+	// MaxPoints caps how many data points one array may produce, defaulting to
+	// defaultMaxPoints. A response that grows unexpectedly is a cardinality
+	// incident in the metrics backend, so the receiver truncates and warns
+	// rather than forwarding everything it was handed.
+	MaxPoints int `mapstructure:"max_points,omitempty"`
 }
 
 func (cfg *Config) Validate() error {
@@ -96,6 +127,19 @@ func (cfg *Config) validateMetric(prefix string, metric *MetricConfig, endpointI
 
 	if metric.JSONPath == "" {
 		return fmt.Errorf("%s: json_path is required", prefix)
+	}
+
+	if metric.ConvertToDecimal && metric.ConvertToAgeSeconds {
+		return fmt.Errorf("%s: convert_to_decimal and convert_to_age_seconds are mutually exclusive", prefix)
+	}
+
+	if metric.Each != nil {
+		if metric.Each.MaxPoints < 0 {
+			return fmt.Errorf("%s: each.max_points must not be negative", prefix)
+		}
+		if metric.Each.MaxPoints == 0 {
+			cfg.Endpoints[endpointIndex].Metrics[metricIndex].Each.MaxPoints = defaultMaxPoints
+		}
 	}
 
 	// Apply defaults

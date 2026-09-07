@@ -219,7 +219,18 @@ func (s *mongodbScraper) collectTopStats(ctx context.Context, now pcommon.Timest
 }
 
 func (s *mongodbScraper) collectIndexStats(ctx context.Context, now pcommon.Timestamp, databaseName, collectionName string, errs *scrapererror.ScrapeErrors) {
-	if databaseName == "local" {
+	if !s.config.Metrics.MongodbIndexAccessCount.Enabled {
+		return
+	}
+	// admin/config are internal system databases the scraping user typically
+	// isn't (and shouldn't be) granted aggregate rights on, and system.* /
+	// view collections in any database aren't valid $indexStats targets
+	// anyway (Location40602) -- skip them instead of surfacing a partial
+	// Unauthorized/40602 scrape error on every collection interval.
+	if databaseName == "local" || databaseName == "admin" || databaseName == "config" {
+		return
+	}
+	if strings.HasPrefix(collectionName, "system.") {
 		return
 	}
 	indexStats, err := s.client.IndexStats(ctx, databaseName, collectionName)
